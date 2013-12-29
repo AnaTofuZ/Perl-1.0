@@ -1,6 +1,9 @@
-/* $Header: arg.c,v 1.0.1.8 88/02/04 11:14:58 root Exp $
+/* $Header: arg.c,v 1.0.1.9 88/02/04 17:47:31 root Exp $
  *
  * $Log:	arg.c,v $
+ * Revision 1.0.1.9  88/02/04  17:47:31  root
+ * patch20: made failing fork/exec exit.
+ * 
  * Revision 1.0.1.8  88/02/04  11:14:58  root
  * patch18: regularized includes.
  * 
@@ -2032,7 +2035,12 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	    value = (double)argflags;
 	    goto donumset;
 	}
-	/* FALL THROUGH */
+	if (arg[1].arg_flags & AF_SPECIAL)
+	    value = (double)do_aexec(arg);
+	else {
+	    value = (double)do_exec(str_get(sarg[1]));
+	}
+	_exit(-1);
     case O_EXEC:
 	if (arg[1].arg_flags & AF_SPECIAL)
 	    value = (double)do_aexec(arg);

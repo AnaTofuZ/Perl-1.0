@@ -1,12 +1,18 @@
 #!./perl
 
-# $Header: op.exec,v 1.0 87/12/18 13:13:26 root Exp $
+# $Header: op.exec,v 1.0.1.1 88/02/04 17:49:08 root Exp $
 
 $| = 1;				# flush stdout
-print "1..4\n";
+print "1..7\n";
 
-system "echo ok \\1";		# shell interpreted
-system "echo ok 2";		# split and directly called
-system "echo", "ok", "3";	# directly called
+print "not ok 1\n" if system "echo ok \\1";	# shell interpreted
+print "not ok 2\n" if system "echo ok 2";	# split and directly called
+print "not ok 3\n" if system "echo", "ok", "3"; # directly called
 
-exec "echo","ok","4";
+if ((system "false") == 256) {print "ok 4\n";} else {print "not ok 4\n";}
+
+if ((system "lskdfj") == 255 * 256) {print "ok 5\n";} else {print "not ok 5\n";}
+
+unless (exec "lskdjfalksdjfdjfkls") {print "ok 6\n";} else {print "not ok 6\n";}
+
+exec "echo","ok","7";
