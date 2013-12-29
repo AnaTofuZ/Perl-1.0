@@ -986,7 +986,7 @@ char *string;
 		*d = '\0';
 		break;
 	    }
-	    strcpy(d,d+1);
+	    memmove(d,d+1,strlen(d+1)+1);
 	    switch(*d) {
 	    case 'n':
 		*d = '\n';
