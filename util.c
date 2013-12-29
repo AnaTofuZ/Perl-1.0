@@ -259,7 +259,7 @@ static bool firstsetenv = TRUE;
 extern char **environ;
 
 void
-setenv(nam,val)
+xsetenv(nam,val)
 char *nam, *val;
 {
     register int i=envix(nam);		/* where does it go? */

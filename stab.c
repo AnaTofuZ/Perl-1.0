@@ -293,7 +293,7 @@ STR *str;
 	}
     }
     else if (stab == envstab && envname) {
-	setenv(envname,str_get(str));
+	xsetenv(envname,str_get(str));
 				/* And you'll never guess what the dog had */
 	safefree(envname);	/*   in its mouth... */
 	envname = Nullch;
