@@ -8,7 +8,7 @@
 # and edit it to reflect your system.  Some packages may include samples
 # of config.h for certain machines, so you might look for one of those.)
 #
-# $Header: Configure,v 1.0.1.8 88/02/25 11:29:46 root Exp $
+# $Header: Configure,v 1.0.1.9 88/03/03 16:02:26 root Exp $
 #
 # Yes, you may rip this off to use in other distribution packages.
 # (Note: this Configure script was generated automatically.  Rather than
@@ -81,6 +81,7 @@ d_symlink=''
 d_tminsys=''
 d_vfork=''
 d_voidsig=''
+gidtype=''
 libc=''
 libnm=''
 mallocsrc=''
@@ -770,6 +771,16 @@ else
 fi
 $rm -f try.*
 
+: see if symlink exists
+echo " "
+if $contains symlink libc.list >/dev/null 2>&1; then
+    echo 'symlink() found.'
+    d_symlink="$define"
+else
+    echo 'symlink() not found.'
+    d_symlink="$undef"
+fi
+
 : see if struct tm is defined in sys/time.h
 echo " "
 if $contains 'struct tm' /usr/include/time.h >/dev/null 2>&1 ; then
@@ -869,6 +880,29 @@ $echo $n "$rp $c"
 . myread
 voidflags="$ans"
 $rm -f try.* .out
+
+: see what type gids are declared as in the kernel
+case "$gidtype" in
+'')
+    if $contains 'gid_t;' /usr/include/sys/types.h >/dev/null 2>&1 ; then
+	dflt='gid_t';
+    else
+	set `grep 'groups\[NGROUPS\];' /usr/include/sys/user.h 2>/dev/null` unsigned short
+	case $1 in
+	unsigned) dflt="$1 $2" ;;
+	*) dflt="$1" ;;
+	esac
+    fi
+    ;;
+*)  dflt="$gidtype"
+    ;;
+esac
+cont=true
+echo " "
+rp="What type are group ids on this system declared as? [$dflt]"
+$echo $n "$rp $c"
+. myread
+gidtype="$ans"
 
 : see what type of char stdio uses.
 echo " "
@@ -1264,16 +1298,6 @@ else
     cc=cc
 fi
 
-: see if symlink exists
-echo " "
-if $contains symlink libc.list >/dev/null 2>&1; then
-    echo 'symlink() found.'
-    d_symlink="$define"
-else
-    echo 'symlink() not found.'
-    d_symlink="$undef"
-fi
-
 : see if we should include -lnm
 echo " "
 if $test -r /usr/lib/libnm.a || $test -r /usr/local/lib/libnm.a ; then
@@ -1380,6 +1404,7 @@ d_symlink='$d_symlink'
 d_tminsys='$d_tminsys'
 d_vfork='$d_vfork'
 d_voidsig='$d_voidsig'
+gidtype='$gidtype'
 libc='$libc'
 libnm='$libnm'
 mallocsrc='$mallocsrc'

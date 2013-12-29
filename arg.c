@@ -1,6 +1,9 @@
-/* $Header: arg.c,v 1.0.1.13 88/03/02 11:29:29 root Exp $
+/* $Header: arg.c,v 1.0.1.14 88/03/03 16:02:57 root Exp $
  *
  * $Log:	arg.c,v $
+ * Revision 1.0.1.14  88/03/03  16:02:57  root
+ * patch26: use GIDTYPE for getgroups() call
+ * 
  * Revision 1.0.1.13  88/03/02  11:29:29  root
  * patch24: upgraded runtime error messages
  * patch24: sprintf blasts errno on Xenix
@@ -2231,7 +2234,7 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 		str = &str_yes;	/* ok as "group" */
 	    else {
 #ifdef NGROUPS
-		gid_t gary[NGROUPS];
+		GIDTYPE gary[NGROUPS];
 
 		str = &str_no;
 		anum = getgroups(NGROUPS,gary);

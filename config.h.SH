@@ -136,6 +136,12 @@ cat <<!GROK!THIS! >config.h
  */
 #$d_voidsig	VOIDSIG 	/**/
 
+/* GIDTYPE:
+ *	This symbol has a value like gid_t, int, ushort, or whatever type is
+ *	used to declare group ids in the kernel.
+ */
+#define GIDTYPE $gidtype		/**/
+
 /* STDCHAR:
  *	This symbol is defined to be the type of char used in stdio.h.
  *	It has the values "unsigned char" or "char".
