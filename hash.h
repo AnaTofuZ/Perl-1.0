@@ -1,6 +1,9 @@
-/* $Header: hash.h,v 1.0 87/12/18 13:05:20 root Exp $
+/* $Header: hash.h,v 1.0.1.1 88/03/10 16:28:43 root Exp $
  *
  * $Log:	hash.h,v $
+ * Revision 1.0.1.1  88/03/10  16:28:43  root
+ * patch29: added hclear()
+ * 
  * Revision 1.0  87/12/18  13:05:20  root
  * Initial revision
  * 
@@ -43,6 +46,9 @@ STR *hfetch();
 bool hstore();
 bool hdelete();
 HASH *hnew();
+void hclear();
+void hfree();
+void hentfree();
 int hiterinit();
 HENT *hiternext();
 char *hiterkey();

@@ -1,6 +1,12 @@
-/* $Header: perl.h,v 1.0.1.6 88/03/02 12:34:53 root Exp $
+/* $Header: perl.h,v 1.0.1.7 88/03/10 16:28:52 root Exp $
  *
  * $Log:	perl.h,v $
+ * Revision 1.0.1.7  88/03/10  16:28:52  root
+ * patch29: types.h was included twice
+ * patch29: filename sometimes became ""
+ * patch29: uid and gid now available
+ * patch29: UNLINK was wrong on Eunice
+ * 
  * Revision 1.0.1.6  88/03/02  12:34:53  root
  * patch24: added include of <sys/param.h>
  * patch24: made some identifiers unique in first 7 chars
@@ -38,9 +44,8 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <setjmp.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/param.h>
+#include <sys/stat.h>
 
 #ifdef TMINSYS
 #include <sys/time.h>
@@ -168,6 +173,8 @@ EXT STAB *argvoutstab INIT(Nullstab);
 
 EXT STR *freestrroot INIT(Nullstr);
 
+EXT char *filename;
+EXT char *origfilename;
 EXT FILE *rsfp;
 EXT char buf[1024];
 EXT char *bufptr INIT(buf);
@@ -193,6 +200,13 @@ STIO *stio_new();
 
 EXT struct stat statbuf;
 EXT struct tms timesbuf;
+EXT int uid;
+EXT int euid;
+UIDTYPE getuid();
+UIDTYPE geteuid();
+GIDTYPE getgid();
+GIDTYPE getegid();
+EXT int unsafe;
 
 #ifdef DEBUGGING
 EXT int debug INIT(0);
@@ -225,7 +239,8 @@ long time();
 struct tm *gmtime(), *localtime();
 
 #ifdef EUNICE
-#define UNLINK(f) while (unlink(f) >= 0)
+#define UNLINK unlnk
+int unlnk();
 #else
 #define UNLINK unlink
 #endif

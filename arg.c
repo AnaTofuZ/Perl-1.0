@@ -1,6 +1,18 @@
-/* $Header: arg.c,v 1.0.1.16 88/03/04 19:10:31 root Exp $
+/* $Header: arg.c,v 1.0.1.17 88/03/10 15:59:12 root Exp $
  *
  * $Log:	arg.c,v $
+ * Revision 1.0.1.17  88/03/10  15:59:12  root
+ * patch29: added duped filehandles
+ * patch29: -i now preserves mode and owner
+ * patch29: uid and gid now available
+ * patch29: unlink as root was dangerous
+ * patch29: time() not declared and arg wasn't cast right
+ * patch29: times were erroneous if HZ != 60
+ * patch29: $# failed on one-arg prints
+ * patch29: int(-1.5) failed on some systems
+ * patch29: $? now set by system op as well as `cmd`
+ * patch29: NGROUPS doesn't imply getgroups() on some systems
+ * 
  * Revision 1.0.1.16  88/03/04  19:10:31  root
  * patch28: support for killpg() or equivalent
  * 
@@ -72,6 +84,7 @@
 #include <signal.h>
 
 ARG *debarg;
+long time();
 
 bool
 do_match(s,arg)
@@ -362,6 +375,7 @@ register char *name;
     register STIO *stio = stab->stab_io;
     char *myname = savestr(name);
     int result;
+    int fd;
 
     name = myname;
     while (len && isspace(name[len-1]))
@@ -386,8 +400,25 @@ register char *name;
 	fp = popen(name,"w");
     }
     else if (*name == '>' && name[1] == '>') {
+	stio->type = 'a';
 	for (name += 2; isspace(*name); name++) ;
 	fp = fopen(name,"a");
+    }
+    else if (*name == '>' && name[1] == '&') {
+	for (name += 2; isspace(*name); name++) ;
+	if (isdigit(*name))
+	    fd = atoi(name);
+	else {
+	    stab = stabent(name,FALSE);
+	    if (stab->stab_io && stab->stab_io->fp) {
+		fd = fileno(stab->stab_io->fp);
+		stio->type = stab->stab_io->type;
+	    }
+	    else
+		fd = -1;
+	}
+	fp = fdopen(dup(fd),stio->type == 'a' ? "a" :
+	  (stio->type == '<' ? "r" : "w") );
     }
     else if (*name == '>') {
 	for (name++; isspace(*name); name++) ;
@@ -430,7 +461,7 @@ register char *name;
     safefree(myname);
     if (!fp)
 	return FALSE;
-    if (stio->type != '|' && stio->type != '-') {
+    if (stio->type && stio->type != '|' && stio->type != '-') {
 	if (fstat(fileno(fp),&statbuf) < 0) {
 	    fclose(fp);
 	    return FALSE;
@@ -453,6 +484,7 @@ register STAB *stab;
 {
     register STR *str;
     char *oldname;
+    int filemode,fileuid,filegid;
 
     while (alen(stab->stab_array) >= 0L) {
 	str = ashift(stab->stab_array);
@@ -461,6 +493,9 @@ register STAB *stab;
 	oldname = str_get(stab->stab_val);
 	if (do_open(stab,oldname)) {
 	    if (inplace) {
+		filemode = statbuf.st_mode;
+		fileuid = statbuf.st_uid;
+		filegid = statbuf.st_gid;
 		if (*inplace) {
 		    str_cat(str,inplace);
 #ifdef RENAME
@@ -478,6 +513,8 @@ register STAB *stab;
 		errno = 0;		/* in case sprintf set errno */
 		do_open(argvoutstab,tokenbuf);
 		defoutstab = argvoutstab;
+		fchmod(fileno(argvoutstab->stab_io->fp),filemode);
+		fchown(fileno(argvoutstab->stab_io->fp),fileuid,filegid);
 	    }
 	    str_free(str);
 	    return stab->stab_io->fp;
@@ -660,12 +697,16 @@ STR ***retary;
     ary->ary_fill = -1;
     times(&timesbuf);
 
+#ifndef HZ
+#define HZ 60
+#endif
+
     if (retary) {
 	if (max) {
-	    apush(ary,str_nmake(((double)timesbuf.tms_utime)/60.0));
-	    apush(ary,str_nmake(((double)timesbuf.tms_stime)/60.0));
-	    apush(ary,str_nmake(((double)timesbuf.tms_cutime)/60.0));
-	    apush(ary,str_nmake(((double)timesbuf.tms_cstime)/60.0));
+	    apush(ary,str_nmake(((double)timesbuf.tms_utime)/HZ));
+	    apush(ary,str_nmake(((double)timesbuf.tms_stime)/HZ));
+	    apush(ary,str_nmake(((double)timesbuf.tms_cutime)/HZ));
+	    apush(ary,str_nmake(((double)timesbuf.tms_cstime)/HZ));
 	}
 	sarg = (STR**)safemalloc((max+2)*sizeof(STR*));
 	sarg[0] = Nullstr;
@@ -797,13 +838,17 @@ register STR **sarg;
 }
 
 bool
-do_print(s,fp)
-char *s;
+do_print(str,fp)
+register STR *str;
 FILE *fp;
 {
-    if (!fp || !s)
+    if (!fp || !str)
 	return FALSE;
-    fputs(s,fp);
+    if (ofmt &&
+      ((str->str_nok && str->str_nval != 0.0) || str_gnum(str) != 0.0) )
+	fprintf(fp, ofmt, str->str_nval);
+    else
+	fputs(str_get(str),fp);
     return TRUE;
 }
 
@@ -817,28 +862,24 @@ register FILE *fp;
     register bool retval;
     double value;
 
+    if (!fp)
+	return FALSE;
     (void)eval(arg[1].arg_ptr.arg_arg,&tmpary);
     if (arg->arg_type == O_PRTF) {
 	do_sprintf(arg->arg_ptr.arg_str,32767,tmpary);
-	retval = do_print(str_get(arg->arg_ptr.arg_str),fp);
+	retval = do_print(arg->arg_ptr.arg_str,fp);
     }
     else {
 	retval = FALSE;
 	for (elem = tmpary+1; *elem; elem++) {
 	    if (retval && ofs)
-		do_print(ofs, fp);
-	    if (ofmt && fp) {
-		if ((*elem)->str_nok || str_gnum(*elem) != 0.0)
-		    fprintf(fp, ofmt, str_gnum(*elem));
-		retval = TRUE;
-	    }
-	    else
-		retval = do_print(str_get(*elem), fp);
+		fputs(ofs, fp);
+	    retval = do_print(*elem, fp);
 	    if (!retval)
 		break;
 	}
 	if (ors)
-	    retval = do_print(ors, fp);
+	    fputs(ors, fp);
     }
     safefree((char*)tmpary);
     return retval;
@@ -959,6 +1000,7 @@ STR **sarg;
     register int i;
     register int val;
     register int val2;
+    char *s;
 
     if (sarg)
 	tmpary = sarg;
@@ -1009,9 +1051,22 @@ STR **sarg;
 	}
 	break;
     case O_UNLINK:
-	for (elem = tmpary+1; *elem; elem++)
-	    if (UNLINK(str_get(*elem)))
-		i--;
+	for (elem = tmpary+1; *elem; elem++) {
+	    s = str_get(*elem);
+	    if (euid || unsafe) {
+		if (UNLINK(s))
+		    i--;
+	    }
+	    else {	/* don't let root wipe out directories without -U */
+		if (stat(s,&statbuf) < 0 ||
+		  (statbuf.st_mode & S_IFMT) == S_IFDIR )
+		    i--;
+		else {
+		    if (UNLINK(s))
+			i--;
+		}
+	    }
+	}
 	break;
     }
     if (!sarg)
@@ -1938,18 +1993,18 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	    if (!stab)
 		stab = defoutstab;
 	}
-	if (!stab->stab_io)
+	if (!stab->stab_io || !(fp = stab->stab_io->fp))
 	    value = 0.0;
 	else {
 	    if (arg[1].arg_flags & AF_SPECIAL)
-		value = (double)do_aprint(arg,stab->stab_io->fp);
+		value = (double)do_aprint(arg,fp);
 	    else {
-		value = (double)do_print(str_get(sarg[1]),stab->stab_io->fp);
+		value = (double)do_print(sarg[1],fp);
 		if (ors && optype == O_PRINT)
-		    do_print(ors, stab->stab_io->fp);
+		    fputs(ors, fp);
 	    }
-	    if (stab->stab_io->flags & IOF_FLUSH && stab->stab_io->fp)
-		fflush(stab->stab_io->fp);
+	    if (stab->stab_io->flags & IOF_FLUSH)
+		fflush(fp);
 	}
 	goto donumset;
     case O_CHDIR:
@@ -2031,7 +2086,7 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	    value = (double)(tmps2 - tmps + arybase);
 	goto donumset;
     case O_TIME:
-	value = (double) time(0);
+	value = (double) time(Null(long*));
 	goto donumset;
     case O_TMS:
 	value = (double) do_tms(retary);
@@ -2070,7 +2125,13 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	value = sqrt(str_gnum(sarg[1]));
 	goto donumset;
     case O_INT:
-	modf(str_gnum(sarg[1]),&value);
+	value = str_gnum(sarg[1]);
+	if (value >= 0.0)
+	    modf(value,&value);
+	else {
+	    modf(-value,&value);
+	    value = -value;
+	}
 	goto donumset;
     case O_ORD:
 	value = (double) *str_get(sarg[1]);
@@ -2124,6 +2185,7 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	    }
 	    signal(SIGINT, ihand);
 	    signal(SIGQUIT, qhand);
+	    statusvalue = argflags;
 	    value = (double)argflags;
 	    goto donumset;
 	}
@@ -2199,7 +2261,9 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	value = (double)(rename(tmps,str_get(sarg[2])) >= 0);
 #else
 	tmps2 = str_get(sarg[2]);
-	UNLINK(tmps2);
+	if (euid || stat(tmps2,&statbuf) < 0 ||
+	  (statbuf.st_mode & S_IFMT) != S_IFDIR )
+	    UNLINK(tmps2);	/* avoid unlinking a directory */
 	if (!(anum = link(tmps,tmps2)))
 	    anum = UNLINK(tmps);
 	value = (double)(anum >= 0);
@@ -2256,13 +2320,16 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	else if (statbuf.st_mode & anum >> 6)
 	    str = &str_yes;	/* ok as "other" */
 	else if (statbuf.st_mode & anum &&
-	  statbuf.st_uid == (maxarg ? geteuid() : getuid()) )
+	  statbuf.st_uid == (maxarg ? euid : uid) )
 	    str = &str_yes;	/* ok as "user" */
 	else if (statbuf.st_mode & anum >> 3) {
 	    if (statbuf.st_gid == (maxarg ? getegid() : getgid()))
 		str = &str_yes;	/* ok as "group" */
 	    else {
-#ifdef NGROUPS
+#ifdef GETGROUPS
+#ifndef NGROUPS
+#define NGROUPS 32
+#endif
 		GIDTYPE gary[NGROUPS];
 
 		str = &str_no;
@@ -2288,7 +2355,7 @@ STR ***retary;		/* where to return an array to, null if nowhere */
     case O_FTEOWNED:
     case O_FTROWNED:
 	if (stat(str_get(sarg[1]),&statbuf) >= 0 &&
-	  statbuf.st_uid == (optype == O_FTEOWNED ? geteuid() : getuid()) )
+	  statbuf.st_uid == (optype == O_FTEOWNED ? euid : uid) )
 	    str = &str_yes;
 	else
 	    str = &str_no;

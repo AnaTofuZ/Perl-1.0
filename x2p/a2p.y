@@ -1,7 +1,10 @@
 %{
-/* $Header: a2p.y,v 1.0.1.2 88/03/02 12:59:39 root Exp $
+/* $Header: a2p.y,v 1.0.1.3 88/03/10 17:17:08 root Exp $
  *
  * $Log:	a2p.y,v $
+ * Revision 1.0.1.3  88/03/10  17:17:08  root
+ * patch29: couldn't handle vertical whitespace after opening curly
+ * 
  * Revision 1.0.1.2  88/03/02  12:59:39  root
  * patch24: blank lines were being treated like they had semicolons on them
  * 
@@ -48,14 +51,14 @@ program	: junk begin hunks end
 		{ root = oper4(OPROG,$1,$2,$3,$4); }
 	;
 
-begin	: BEGIN '{' states '}' junk
-		{ $$ = oper2(OJUNK,$3,$5); in_begin = FALSE; }
+begin	: BEGIN '{' maybe states '}' junk
+		{ $$ = oper3(OJUNK,$3,$4,$6); in_begin = FALSE; }
 	| /* NULL */
 		{ $$ = Nullop; }
 	;
 
-end	: END '{' states '}'
-		{ $$ = $3; }
+end	: END '{' maybe states '}'
+		{ $$ = oper2(OJUNK,$3,$4); }
 	| end NEWLINE
 		{ $$ = $1; }
 	| /* NULL */
@@ -70,10 +73,10 @@ hunks	: hunks hunk junk
 
 hunk	: patpat
 		{ $$ = oper1(OHUNK,$1); need_entire = TRUE; }
-	| patpat '{' states '}'
-		{ $$ = oper2(OHUNK,$1,$3); }
-	| '{' states '}'
-		{ $$ = oper2(OHUNK,Nullop,$2); }
+	| patpat '{' maybe states '}'
+		{ $$ = oper2(OHUNK,$1,oper2(OJUNK,$3,$4)); }
+	| '{' maybe states '}'
+		{ $$ = oper2(OHUNK,Nullop,oper2(OJUNK,$2,$3)); }
 	;
 
 patpat	: pat
@@ -334,8 +337,8 @@ compound
 		{ $$ = oper4(OFOR,$3,string("",0),$6,bl($9,$8)); }
 	| FOR '(' VAR IN VAR ')' maybe statement
 		{ $$ = oper3(OFORIN,$3,$5,bl($8,$7)); }
-	| '{' states '}'
-		{ $$ = oper1(OBLOCK,$2); }
+	| '{' maybe states '}'
+		{ $$ = oper1(OBLOCK,oper2(OJUNK,$2,$3)); }
 	;
 
 %%

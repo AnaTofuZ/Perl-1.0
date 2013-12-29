@@ -1,12 +1,12 @@
 #!./perl
 
-# $Header: op.magic,v 1.0.1.1 88/02/12 10:52:07 root Exp $
+# $Header: op.magic,v 1.0.1.2 88/03/10 16:55:06 root Exp $
 
 $| = 1;		# command buffering
 
 print "1..4\n";
 
-$ENV{'foo'} = 'hi there';
+eval '$ENV{"foo"} = "hi there";';	# check that ENV is inited inside eval
 if (`echo \$foo` eq "hi there\n") {print "ok 1\n";} else {print "not ok 1\n";}
 
 $! = 0;

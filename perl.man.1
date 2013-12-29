@@ -1,7 +1,12 @@
 .rn '' }`
-''' $Header: perl.man.1,v 1.0.1.7 88/03/02 12:36:18 root Exp $
+''' $Header: perl.man.1,v 1.0.1.8 88/03/10 16:31:29 root Exp $
 ''' 
 ''' $Log:	perl.man.1,v $
+''' Revision 1.0.1.8  88/03/10  16:31:29  root
+''' patch29: /bin/perl -> /usr/bin/perl
+''' patch29: documented -U
+''' patch29: new die functionality
+''' 
 ''' Revision 1.0.1.7  88/03/02  12:36:18  root
 ''' patch24: documented file tests
 ''' 
@@ -122,7 +127,7 @@ only allows one argument.  Example:
 .nf
 
 .ne 2
-	#!/bin/perl -spi.bak	# same as -s -p -i.bak
+	#!/usr/bin/perl -spi.bak	# same as -s -p -i.bak
 	.\|.\|.
 
 .fi
@@ -159,13 +164,13 @@ the script:
 .nf
 
 .ne 2
-	#!/bin/perl -pi.bak
+	#!/usr/bin/perl -pi.bak
 	s/foo/bar/;
 
 which is equivalent to
 
 .ne 14
-	#!/bin/perl
+	#!/usr/bin/perl
 	while (<>) {
 		if ($ARGV ne $oldargv) {
 			rename($ARGV,$ARGV . '.bak');
@@ -254,10 +259,15 @@ invoked with a -xyz switch.
 .nf
 
 .ne 2
-	#!/bin/perl -s
+	#!/usr/bin/perl -s
 	if ($xyz) { print "true\en"; }
 
 .fi
+.TP 5
+.B \-U
+allows perl to do unsafe operations.
+Currently the only "unsafe" operation is the unlinking of directories while
+running as superuser.
 .TP 5
 .B \-v
 prints the version and patchlevel of your perl executable.
@@ -659,7 +669,7 @@ modifiers have the expected semantics.
 The
 .I while
 and
-.I unless
+.I until
 modifiers also have the expected semantics (conditional evaluated first),
 except when applied to a do-BLOCK command,
 in which case the block executes once before the conditional is evaluated.
@@ -962,17 +972,39 @@ Encrypts a string exactly like the crypt() function in the C library.
 Useful for checking the password file for lousy passwords.
 Only the guys wearing white hats should do this.
 .Ip "die EXPR" 8 6
-Prints the value of EXPR to stderr and exits with a non-zero status.
+Prints the value of EXPR to stderr and exits with the current value of $!
+(errno).
+If $! is 0, exits with the value of ($? >> 8) (`command` status).
+If ($? >> 8) is 0, exits with 255.
 Equivalent examples:
 .nf
 
 .ne 3
-	die "Can't cd to spool." unless chdir '/usr/spool/news';
+	die "Can't cd to spool.\en" unless chdir '/usr/spool/news';
 
-	(chdir '/usr/spool/news') || die "Can't cd to spool." 
+	(chdir '/usr/spool/news') || die "Can't cd to spool.\en" 
 
 .fi
 Note that the parens are necessary above due to precedence.
+.Sp
+If the value of EXPR does not end in a newline, the current script line
+number and input line number (if any) are also printed, and a newline is
+supplied.
+Hint: sometimes appending ", stopped" to your message will cause it to make
+better sense when the string "at foo line 123" is appended.
+Suppose you are running script "canasta".
+.nf
+
+.ne 7
+	die "/etc/games is no good";
+	die "/etc/games is no good, stopped";
+
+produce, respectively
+
+	/etc/games is no good at canasta line 123.
+	/etc/games is no good, stopped at canasta line 123.
+
+.fi
 See also
 .IR exit .
 .Ip "do BLOCK" 8 4

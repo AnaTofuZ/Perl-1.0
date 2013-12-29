@@ -1,8 +1,8 @@
 #!./perl
 
-# $Header: op.subst,v 1.0.1.1 88/02/06 00:27:19 root Exp $
+# $Header: op.subst,v 1.0.1.2 88/03/10 16:56:36 root Exp $
 
-print "1..8\n";
+print "1..13\n";
 
 $x = 'foo';
 $_ = "x";
@@ -39,3 +39,14 @@ if (($a =~ s/b/y/g) == 1 && $a eq 'xyxcxdx')
 
 $_ = 'ABACADA';
 if (/a/i && s///gi && $_ eq 'BCD') {print "ok 8\n";} else {print "not ok 8\n";}
+
+$_ = '\\' x 4;
+if (length($_) == 4) {print "ok 9\n";} else {print "not ok 9\n";}
+s/\\/\\\\/g;
+if ($_ eq '\\' x 8) {print "ok 10\n";} else {print "not ok 10\n";}
+
+$_ = '\/' x 4;
+if (length($_) == 8) {print "ok 11\n";} else {print "not ok 11\n";}
+s/\//\/\//g;
+if ($_ eq '\\//' x 4) {print "ok 12\n";} else {print "not ok 12\n";}
+if (length($_) == 12) {print "ok 13\n";} else {print "not ok 13\n";}

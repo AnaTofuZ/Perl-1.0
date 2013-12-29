@@ -1,7 +1,7 @@
 #!./perl
 
-# $Header: op.pat,v 1.0.1.2 88/03/03 19:38:00 root Exp $
-print "1..24\n";
+# $Header: op.pat,v 1.0.1.3 88/03/10 16:55:45 root Exp $
+print "1..27\n";
 
 $x = "abc\ndef\n";
 
@@ -59,3 +59,22 @@ if (/^$_$/) {print "ok 23\n";} else {print "not ok 23\n";}
 
 $* = 1;		# test 3 only tested the optimized version--this one is for real
 if ("ab\ncd\n" =~ /^cd/) {print "ok 24\n";} else {print "not ok 24\n";}
+$* = 0;
+
+$XXX{123} = 123;
+$XXX{234} = 234;
+$XXX{345} = 345;
+
+@XXX = ('ok 25','not ok 25', 'ok 26','not ok 26','not ok 27');
+while ($_ = shift(XXX)) {
+    ?(.*)? && (print $1,"\n");
+    /not/ && reset;
+    /not ok 26/ && reset 'X';
+}
+
+while (($key,$val) = each(XXX)) {
+    print "not ok 27\n";
+    exit;
+}
+
+print "ok 27\n";

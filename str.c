@@ -1,6 +1,9 @@
-/* $Header: str.c,v 1.0.1.4 88/03/02 12:56:44 root Exp $
+/* $Header: str.c,v 1.0.1.5 88/03/10 16:53:14 root Exp $
  *
  * $Log:	str.c,v $
+ * Revision 1.0.1.5  88/03/10  16:53:14  root
+ * patch29: reset now clears arrays too
+ * 
  * Revision 1.0.1.4  88/03/02  12:56:44  root
  * patch24: some Xenix systems clobber errno on every sprintf()
  * 
@@ -49,8 +52,15 @@ register char *s;
 	    for (stab = stab_index[i]; stab; stab = stab->stab_next) {
 		str = stab->stab_val;
 		str->str_cur = 0;
+		str->str_nok = 0;
 		if (str->str_ptr != Nullch)
 		    str->str_ptr[0] = '\0';
+		if (stab->stab_array) {
+		    aclear(stab->stab_array);
+		}
+		if (stab->stab_hash) {
+		    hclear(stab->stab_hash);
+		}
 	    }
 	}
     }
@@ -80,7 +90,11 @@ register STR *str;
     s = str->str_ptr;
     if (str->str_nok) {
 	olderrno = errno;	/* some Xenix systems wipe out errno here */
+#if defined(scs) && defined(ns32000)
+	gcvt(str->str_nval,20,s);
+#else
 	sprintf(s,"%.20g",str->str_nval);
+#endif
 	errno = olderrno;
 	while (*s) s++;
     }

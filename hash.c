@@ -1,6 +1,9 @@
-/* $Header: hash.c,v 1.0.1.1 88/02/04 11:16:20 root Exp $
+/* $Header: hash.c,v 1.0.1.2 88/03/10 16:27:20 root Exp $
  *
  * $Log:	hash.c,v $
+ * Revision 1.0.1.2  88/03/10  16:27:20  root
+ * patch29: added hclear() for reset operator
+ * 
  * Revision 1.0.1.1  88/02/04  11:16:20  root
  * patch18: regularized includes.
  * 
@@ -89,7 +92,6 @@ STR *val;
     return FALSE;
 }
 
-#ifdef NOTUSED
 bool
 hdelete(tb,key)
 register HASH *tb;
@@ -117,17 +119,14 @@ char *key;
 	    continue;
 	if (strNE(entry->hent_key,key))	/* is this it? */
 	    continue;
-	safefree((char*)entry->hent_val);
-	safefree(entry->hent_key);
 	*oentry = entry->hent_next;
-	safefree((char*)entry);
+	hentfree(entry);
 	if (i)
 	    tb->tbl_fill--;
 	return TRUE;
     }
     return FALSE;
 }
-#endif
 
 hsplit(tb)
 HASH *tb;
@@ -178,6 +177,54 @@ hnew()
     bzero((char*)tb->tbl_array, 8 * sizeof(HENT*));
     return tb;
 }
+
+void
+hentfree(hent)
+register HENT *hent;
+{
+    if (!hent)
+	return;
+    str_free((char*)hent->hent_val);
+    safefree(hent->hent_key);
+    safefree((char*)hent);
+}
+
+void
+hclear(tb)
+register HASH *tb;
+{
+    register HENT *hent;
+    register HENT *ohent = Null(HENT*);
+
+    if (!tb)
+	return;
+    hiterinit(tb);
+    while (hent = hiternext(tb)) {	/* concise but not very efficient */
+	hentfree(ohent);
+	ohent = hent;
+    }
+    hentfree(ohent);
+    tb->tbl_fill = 0;
+    bzero((char*)tb->tbl_array, (tb->tbl_max + 1) * sizeof(HENT*));
+}
+
+#ifdef NOTUSED
+void
+hfree(tb)
+HASH *tb;
+{
+    if (!tb)
+	return
+    hiterinit(tb);
+    while (hent = hiternext(tb)) {
+	hentfree(ohent);
+	ohent = hent;
+    }
+    hentfree(ohent);
+    safefree((char*)tb->tbl_array);
+    safefree((char*)tb);
+}
+#endif
 
 #ifdef NOTUSED
 hshow(tb)

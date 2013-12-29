@@ -1,6 +1,9 @@
-/* $Header: array.c,v 1.0.1.2 88/02/25 11:38:33 root Exp $
+/* $Header: array.c,v 1.0.1.3 88/03/10 16:25:49 root Exp $
  *
  * $Log:	array.c,v $
+ * Revision 1.0.1.3  88/03/10  16:25:49  root
+ * patch29: added aclear() for reset operator
+ * 
  * Revision 1.0.1.2  88/02/25  11:38:33  root
  * patch23: unshift can wipe out malloc arena on some machines
  * 
@@ -81,6 +84,20 @@ anew()
 }
 
 void
+aclear(ar)
+register ARRAY *ar;
+{
+    register int key;
+
+    if (!ar)
+	return;
+    for (key = 0; key <= ar->ary_max; key++)
+	str_free(ar->ary_array[key]);
+    ar->ary_fill = -1;
+    bzero((char*)ar->ary_array, (ar->ary_max+1) * sizeof(STR*));
+}
+
+void
 afree(ar)
 register ARRAY *ar;
 {
@@ -88,7 +105,7 @@ register ARRAY *ar;
 
     if (!ar)
 	return;
-    for (key = 0; key <= ar->ary_fill; key++)
+    for (key = 0; key <= ar->ary_max; key++)
 	str_free(ar->ary_array[key]);
     safefree((char*)ar->ary_array);
     safefree((char*)ar);

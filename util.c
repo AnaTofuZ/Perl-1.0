@@ -1,6 +1,11 @@
-/* $Header: util.c,v 1.0.1.5 88/03/02 12:58:14 root Exp $
+/* $Header: util.c,v 1.0.1.6 88/03/10 17:13:40 root Exp $
  *
  * $Log:	util.c,v $
+ * Revision 1.0.1.6  88/03/10  17:13:40  root
+ * patch29: made s/\\/\\\\/ work right
+ * patch29: enhanced die operator
+ * patch29: added unlnk() for Eunice
+ * 
  * Revision 1.0.1.5  88/03/02  12:58:14  root
  * patch24: upgraded runtime error messages
  * 
@@ -150,8 +155,12 @@ register char *to, *from;
 register int delim;
 {
     for (; *from; from++,to++) {
-	if (*from == '\\' && from[1] == delim)
-	    from++;
+	if (*from == '\\') {
+	    if (from[1] == delim)
+		from++;
+	    else if (from[1] == '\\')
+		*to++ = *from++;
+	}
 	else if (*from == delim)
 	    break;
 	*to = *from;
@@ -211,6 +220,8 @@ int newlen;
     }
 }
 
+extern int errno;
+
 /*VARARGS1*/
 fatal(pat,a1,a2,a3,a4)
 char *pat;
@@ -222,17 +233,21 @@ char *pat;
     s = tokenbuf;
     sprintf(s,pat,a1,a2,a3,a4);
     s += strlen(s);
-    if (line) {
-	sprintf(s," at line %d",line);
-	s += strlen(s);
+    if (s[-1] != '\n') {
+	if (line) {
+	    sprintf(s," at %s line %d", in_eval?filename:origfilename, line);
+	    s += strlen(s);
+	}
+	if (last_in_stab &&
+	    last_in_stab->stab_io &&
+	    last_in_stab->stab_io->lines ) {
+	    sprintf(s,", <%s> line %d",
+	      last_in_stab == argvstab ? "" : last_in_stab->stab_name,
+	      last_in_stab->stab_io->lines);
+	    s += strlen(s);
+	}
+	strcpy(s,".\n");
     }
-    if (last_in_stab && last_in_stab->stab_io && last_in_stab->stab_io->lines) {
-	sprintf(s,", <%s> line %d",
-	  last_in_stab == argvstab ? "" : last_in_stab->stab_name,
-	  last_in_stab->stab_io->lines);
-	s += strlen(s);
-    }
-    strcpy(s,".\n");
     if (in_eval) {
 	str_set(stabent("@",TRUE)->stab_val,tokenbuf);
 	longjmp(eval_env,1);
@@ -240,7 +255,8 @@ char *pat;
     fputs(tokenbuf,stderr);
     if (e_fp)
 	UNLINK(e_tmpname);
-    exit(1);
+    statusvalue >>= 8;
+    exit(errno?errno:(statusvalue?statusvalue:255));
 }
 
 static bool firstsetenv = TRUE;
@@ -293,3 +309,14 @@ char *nam;
     }					/* potential SEGV's */
     return i;
 }
+
+#ifdef EUNICE
+unlnk(f)	/* unlink all versions of a file */
+char *f;
+{
+    int i;
+
+    for (i = 0; unlink(f) >= 0; i++) ;
+    return i ? 0 : -1;
+}
+#endif

@@ -1,7 +1,14 @@
 ''' Beginning of part 2
-''' $Header: perl.man.2,v 1.0.1.8 88/03/04 19:11:44 root Exp $
+''' $Header: perl.man.2,v 1.0.1.9 88/03/10 16:36:45 root Exp $
 '''
 ''' $Log:	perl.man.2,v $
+''' Revision 1.0.1.9  88/03/10  16:36:45  root
+''' patch29: filehandle duping
+''' patch29: reset resets arrays also now
+''' patch29: clarification of $.
+''' patch29: new wrinkles on $? and $!
+''' patch29: uids and gids
+''' 
 ''' Revision 1.0.1.8  88/03/04  19:11:44  root
 ''' patch28: documented killing of process groups
 ''' 
@@ -189,6 +196,37 @@ Examples:
     open(extract, "|sort >/tmp/Tmp$$"\|);		# $$ is our process#
 
 .fi
+You may also, in the Bourne shell tradition, specify an EXPR beginning
+with ">&", in which case the rest of the string
+is interpreted as the name of a filehandle
+(or file descriptor, if numeric) which is to be duped and opened.
+Here is a script that saves, redirects, and restores stdout and stdin:
+.nf
+
+.ne 21
+	#!/usr/bin/perl
+	open(saveout,">&stdout");
+	open(saveerr,">&stderr");
+
+	open(stdout,">foo.out") || die "Can't redirect stdout";
+	open(stderr,">&stdout") || die "Can't dup stdout";
+
+	select(stderr); $| = 1;		# make unbuffered
+	select(stdout); $| = 1;		# make unbuffered
+
+	print stdout "stdout 1\en";	# this works for
+	print stderr "stderr 1\en";	# subprocesses too
+
+	close(stdout);
+	close(stderr);
+
+	open(stdout,">&saveout");
+	open(stderr,">&saveerr");
+
+	print stdout "stdout 2\en";
+	print stderr "stderr 2\en";
+
+.fi
 .Ip "ord(EXPR)" 8 3
 Returns the ascii value of the first character of EXPR.
 .Ip "pop ARRAY" 8 6
@@ -260,8 +298,8 @@ block at the end of a loop to clear variables and reset ?? searches
 so that they work again.
 The expression is interpreted as a list of single characters (hyphens allowed
 for ranges).
-All string variables beginning with one of those letters are set to the null
-string.
+All variables and arrays beginning with one of those letters are reset to
+their pristine state.
 If the expression is omitted, one-match searches (?pattern?) are reset to
 match again.
 Always returns 1.
@@ -274,6 +312,8 @@ Examples:
     reset;	\h'|2i'# just reset ?? searches
 
 .fi
+Note: reset "A-Z" is not recommended since you'll wipe out your ARGV and ENV
+arrays.
 .Ip "s/PATTERN/REPLACEMENT/gi" 8 3
 Searches a string for a pattern, and if found, replaces that pattern with the
 replacement text and returns the number of substitutions made.
@@ -477,6 +517,8 @@ Note: in order to use the value you must put the whole thing in parentheses:
 	$cnt = (unlink 'a','b','c');
 
 .fi
+Note: unlink will not delete directories unless you are superuser and the \-U
+flag is supplied to perl.
 .ne 7
 .Ip "unshift(ARRAY,LIST)" 8 4
 Does the opposite of a shift.
@@ -781,8 +823,10 @@ The following pairs are equivalent:
 .fi 
 (Mnemonic: underline is understood in certain operations.)
 .Ip $. 8
-The current input line number of the last file that was read.
+The current input line number of the last filehandle that was read.
 Readonly.
+Remember that only an explicit close on the filehandle resets the line number.
+Since <> never does an explicit close line numbers increase across ARGV files.
 (Mnemonic: many programs use . to mean the current line number.)
 .Ip $/ 8
 The input record separator, newline by default.
@@ -848,8 +892,12 @@ The process number of the
 running this script.
 (Mnemonic: same as shells.)
 .Ip $? 8
-The status returned by the last backtick (``) command.
-(Mnemonic: same as sh and ksh.)
+The status returned by the last backtick (``) command or system operator.
+Note that this is the status word returned by the wait() system
+call, so the exit value of the subprocess is actually ($? >> 8).
+$? & 255 gives which signal, if any, the process died from, and whether
+there was a core dump.
+(Mnemonic: similar to sh and ksh.)
 .Ip $+ 8 4
 The last bracket matched by the last search pattern.
 This is useful if you don't know which of a set of alternative patterns
@@ -889,12 +937,45 @@ behave more like
 when subscripting and when evaluating the index() and substr() functions.
 (Mnemonic: [ begins subscripts.)
 .Ip $! 8 2
-The current value of errno, with all the usual caveats.
+If used in a numeric context, yields the current value of errno, with all the
+usual caveats.
+If used in a string context, yields the corresponding system error string.
+You can assign to $! in order to set errno
+if, for instance, you want $! to return the string for error n, or you want
+to set the exit value for the die operator.
 (Mnemonic: What just went bang?)
 .Ip $@ 8 2
 The error message from the last eval command.
 If null, the last eval parsed and executed correctly.
 (Mnemonic: Where was the syntax error "at"?)
+.Ip $< 8 2
+The real uid of this process.
+(Mnemonic: it's the uid you came FROM, if you're running setuid.)
+.Ip $> 8 2
+The effective uid of this process.
+Example:
+.nf
+
+	$< = $>;	# set real uid to the effective uid
+
+.fi
+(Mnemonic: it's the uid you went TO, if you're running setuid.)
+.Ip $( 8 2
+The real gid of this process.
+If you are on a machine that supports membership in multiple groups
+simultaneously, gives a space separated list of groups you are in.
+The first number is the one returned by getgid(), and the subsequent ones
+by getgroups(), one of which may be the same as the first number.
+(Mnemonic: parens are used to GROUP things.
+The real gid is the group you LEFT, if you're running setgid.)
+.Ip $) 8 2
+The effective gid of this process.
+If you are on a machine that supports membership in multiple groups
+simultaneously, gives a space separated list of groups you are in.
+The first number is the one returned by getegid(), and the subsequent ones
+by getgroups(), one of which may be the same as the first number.
+(Mnemonic: parens are used to GROUP things.
+The effective gid is the group that's RIGHT for you, if you're running setgid.)
 .Ip @ARGV 8 3
 The array ARGV contains the command line arguments intended for the script.
 Note that $#ARGV is the generally number of arguments minus one, since
@@ -911,7 +992,7 @@ Example:
 .ne 12
 	sub handler {	# 1st argument is signal name
 		($sig) = @_;
-		print "Caught a SIG$sig--shutting down\n";
+		print "Caught a SIG$sig--shutting down\en";
 		close(log);
 		exit(0);
 	}

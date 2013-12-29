@@ -1,6 +1,10 @@
-/* $Header: stab.c,v 1.0.1.5 88/02/04 11:16:57 root Exp $
+/* $Header: stab.c,v 1.0.1.6 88/03/10 16:49:11 root Exp $
  *
  * $Log:	stab.c,v $
+ * Revision 1.0.1.6  88/03/10  16:49:11  root
+ * patch29: made $! more magic than ever
+ * patch29: $< and $> are uid and euid, $( and $) are gid and egid
+ * 
  * Revision 1.0.1.5  88/02/04  11:16:57  root
  * patch18: regularized includes.
  * 
@@ -75,6 +79,8 @@ static char *sig_name[] = {
     };
 
 extern int errno;
+extern int sys_nerr;
+extern char *sys_errlist[];
 
 STR *
 stab_str(stab)
@@ -82,6 +88,7 @@ STAB *stab;
 {
     register int paren;
     register char *s;
+    register int i;
 
     switch (*stab->stab_name) {
     case '0': case '1': case '2': case '3': case '4':
@@ -130,18 +137,6 @@ STAB *stab;
     case '%':
 	str_numset(stab->stab_val,(double)curoutstab->stab_io->page);
 	break;
-    case '(':
-	if (curspat) {
-	    str_numset(stab->stab_val,(double)(curspat->spat_compex.subbeg[0] -
-		curspat->spat_compex.subbase));
-	}
-	break;
-    case ')':
-	if (curspat) {
-	    str_numset(stab->stab_val,(double)(curspat->spat_compex.subend[0] -
-		curspat->spat_compex.subbeg[0]));
-	}
-	break;
     case '/':
 	*tokenbuf = record_separator;
 	tokenbuf[1] = '\0';
@@ -164,7 +159,41 @@ STAB *stab;
 	str_set(stab->stab_val,ofmt);
 	break;
     case '!':
-	str_numset(stab->stab_val,(double)errno);
+	str_numset(stab->stab_val, (double)errno);
+	str_set(stab->stab_val,
+	  errno < 0 || errno > sys_nerr ? "(unknown)" : sys_errlist[errno]);
+	stab->stab_val->str_nok = 1;	/* what a wonderful hack! */
+	break;
+    case '<':
+	str_numset(stab->stab_val,(double)uid);
+	break;
+    case '>':
+	str_numset(stab->stab_val,(double)euid);
+	break;
+    case '(':
+	s = tokenbuf;
+	sprintf(s,"%d",(int)getgid());
+	goto add_groups;
+    case ')':
+	s = tokenbuf;
+	sprintf(s,"%d",(int)getegid());
+      add_groups:
+	while (*s) s++;
+#ifdef GETGROUPS
+#ifndef NGROUPS
+#define NGROUPS 32
+#endif
+	{
+	    GIDTYPE gary[NGROUPS];
+
+	    i = getgroups(NGROUPS,gary);
+	    while (i >= 0) {
+		sprintf(s," %d", gary[i--]);
+		while (*s) s++;
+	    }
+	}
+#endif
+	str_set(stab->stab_val,tokenbuf);
 	break;
     }
     return stab->stab_val;
@@ -229,8 +258,27 @@ STR *str;
 	case '[':
 	    arybase = (int)str_gnum(str);
 	    break;
+	case '?':
+	    statusvalue = (unsigned short)str_gnum(str);
+	    break;
 	case '!':
 	    errno = (int)str_gnum(str);		/* will anyone ever use this? */
+	    break;
+	case '<':
+	    uid = (int)str_gnum(str);
+	    if (setruid(uid) < 0)
+		uid = (int)getuid();
+	    break;
+	case '>':
+	    euid = (int)str_gnum(str);
+	    if (seteuid(euid) < 0)
+		euid = (int)geteuid();
+	    break;
+	case '(':
+	    setrgid((int)str_gnum(str));
+	    break;
+	case ')':
+	    setegid((int)str_gnum(str));
 	    break;
 	case '.':
 	case '+':
@@ -245,8 +293,6 @@ STR *str;
 	case '7':
 	case '8':
 	case '9':
-	case '(':
-	case ')':
 	    break;		/* "read-only" registers */
 	}
     }

@@ -1,6 +1,15 @@
-char rcsid[] = "$Header: perly.c,v 1.0.1.10 88/03/04 19:30:56 root Exp $";
+char rcsid[] = "$Header: perly.c,v 1.0.1.11 88/03/10 16:42:59 root Exp $";
 /*
  * $Log:	perly.c,v $
+ * Revision 1.0.1.11  88/03/10  16:42:59  root
+ * patch29: mktemp violated readonly string space
+ * patch29: added -U for unsafe operations
+ * patch29: added uid and gid support
+ * patch29: filename sometimes became ""
+ * patch29: eval 'print $ENV{"SHELL"};' didn't work right
+ * patch29: some compilers don't grok && outside of conditionals
+ * patch29: int(-1.5) fix in evalstatic()
+ * 
  * Revision 1.0.1.10  88/03/04  19:30:56  root
  * patch28: grandfathering of \digit STILL didn't work!
  * 
@@ -53,8 +62,8 @@ bool minus_n = FALSE;
 bool minus_p = FALSE;
 bool doswitches = FALSE;
 bool allstabs = FALSE;		/* init all customary symbols in symbol table?*/
-char *filename;
-char *e_tmpname = "/tmp/perl-eXXXXXX";
+#define TMPPATH "/tmp/perl-eXXXXXX"
+char *e_tmpname;
 FILE *e_fp = Nullfp;
 ARG *l();
 
@@ -65,8 +74,10 @@ register char **env;
 {
     register STR *str;
     register char *s;
-    char *index();
+    char *index(), *strcpy();
 
+    uid = (int)getuid();
+    euid = (int)geteuid();
     linestr = str_new(80);
     str = str_make("-I/usr/lib/perl ");	/* first used for -I flags */
     for (argc--,argv++; argc; argc--,argv++) {
@@ -84,6 +95,7 @@ register char **env;
 #endif
 	case 'e':
 	    if (!e_fp) {
+	        e_tmpname = strcpy(safemalloc(sizeof(TMPPATH)),TMPPATH);
 		mktemp(e_tmpname);
 		e_fp = fopen(e_tmpname,"w");
 	    }
@@ -121,6 +133,10 @@ register char **env;
 	    doswitches = TRUE;
 	    strcpy(argv[0], argv[0]+1);
 	    goto reswitch;
+	case 'U':
+	    unsafe = TRUE;
+	    strcpy(argv[0], argv[0]+1);
+	    goto reswitch;
 	case 'v':
 	    version();
 	    exit(0);
@@ -149,6 +165,7 @@ register char **env;
     if (argv[0] == Nullch)
 	argv[0] = "-";
     filename = savestr(argv[0]);
+    origfilename = savestr(filename);
     if (strEQ(filename,"-"))
 	argv[0] = "";
     if (preprocess) {
@@ -199,11 +216,13 @@ register char **env;
 	}
     }
     if (argvstab = stabent("ARGV",allstabs)) {
+	aadd(argvstab);
 	for (; argc > 0; argc--,argv++) {
 	    apush(argvstab->stab_array,str_make(argv[0]));
 	}
     }
     if (envstab = stabent("ENV",allstabs)) {
+	hadd(envstab);
 	for (; *env; env++) {
 	    if (!(s = index(*env,'=')))
 		continue;
@@ -214,12 +233,14 @@ register char **env;
 	    *--s = '=';
 	}
     }
-    sigstab = stabent("SIG",allstabs);
+    if (sigstab = stabent("SIG",allstabs))
+	hadd(sigstab);
 
-    magicalize("!#?^~=-%0123456789.+&*(),\\/[|");
+    magicalize("!#?^~=-%0123456789.+&*()<>,\\/[|");
 
-    (tmpstab = stabent("0",allstabs)) && str_set(STAB_STR(tmpstab),filename);
-    (tmpstab = stabent("$",allstabs)) &&
+    if (tmpstab = stabent("0",allstabs))
+	str_set(STAB_STR(tmpstab),origfilename);
+    if (tmpstab = stabent("$",allstabs))
 	str_numset(STAB_STR(tmpstab),(double)getpid());
 
     tmpstab = stabent("stdin",TRUE);
@@ -363,7 +384,14 @@ yylex()
 	    if (filename)
 		safefree(filename);
 	    s[strlen(s)-1] = '\0';	/* wipe out newline */
-	    filename = savestr(s);
+	    if (*s == '"') {
+		s++;
+		s[strlen(s)-1] = '\0';	/* wipe out trailing quote */
+	    }
+	    if (*s)
+		filename = savestr(s);
+	    else
+		filename = savestr(origfilename);
 	    s = str_get(linestr);
 	}
 	if (in_eval) {
@@ -2054,12 +2082,12 @@ register ARG *arg;
 	    break;
 	case O_LEFT_SHIFT:
 	    value = str_gnum(s1);
-    tmplong = (long)str_gnum(s2);
+	    tmplong = (long)str_gnum(s2);
 	    str_numset(str,(double)(((long)value) << tmplong));
 	    break;
 	case O_RIGHT_SHIFT:
 	    value = str_gnum(s1);
-    tmplong = (long)str_gnum(s2);
+	    tmplong = (long)str_gnum(s2);
 	    str_numset(str,(double)(((long)value) >> tmplong));
 	    break;
 	case O_LT:
@@ -2193,7 +2221,13 @@ register ARG *arg;
 	    str_numset(str,sqrt(str_gnum(s1)));
 	    break;
 	case O_INT:
-	    modf(str_gnum(s1),&value);
+	    value = str_gnum(s1);
+	    if (value >= 0.0)
+		modf(value,&value);
+	    else {
+		modf(-value,&value);
+		value = -value;
+	    }
 	    str_numset(str,value);
 	    break;
 	case O_ORD:

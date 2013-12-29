@@ -1,6 +1,9 @@
-/* $Header: stab.h,v 1.0 87/12/18 13:06:18 root Exp $
+/* $Header: stab.h,v 1.0.1.1 88/03/10 16:51:35 root Exp $
  *
  * $Log:	stab.h,v $
+ * Revision 1.0.1.1  88/03/10  16:51:35  root
+ * patch29: changed type of statusvalue, deleted subsvalue
+ * 
  * Revision 1.0  87/12/18  13:06:18  root
  * Initial revision
  * 
@@ -51,8 +54,7 @@ EXT STAB *stab_index[128];
 EXT char *envname;	/* place for ENV name being assigned--gross cheat */
 EXT char *signame;	/* place for SIG name being assigned--gross cheat */
 
-EXT int statusvalue;
-EXT int subsvalue;
+EXT unsigned short statusvalue;
 
 STAB *aadd();
 STAB *hadd();

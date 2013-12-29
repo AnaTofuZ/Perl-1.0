@@ -221,7 +221,7 @@ continue {
 close body;
 
 unless ($debug) {
-    open(head,">/tmp/sperl2$$") || do Die("Can't open temp file 2.\n");
+    open(head,">/tmp/sperl2$$.c") || do Die("Can't open temp file 2.\n");
     print head "#define PRINTIT\n" if ($printit);
     print head "#define APPENDSEEN\n" if ($appendseen);
     print head "#define TSEEN\n" if ($tseen);
@@ -236,7 +236,7 @@ unless ($debug) {
     close head;
 
     print "#!/bin/perl\n\n";
-    open(body,"cc -E /tmp/sperl2$$ |") ||
+    open(body,"cc -E /tmp/sperl2$$.c |") ||
 	do Die("Can't reopen temp file.");
     while (<body>) {
 	/^# [0-9]/ && next;

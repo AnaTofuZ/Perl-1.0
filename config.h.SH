@@ -71,6 +71,13 @@ cat <<!GROK!THIS! >config.h
  */
 #$d_crypt	CRYPT		/**/
 
+/* GETGROUPS:
+ *	This symbol, if defined, indicates that the getgroups() routine is
+ *	available to get the list of process groups.  If unavailable, multiple
+ *	groups are probably not supported.
+ */
+#$d_getgrps	GETGROUPS		/**/
+
 /* index:
  *	This preprocessor symbol is defined, along with rindex, if the system
  *	uses the strchr and strrchr routines instead.
@@ -154,6 +161,12 @@ cat <<!GROK!THIS! >config.h
  *	It has the values "unsigned char" or "char".
  */
 #define STDCHAR $stdchar	/**/
+
+/* UIDTYPE:
+ *	This symbol has a value like uid_t, int, ushort, or whatever type is
+ *	used to declare user ids in the kernel.
+ */
+#define UIDTYPE $uidtype		/**/
 
 /* VOIDFLAGS:
  *	This symbol indicates how much support of the void type is given by this

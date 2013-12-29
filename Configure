@@ -8,7 +8,7 @@
 # and edit it to reflect your system.  Some packages may include samples
 # of config.h for certain machines, so you might look for one of those.)
 #
-# $Header: Configure,v 1.0.1.11 88/03/04 19:09:59 root Exp $
+# $Header: Configure,v 1.0.1.12 88/03/10 15:57:46 root Exp $
 #
 # Yes, you may rip this off to use in other distribution packages.
 # (Note: this Configure script was generated automatically.  Rather than
@@ -72,6 +72,7 @@ cppminus=''
 d_bcopy=''
 d_charsprf=''
 d_crypt=''
+d_getgrps=''
 d_index=''
 d_killpg=''
 d_rename=''
@@ -106,6 +107,7 @@ shsharp=''
 sharpbang=''
 startsh=''
 stdchar=''
+uidtype=''
 voidflags=''
 defvoidused=''
 CONFIG=''
@@ -684,6 +686,16 @@ else
     d_crypt="$undef"
 fi
 
+: see if getgroups exists
+echo " "
+if $contains getgroups libc.list >/dev/null 2>&1; then
+    echo 'getgroups() found.'
+    d_getgrps="$define"
+else
+    echo 'getgroups() not found.'
+    d_getgrps="$undef"
+fi
+
 : index or strcpy
 echo " "
 dflt=y
@@ -925,6 +937,29 @@ else
     echo "Your stdio uses signed chars."
     stdchar="char"
 fi
+
+: see what type uids are declared as in the kernel
+case "$uidtype" in
+'')
+    if $contains 'uid_t;' /usr/include/sys/types.h >/dev/null 2>&1 ; then
+	dflt='uid_t';
+    else
+	set `grep '_ruid;' /usr/include/sys/user.h 2>/dev/null` unsigned short
+	case $1 in
+	unsigned) dflt="$1 $2" ;;
+	*) dflt="$1" ;;
+	esac
+    fi
+    ;;
+*)  dflt="$uidtype"
+    ;;
+esac
+cont=true
+echo " "
+rp="What type are user ids on this system declared as? [$dflt]"
+$echo $n "$rp $c"
+. myread
+uidtype="$ans"
 
 : preserve RCS keywords in files with variable substitution, grrr
 Log='$Log'
@@ -1407,6 +1442,7 @@ cppminus='$cppminus'
 d_bcopy='$d_bcopy'
 d_charsprf='$d_charsprf'
 d_crypt='$d_crypt'
+d_getgrps='$d_getgrps'
 d_index='$d_index'
 d_killpg='$d_killpg'
 d_rename='$d_rename'
@@ -1441,6 +1477,7 @@ shsharp='$shsharp'
 sharpbang='$sharpbang'
 startsh='$startsh'
 stdchar='$stdchar'
+uidtype='$uidtype'
 voidflags='$voidflags'
 defvoidused='$defvoidused'
 CONFIG=true
