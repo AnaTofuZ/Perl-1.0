@@ -310,7 +310,7 @@ char *nam;
     return i;
 }
 
-#ifdef EUNICE
+#ifdef EUNICE_SYSTEM
 unlnk(f)	/* unlink all versions of a file */
 char *f;
 {

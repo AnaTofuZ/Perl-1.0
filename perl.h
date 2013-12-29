@@ -36,7 +36,7 @@
 #define VOIDUSED 1
 #include "config.h"
 
-#ifndef BCOPY
+#ifndef HAS_BCOPY
 #   define bcopy(s1,s2,l) memcpy(s2,s1,l);
 #   define bzero(s,l) memset(s,0,l);
 #endif
@@ -47,7 +47,7 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 
-#ifdef TMINSYS
+#ifdef TM_IN_SYS
 #include <sys/time.h>
 #else
 #include <time.h>
@@ -202,10 +202,10 @@ EXT struct stat statbuf;
 EXT struct tms timesbuf;
 EXT int uid;
 EXT int euid;
-UIDTYPE getuid();
-UIDTYPE geteuid();
-GIDTYPE getgid();
-GIDTYPE getegid();
+Uid_t getuid();
+Uid_t geteuid();
+Gid_t getgid();
+Gid_t getegid();
 EXT int unsafe;
 
 #ifdef DEBUGGING
@@ -238,7 +238,7 @@ double atof();
 long time();
 struct tm *gmtime(), *localtime();
 
-#ifdef EUNICE
+#ifdef EUNICE_SYSTEM
 #define UNLINK unlnk
 int unlnk();
 #else

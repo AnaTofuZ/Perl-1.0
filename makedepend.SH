@@ -97,6 +97,11 @@ for file in `$cat .clist`; do
 	-e '}'
     $cpp -I/usr/local/include -I. $file.c | \
     $sed \
+    -e '/^#.*<stdin>/d' \
+    -e '/^#.*<builtin>/d' \
+    -e '/^#.*<built-in>/d' \
+    -e '/^#.*<command line>/d' \
+    -e '/^#.*<command-line>/d' \
 	-e '/^# *[0-9]/!d' \
 	-e 's/^.*"\(.*\)".*$/'$filebase'.o: \1/' \
 	-e 's|: \./|: |' \
@@ -110,7 +115,7 @@ make shlist || ($echo "Searching for .SH files..."; \
 	$echo *.SH */*.SH | $tr ' ' '\012' | $egrep -v '\*' >.shlist)
 if $test -s .deptmp; then
     for file in `cat .shlist`; do
-	$echo `$expr X$file : 'X\(.*\).SH`: $file config.sh \; \
+	$echo `$expr X$file : 'X\(.*\).SH'`: $file config.sh \; \
 	    /bin/sh $file >> .deptmp
     done
     $echo "Updating Makefile..."
@@ -141,7 +146,7 @@ else
     <.deptmp $sed -n 's|h:#include <\(.*\)>.*$|h: /usr/include/\1|p' \
        >> Makefile.new
     for file in `$cat .shlist`; do
-	$echo `$expr X$file : 'X\(.*\).SH`: $file config.sh \; \
+	$echo `$expr X$file : 'X\(.*\).SH'`: $file config.sh \; \
 	    /bin/sh $file >> Makefile.new
     done
 fi

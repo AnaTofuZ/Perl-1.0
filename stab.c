@@ -179,12 +179,12 @@ STAB *stab;
 	sprintf(s,"%d",(int)getegid());
       add_groups:
 	while (*s) s++;
-#ifdef GETGROUPS
+#ifdef HAS_GETGROUPS
 #ifndef NGROUPS
 #define NGROUPS 32
 #endif
 	{
-	    GIDTYPE gary[NGROUPS];
+	    Gid_t gary[NGROUPS];
 
 	    i = getgroups(NGROUPS,gary);
 	    while (i >= 0) {

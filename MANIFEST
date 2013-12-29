@@ -1,7 +1,3 @@
-After all the perl kits are run you should have the following files:
-
-Filename		Kit Description
---------		--- -----------
 Configure                6  Run this first
 EXTERN.h                10  Included before foreign .h files
 INTERN.h                10  Included before domestic .h files
@@ -110,3 +106,5 @@ x2p/str.h               10  Public declarations for the above
 x2p/util.c               9  Utility routines
 x2p/util.h              10  Public declarations for the above
 x2p/walk.c               1  Parse tree walker
+config_h.SH                  Produces config.h
+confmagic.h                  Magic symbol remapping

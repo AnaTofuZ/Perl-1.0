@@ -342,7 +342,7 @@ str_gets(str,fp)
 register STR *str;
 register FILE *fp;
 {
-#ifdef STDSTDIO		/* Here is some breathtakingly efficient cheating */
+#ifdef USE_STDIO_PTR		/* Here is some breathtakingly efficient cheating */
 
     register char *bp;		/* we're going to steal some values */
     register int cnt;		/*  from the stdio struct and put EVERYTHING */
@@ -406,7 +406,7 @@ thats_really_all_folks:
     *bp = '\0';
     str->str_cur = bp - str->str_ptr;	/* set length */
 
-#else /* !STDSTDIO */	/* The big, slow, and stupid way */
+#else /* !USE_STDIO_PTR */	/* The big, slow, and stupid way */
 
     static char buf[4192];
 
@@ -415,7 +415,7 @@ thats_really_all_folks:
     else
 	str_set(str, No);
 
-#endif /* STDSTDIO */
+#endif /* USE_STDIO_PTR */
 
     return str->str_cur ? str->str_ptr : Nullch;
 }

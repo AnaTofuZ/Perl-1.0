@@ -498,7 +498,7 @@ register STAB *stab;
 		filegid = statbuf.st_gid;
 		if (*inplace) {
 		    str_cat(str,inplace);
-#ifdef RENAME
+#ifdef HAS_RENAME
 		    rename(oldname,str->str_ptr);
 #else
 		    UNLINK(str->str_ptr);
@@ -571,7 +571,7 @@ STAB *stab;
 
     while (stio->fp) {
 
-#ifdef STDSTDIO			/* (the code works without this) */
+#ifdef USE_STDIO_PTR			/* (the code works without this) */
 	if (stio->fp->_cnt)		/* cheat a little, since */
 	    return FALSE;		/* this is the most usual case */
 #endif
@@ -664,7 +664,7 @@ STR ***retary;
 	    apush(ary,str_nmake((double)statbuf.st_atime));
 	    apush(ary,str_nmake((double)statbuf.st_mtime));
 	    apush(ary,str_nmake((double)statbuf.st_ctime));
-#ifdef STATBLOCKS
+#ifdef HAS_STAT_BLOCKS
 	    apush(ary,str_nmake((double)statbuf.st_blksize));
 	    apush(ary,str_nmake((double)statbuf.st_blocks));
 #else
@@ -1036,7 +1036,7 @@ STR **sarg;
 	    if (val < 0) {
 		val = -val;
 		for (elem = tmpary+2; *elem; elem++)
-#ifdef KILLPG
+#ifdef HAS_KILLPG
 		    if (killpg((int)(str_gnum(*elem)),val))	/* BSD */
 #else
 		    if (kill(-(int)(str_gnum(*elem)),val))	/* SYSV */
@@ -1910,7 +1910,7 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	str = apop(arg[1].arg_ptr.arg_stab->stab_array);
 	if (!str)
 	    return &str_no;
-#ifdef STRUCTCOPY
+#ifdef USE_STRUCT_COPY
 	*(arg->arg_ptr.arg_str) = *str;
 #else
 	bcopy((char*)str, (char*)arg->arg_ptr.arg_str, sizeof *str);
@@ -1922,7 +1922,7 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	str = ashift(arg[1].arg_ptr.arg_stab->stab_array);
 	if (!str)
 	    return &str_no;
-#ifdef STRUCTCOPY
+#ifdef USE_STRUCT_COPY
 	*(arg->arg_ptr.arg_str) = *str;
 #else
 	bcopy((char*)str, (char*)arg->arg_ptr.arg_str, sizeof *str);
@@ -2107,7 +2107,7 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	retary = Null(STR***);		/* do_stat already did retary */
 	goto donumset;
     case O_CRYPT:
-#ifdef CRYPT
+#ifdef HAS_CRYPT
 	tmps = str_get(sarg[1]);
 	str_set(str,crypt(tmps,str_get(sarg[2])));
 #else
@@ -2257,7 +2257,7 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	goto donumset;
     case O_RENAME:
 	tmps = str_get(sarg[1]);
-#ifdef RENAME
+#ifdef HAS_RENAME
 	value = (double)(rename(tmps,str_get(sarg[2])) >= 0);
 #else
 	tmps2 = str_get(sarg[2]);
@@ -2326,11 +2326,11 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	    if (statbuf.st_gid == (maxarg ? getegid() : getgid()))
 		str = &str_yes;	/* ok as "group" */
 	    else {
-#ifdef GETGROUPS
+#ifdef HAS_GETGROUPS
 #ifndef NGROUPS
 #define NGROUPS 32
 #endif
-		GIDTYPE gary[NGROUPS];
+		Gid_t gary[NGROUPS];
 
 		str = &str_no;
 		anum = getgroups(NGROUPS,gary);
@@ -2386,7 +2386,7 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	    str = &str_no;
 	break;
     case O_FTLINK:
-#ifdef SYMLINK
+#ifdef HAS_SYMLINK
 	if (lstat(str_get(sarg[1]),&statbuf) >= 0 &&
 	  (statbuf.st_mode & S_IFMT) == S_IFLNK )
 	    str = &str_yes;
@@ -2394,7 +2394,7 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 #endif
 	    str = &str_no;
 	break;
-#ifdef SYMLINK
+#ifdef HAS_SYMLINK
     case O_SYMLINK:
 	tmps = str_get(sarg[1]);
 	value = (double)(symlink(tmps,str_get(sarg[2])) >= 0);

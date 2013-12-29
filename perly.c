@@ -808,7 +808,7 @@ yylex()
 	    OPERATOR(PRINT);
 	}
 	if (strEQ(d,"symlink"))
-#ifdef SYMLINK
+#ifdef HAS_SYMLINK
 	    FUN2(O_SYMLINK);
 #else
 	    fatal("symlink() not supported on this machine");
@@ -2203,7 +2203,7 @@ register ARG *arg;
 	    str_numset(str,(double)(strNE(tmps,str_get(s2))));
 	    break;
 	case O_CRYPT:
-#ifdef CRYPT
+#ifdef HAS_CRYPT
 	    tmps = str_get(s1);
 	    str_set(str,crypt(tmps,str_get(s2)));
 #else
