@@ -1,6 +1,10 @@
-char rcsid[] = "$Header: perly.c,v 1.0.1.3 88/01/28 10:28:31 root Exp $";
+char rcsid[] = "$Header: perly.c,v 1.0.1.4 88/02/03 16:25:19 root Exp $";
 /*
  * $Log:	perly.c,v $
+ * Revision 1.0.1.4  88/02/03  16:25:19  root
+ * patch15: 1+$foo confused tokener.
+ * Also, the return value in do_eval got tromped by cmd_free().
+ * 
  * Revision 1.0.1.3  88/01/28  10:28:31  root
  * patch8: added eval operator.  Also fixed expectterm following right curly.
  * 
@@ -1581,18 +1585,28 @@ register char *s;
       decimal:
 	arg[1].arg_type = A_SINGLE;
 	d = tokenbuf;
-	while (isdigit(*s) || *s == '_')
+	while (isdigit(*s) || *s == '_') {
+	    if (*s == '_')
+		s++;
+	    else
+		*d++ = *s++;
+	}
+	if (*s == '.' && index("0123456789eE",s[1])) {
 	    *d++ = *s++;
-	if (*s == '.' && index("0123456789eE",s[1]))
+	    while (isdigit(*s) || *s == '_') {
+		if (*s == '_')
+		    s++;
+		else
+		    *d++ = *s++;
+	    }
+	}
+	if (index("eE",*s) && index("+-0123456789",s[1])) {
 	    *d++ = *s++;
-	while (isdigit(*s) || *s == '_')
-	    *d++ = *s++;
-	if (index("eE",*s) && index("+-0123456789",s[1]))
-	    *d++ = *s++;
-	if (*s == '+' || *s == '-')
-	    *d++ = *s++;
-	while (isdigit(*s))
-	    *d++ = *s++;
+	    if (*s == '+' || *s == '-')
+		*d++ = *s++;
+	    while (isdigit(*s))
+		*d++ = *s++;
+	}
 	*d = '\0';
 	arg[1].arg_ptr.arg_str = str_make(tokenbuf);
 	break;
@@ -1890,7 +1904,7 @@ register ARG *arg;
 	    break;
 	case O_REPEAT:
 	    i = (int)str_gnum(s2);
-	    while (i--)
+	    while (i-- > 0)
 		str_scat(str,s1);
 	    break;
 	case O_MULTIPLY:
@@ -2513,7 +2527,8 @@ STR *str;
     if (retval)
 	str = &str_no;
     else {
-	str = cmd_exec(eval_root);
+	str = str_static(cmd_exec(eval_root));
+				/* if we don't save str, free zaps it */
 	cmd_free(myroot);	/* can't free on error, for some reason */
     }
     in_eval--;
