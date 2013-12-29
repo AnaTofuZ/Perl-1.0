@@ -1,6 +1,9 @@
-/* $Header: arg.c,v 1.0.1.9 88/02/04 17:47:31 root Exp $
+/* $Header: arg.c,v 1.0.1.10 88/02/06 00:17:48 root Exp $
  *
  * $Log:	arg.c,v $
+ * Revision 1.0.1.10  88/02/06  00:17:48  root
+ * patch21: fixed code so /foo/ && s//bar/ would work.  Also /foo/i.
+ * 
  * Revision 1.0.1.9  88/02/04  17:47:31  root
  * patch20: made failing fork/exec exit.
  * 
@@ -61,17 +64,19 @@ register ARG *arg;
 	if (debug & 8)
 	    deb("2.SPAT /%s/\n",t);
 #endif
-	if (d = compile(&spat->spat_compex,t,TRUE,FALSE)) {
+	if (d = compile(&spat->spat_compex,t,TRUE,
+	  spat->spat_flags & SPAT_FOLD )) {
 #ifdef DEBUGGING
 	    deb("/%s/: %s\n", t, d);
 #endif
 	    return FALSE;
 	}
-	if (spat->spat_compex.complen <= 1 && curspat)
-	    spat = curspat;
+	if (!*spat->spat_compex.precomp && lastspat)
+	    spat = lastspat;
 	if (execute(&spat->spat_compex, s, TRUE, 0)) {
 	    if (spat->spat_compex.numsubs)
 		curspat = spat;
+	    lastspat = spat;
 	    return TRUE;
 	}
 	else
@@ -89,8 +94,8 @@ register ARG *arg;
 	    deb("2.SPAT %c%s%c\n",ch,spat->spat_compex.precomp,ch);
 	}
 #endif
-	if (spat->spat_compex.complen <= 1 && curspat)
-	    spat = curspat;
+	if (!*spat->spat_compex.precomp && lastspat)
+	    spat = lastspat;
 	if (spat->spat_first) {
 	    if (spat->spat_flags & SPAT_SCANFIRST) {
 		str_free(spat->spat_first);
@@ -103,6 +108,7 @@ register ARG *arg;
 	if (execute(&spat->spat_compex, s, TRUE, 0)) {
 	    if (spat->spat_compex.numsubs)
 		curspat = spat;
+	    lastspat = spat;
 	    if (spat->spat_flags & SPAT_USE_ONCE)
 		spat->spat_flags |= SPAT_USED;
 	    return TRUE;
@@ -131,7 +137,8 @@ register ARG *arg;
 	char *d;
 
 	m = str_get(eval(spat->spat_runtime,Null(STR***)));
-	if (d = compile(&spat->spat_compex,m,TRUE,FALSE)) {
+	if (d = compile(&spat->spat_compex,m,TRUE,
+	  spat->spat_flags & SPAT_FOLD )) {
 #ifdef DEBUGGING
 	    deb("/%s/: %s\n", m, d);
 #endif
@@ -143,8 +150,8 @@ register ARG *arg;
 	deb("2.SPAT /%s/\n",spat->spat_compex.precomp);
     }
 #endif
-    if (spat->spat_compex.complen <= 1 && curspat)
-	spat = curspat;
+    if (!*spat->spat_compex.precomp && lastspat)
+	spat = lastspat;
     if (spat->spat_first) {
 	if (spat->spat_flags & SPAT_SCANFIRST) {
 	    str_free(spat->spat_first);
@@ -160,6 +167,7 @@ register ARG *arg;
 	dstr = str_new(str_len(str));
 	if (spat->spat_compex.numsubs)
 	    curspat = spat;
+	lastspat = spat;
 	do {
 	    if (iters++ > 10000)
 		fatal("Substitution loop?\n");
@@ -239,7 +247,8 @@ STR ***retary;
 	    arg_free(spat->spat_runtime);	/* it won't change, so */
 	    spat->spat_runtime = Nullarg;	/* no point compiling again */
 	}
-	if (d = compile(&spat->spat_compex,m,TRUE,FALSE)) {
+	if (d = compile(&spat->spat_compex,m,TRUE,
+	  spat->spat_flags & SPAT_FOLD )) {
 #ifdef DEBUGGING
 	    deb("/%s/: %s\n", m, d);
 #endif

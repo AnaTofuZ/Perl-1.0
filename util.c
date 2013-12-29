@@ -1,6 +1,9 @@
-/* $Header: util.c,v 1.0.1.3 88/02/04 11:17:05 root Exp $
+/* $Header: util.c,v 1.0.1.4 88/02/06 00:28:14 root Exp $
  *
  * $Log:	util.c,v $
+ * Revision 1.0.1.4  88/02/06  00:28:14  root
+ * patch21: added trap in saferealloc() for null pointer on input.
+ * 
  * Revision 1.0.1.3  88/02/04  11:17:05  root
  * patch18: regularized includes.
  * 
@@ -58,6 +61,8 @@ MEM_SIZE size;
     char *ptr;
     char *realloc();
 
+    if (!where)
+	fatal("Null realloc\n");
     ptr = realloc(where,size?size:1);	/* realloc(0) is NASTY on our system */
 #ifdef DEBUGGING
     if (debug & 128) {

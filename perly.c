@@ -1,6 +1,9 @@
-char rcsid[] = "$Header: perly.c,v 1.0.1.4 88/02/03 16:25:19 root Exp $";
+char rcsid[] = "$Header: perly.c,v 1.0.1.5 88/02/06 00:22:51 root Exp $";
 /*
  * $Log:	perly.c,v $
+ * Revision 1.0.1.5  88/02/06  00:22:51  root
+ * patch21: added /foo/i, /$var/.
+ * 
  * Revision 1.0.1.4  88/02/03  16:25:19  root
  * patch15: 1+$foo confused tokener.
  * Also, the return value in do_eval got tromped by cmd_free().
@@ -932,6 +935,21 @@ register char *s;
     if (!*s)
 	fatal("Search pattern not terminated:\n%s",str_get(linestr));
     s++;
+    if (*s == 'i') {
+	s++;
+	spat->spat_flags |= SPAT_FOLD;
+    }
+    for (d=tokenbuf; *d; d++) {
+	if (*d == '$' && d[1] && d[-1] != '\\' && d[1] != '|') {
+	    register ARG *arg;
+
+	    spat->spat_runtime = arg = op_new(1);
+	    arg->arg_type = O_ITEM;
+	    arg[1].arg_type = A_DOUBLE;
+	    arg[1].arg_ptr.arg_str = str_make(tokenbuf);
+	    goto got_pat;		/* skip compiling for now */
+	}
+    }
     if (*tokenbuf == '^') {
 	spat->spat_first = scanconst(tokenbuf+1);
 	if (spat->spat_first) {
@@ -949,8 +967,10 @@ register char *s;
 		spat->spat_flags |= SPAT_SCANALL;
 	}
     }	
-    if (d = compile(&spat->spat_compex,tokenbuf,TRUE,FALSE))
+    if (d = compile(&spat->spat_compex,tokenbuf,TRUE,
+      spat->spat_flags & SPAT_FOLD ))
 	fatal(d);
+  got_pat:
     yylval.arg = make_match(O_MATCH,stab_to_arg(A_STAB,defstab),spat);
     return s;
 }
@@ -999,12 +1019,18 @@ get_repl:
     if (!*s)
 	fatal("Substitution replacement not terminated:\n%s",str_get(linestr));
     spat->spat_repl = yylval.arg;
-    if (*s == 'g') {
-	s++;
-	spat->spat_flags &= ~SPAT_USE_ONCE;
+    spat->spat_flags |= SPAT_USE_ONCE;
+    while (*s == 'g' || *s == 'i') {
+	if (*s == 'g') {
+	    s++;
+	    spat->spat_flags &= ~SPAT_USE_ONCE;
+	}
+	if (*s == 'i') {
+	    s++;
+	    spat->spat_flags |= SPAT_FOLD;
+	}
     }
-    else
-	spat->spat_flags |= SPAT_USE_ONCE;
+    spat->spat_compex.do_folding = spat->spat_flags & SPAT_FOLD;
     yylval.arg = make_match(O_SUBST,stab_to_arg(A_STAB,defstab),spat);
     return s;
 }

@@ -1,7 +1,10 @@
 ''' Beginning of part 2
-''' $Header: perl.man.2,v 1.0.1.4 88/02/04 17:48:31 root Exp $
+''' $Header: perl.man.2,v 1.0.1.5 88/02/06 00:22:26 root Exp $
 '''
 ''' $Log:	perl.man.2,v $
+''' Revision 1.0.1.5  88/02/06  00:22:26  root
+''' patch21: documented s/foo/bar/i.
+''' 
 ''' Revision 1.0.1.4  88/02/04  17:48:31  root
 ''' patch20: documented return values of system better.
 ''' 
@@ -259,11 +262,14 @@ Examples:
     reset;	\h'|2i'# just reset ?? searches
 
 .fi
-.Ip "s/PATTERN/REPLACEMENT/g" 8 3
+.Ip "s/PATTERN/REPLACEMENT/gi" 8 3
 Searches a string for a pattern, and if found, replaces that pattern with the
 replacement text and returns the number of substitutions made.
 Otherwise it returns false (0).
 The \*(L"g\*(R" is optional, and if present, indicates that all occurences
+of the pattern are to be replaced.
+The \*(L"i\*(R" is also optional, and if present, indicates that matching
+is to be done in a case-insensitive manner.
 of the pattern are to be replaced.
 Any delimiter may replace the slashes; if single quotes are used, no
 interpretation is done on the replacement string.

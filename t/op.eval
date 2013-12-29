@@ -1,6 +1,6 @@
 #!./perl
 
-print "1..7\n";
+print "1..8\n";
 
 eval 'print "ok 1\n";';
 
@@ -20,3 +20,10 @@ print eval '$foo = /';	# this tests for a call through fatal()
 if ($@ =~ /Search/) {print "ok 6\n";} else {print "not ok 6\n";}
 
 print eval '"ok 7\n";';
+
+# calculate a factorial with recursive evals
+
+$foo = 5;
+$fact = 'if ($foo <= 1) {1;} else {push(@x,$foo--); (eval $fact) * pop(@x);}';
+$ans = eval $fact;
+if ($ans == 120) {print "ok 8\n";} else {print "not ok 8\n";}

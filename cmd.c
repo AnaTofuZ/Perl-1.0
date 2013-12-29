@@ -1,6 +1,9 @@
-/* $Header: cmd.c,v 1.0.1.2 88/02/04 11:15:58 root Exp $
+/* $Header: cmd.c,v 1.0.1.3 88/02/06 00:18:47 root Exp $
  *
  * $Log:	cmd.c,v $
+ * Revision 1.0.1.3  88/02/06  00:18:47  root
+ * patch21: fixed loop and block exits to pop label stack consistently.
+ * 
  * Revision 1.0.1.2  88/02/04  11:15:58  root
  * patch18: regularized includes.
  * 
@@ -108,15 +111,7 @@ tail_recursion_entry:
 		    olddlevel = dlevel;
 #endif
 		    curspat = oldspat;
-#ifdef DEBUGGING
-		    if (debug & 4) {
-			deb("(Popping label #%d %s)\n",loop_ptr,
-			    loop_stack[loop_ptr].loop_label);
-		    }
-#endif
-		    loop_ptr--;
-		    cmd = cmd->c_next;
-		    goto tail_recursion_entry;
+		    goto next_cmd;
 		case O_NEXT:	/* not done unless go_to found */
 		    go_to = Nullch;
 		    goto next_iter;
@@ -155,8 +150,18 @@ tail_recursion_entry:
 		goto finish_while;
 	    }
 	    cmd = cmd->c_next;
-	    if (cmd && cmd->c_head == cmd)	/* reached end of while loop */
+	    if (cmd && cmd->c_head == cmd)
+					/* reached end of while loop */
 		return retstr;		/* targ isn't in this block */
+	    if (cmdflags & CF_ONCE) {
+#ifdef DEBUGGING
+		if (debug & 4) {
+		    deb("(Popping label #%d %s)\n",loop_ptr,
+			loop_stack[loop_ptr].loop_label);
+		}
+#endif
+		loop_ptr--;
+	    }
 	    goto tail_recursion_entry;
 	}
     }
@@ -311,10 +316,8 @@ until_loop:
     maybe:
 	if (cmdflags & CF_INVERT)
 	    match = !match;
-	if (!match && cmd->c_type != C_IF) {
-	    cmd = cmd->c_next;
-	    goto tail_recursion_entry;
-	}
+	if (!match && cmd->c_type != C_IF)
+	    goto next_cmd;
     }
 
     /* now to do the actual command, if any */
@@ -374,15 +377,7 @@ until_loop:
 	case O_LAST:
 	    retstr = &str_no;
 	    curspat = oldspat;
-#ifdef DEBUGGING
-	    if (debug & 4) {
-		deb("(Popping label #%d %s)\n",loop_ptr,
-		    loop_stack[loop_ptr].loop_label);
-	    }
-#endif
-	    loop_ptr--;
-	    cmd = cmd->c_next;
-	    goto tail_recursion_entry;
+	    goto next_cmd;
 	case O_NEXT:
 	    goto next_iter;
 	case O_REDO:
@@ -403,7 +398,7 @@ until_loop:
 #endif
 	    cmd_exec(cmd->ucmd.ccmd.cc_true);
 	}
-	/* actually, this spot is never reached anymore since the above
+	/* actually, this spot is rarely reached anymore since the above
 	 * cmd_exec() returns through longjmp().  Hooray for structure.
 	 */
       next_iter:
@@ -429,7 +424,17 @@ until_loop:
 	cmdflags |= CF_COND;		/* now test the condition */
 	goto until_loop;
     }
+  next_cmd:
     cmd = cmd->c_next;
+    if (cmdflags & CF_ONCE) {
+#ifdef DEBUGGING
+	if (debug & 4) {
+	    deb("(Popping label #%d %s)\n",loop_ptr,
+		loop_stack[loop_ptr].loop_label);
+	}
+#endif
+	loop_ptr--;
+    }
     goto tail_recursion_entry;
 }
 

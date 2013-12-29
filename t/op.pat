@@ -1,7 +1,7 @@
 #!./perl
 
-# $Header: op.pat,v 1.0 87/12/18 13:14:07 root Exp $
-print "1..22\n";
+# $Header: op.pat,v 1.0.1.1 88/02/06 00:26:35 root Exp $
+print "1..23\n";
 
 $x = "abc\ndef\n";
 
@@ -54,3 +54,5 @@ if (/bcd|xyz/) {print "ok 20\n";} else {print "not ok 20\n";}
 if (/xyz|bcd/) {print "ok 21\n";} else {print "not ok 21\n";}
 
 if (m|bc/*d|) {print "ok 22\n";} else {print "not ok 22\n";}
+
+if (/^$_$/) {print "ok 23\n";} else {print "not ok 23\n";}

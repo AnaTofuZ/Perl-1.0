@@ -1,7 +1,10 @@
 .rn '' }`
-''' $Header: perl.man.1,v 1.0.1.3 88/02/04 17:48:02 root Exp $
+''' $Header: perl.man.1,v 1.0.1.4 88/02/06 00:19:44 root Exp $
 ''' 
 ''' $Log:	perl.man.1,v $
+''' Revision 1.0.1.4  88/02/06  00:19:44  root
+''' patch21: documented -v, /foo/i.
+''' 
 ''' Revision 1.0.1.3  88/02/04  17:48:02  root
 ''' patch20: added missing chop($user); to example in chown.
 ''' 
@@ -246,6 +249,9 @@ invoked with a -xyz switch.
 	if ($xyz) { print "true\en"; }
 
 .fi
+.TP 5
+.B \-v
+prints the version and patchlevel of your perl executable.
 .Sh "Data Types and Objects"
 .PP
 Perl has about two and a half data types: strings, arrays of strings, and
@@ -785,7 +791,7 @@ and this all reduces to one string internally.
 .PP
 Along with the literals and variables mentioned earlier,
 the following operations can serve as terms in an expression:
-.Ip "/PATTERN/" 8 4
+.Ip "/PATTERN/i" 8 4
 Searches a string for a pattern, and returns true (1) or false ('').
 If no string is specified via the =~ or !~ operator,
 the $_ string is searched.
@@ -794,13 +800,15 @@ See also the section on regular expressions.
 .Sp
 If you prepend an `m' you can use any pair of characters as delimiters.
 This is particularly useful for matching Unix path names that contain `/'.
+If the final delimiter is followed by the optional letter `i', the matching is
+done in a case-insensitive manner.
 .Sp
 Examples:
 .nf
 
 .ne 4
     open(tty, '/dev/tty');
-    <tty> \|=~ \|/\|^[Yy]\|/ \|&& \|do foo(\|);	# do foo if desired
+    <tty> \|=~ \|/\|^y\|/i \|&& \|do foo(\|);	# do foo if desired
 
     if (/Version: \|*\|([0-9.]*\|)\|/\|) { $version = $1; }
 
