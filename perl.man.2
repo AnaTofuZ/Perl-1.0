@@ -1,7 +1,10 @@
 ''' Beginning of part 2
-''' $Header: perl.man.2,v 1.0.1.6 88/02/25 11:44:09 root Exp $
+''' $Header: perl.man.2,v 1.0.1.7 88/03/02 12:36:57 root Exp $
 '''
 ''' $Log:	perl.man.2,v $
+''' Revision 1.0.1.7  88/03/02  12:36:57  root
+''' patch24: documented symlink()
+''' 
 ''' Revision 1.0.1.6  88/02/25  11:44:09  root
 ''' patch23: two typos and a clarification.
 ''' 
@@ -416,6 +419,10 @@ The return value is the exit status of the program as returned by the wait()
 call.
 To get the actual exit value divide by 256.
 See also exec.
+.Ip "symlink(OLDFILE,NEWFILE)" 8 2
+Creates a new filename symbolically linked to the old filename.
+Returns 1 for success, 0 otherwise.
+On systems that don't support symbolic links, produces a fatal error.
 .Ip "tell(FILEHANDLE)" 8 6
 .Ip "tell" 8
 Returns the current file position for FILEHANDLE.

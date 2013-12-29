@@ -1,6 +1,9 @@
-/* $Header: malloc.c,v 1.0.1.3 88/02/12 10:26:09 root Exp $
+/* $Header: malloc.c,v 1.0.1.4 88/03/02 12:34:23 root Exp $
  *
  * $Log:	malloc.c,v $
+ * Revision 1.0.1.4  88/03/02  12:34:23  root
+ * patch24: shortened a long identifier
+ * 
  * Revision 1.0.1.3  88/02/12  10:26:09  root
  * patch22: made yell about bad free()
  * 
@@ -250,11 +253,11 @@ free(cp)
  * back.  We have to search all the free lists for the block in order
  * to determine its bucket: 1st we make one pass thru the lists
  * checking only the first block in each; if that fails we search
- * ``realloc_srchlen'' blocks in each list for a match (the variable
+ * ``reall_srchlen'' blocks in each list for a match (the variable
  * is extern so the caller can modify it).  If that fails we just copy
  * however many bytes was given to realloc() and hope it's not huge.
  */
-int realloc_srchlen = 4;	/* 4 should be plenty, -1 =>'s whole list */
+int reall_srchlen = 4;	/* 4 should be plenty, -1 =>'s whole list */
 
 char *
 realloc(cp, nbytes)
@@ -280,13 +283,13 @@ realloc(cp, nbytes)
 		 * Search for the old block of memory on the
 		 * free list.  First, check the most common
 		 * case (last element free'd), then (this failing)
-		 * the last ``realloc_srchlen'' items free'd.
+		 * the last ``reall_srchlen'' items free'd.
 		 * If all lookups fail, then assume the size of
 		 * the memory block being realloc'd is the
 		 * smallest possible.
 		 */
 		if ((i = findbucket(op, 1)) < 0 &&
-		    (i = findbucket(op, realloc_srchlen)) < 0)
+		    (i = findbucket(op, reall_srchlen)) < 0)
 			i = 0;
 	}
 	onb = (1 << (i + 3)) - sizeof (*op) - RSLOP;

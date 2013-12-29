@@ -1,8 +1,11 @@
 #!./perl
 
-# $Header: io.fs,v 1.0 87/12/18 13:12:48 root Exp $
+# $Header: io.fs,v 1.0.1.1 88/03/02 12:57:26 root Exp $
 
-print "1..18\n";
+print "1..20\n";
+
+$wd = `pwd`;
+chop($wd);
 
 chdir '/tmp';
 `/bin/rm -rf a b c x`;
@@ -61,3 +64,15 @@ if ((unlink 'b') == 1) {print "ok 17\n";} else {print "not ok 17\n";}
     $blksize,$blocks) = stat('b');
 if ($ino == 0) {print "ok 18\n";} else {print "not ok 18\n";}
 unlink 'c';
+
+chdir $wd || die "Can't cd back to $wd";
+
+unlink 'c';
+if (`ls -l perl 2>/dev/null` =~ /^l.*->/) {  # we have symbolic links
+    if (symlink('TEST','c')) {print "ok 19\n";} else {print "not ok 19\n";}
+    $foo = `grep perl c`;
+    if ($foo) {print "ok 20\n";} else {print "not ok 20\n";}
+}
+else {
+    print "ok 19\nok 20\n";
+}

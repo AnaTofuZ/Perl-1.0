@@ -1,6 +1,9 @@
-/* $Header: dump.c,v 1.0.1.1 88/02/04 11:16:02 root Exp $
+/* $Header: dump.c,v 1.0.1.2 88/03/02 12:33:51 root Exp $
  *
  * $Log:	dump.c,v $
+ * Revision 1.0.1.2  88/03/02  12:33:51  root
+ * patch24: added printout of new line number field
+ * 
  * Revision 1.0.1.1  88/02/04  11:16:02  root
  * patch18: regularized includes.
  * 
@@ -23,6 +26,8 @@ register CMD *alt;
     while (cmd) {
 	dumplvl++;
 	dump("C_TYPE = %s\n",cmdname[cmd->c_type]);
+	if (cmd->c_line)
+	    dump("C_LINE = %d\n",cmd->c_line);
 	if (cmd->c_label)
 	    dump("C_LABEL = \"%s\"\n",cmd->c_label);
 	dump("C_OPT = CFT_%s\n",cmdopt[cmd->c_flags & CF_OPTIMIZE]);

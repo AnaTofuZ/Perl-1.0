@@ -1,8 +1,8 @@
 #!./perl
 
-# $Header: op.stat,v 1.0 87/12/18 13:14:27 root Exp $
+# $Header: op.stat,v 1.0.1.1 88/03/02 12:57:50 root Exp $
 
-print "1..4\n";
+print "1..28\n";
 
 open(foo, ">Op.stat.tmp");
 
@@ -26,4 +26,57 @@ if ($nlink == 2) {print "ok 3\n";} else {print "not ok 3\n";}
 if ($mtime && $mtime != $ctime) {print "ok 4\n";} else {print "not ok 4\n";}
 print "#4	:$mtime: != :$ctime:\n";
 
+`cp /dev/null Op.stat.tmp`;
+
+if (-z 'Op.stat.tmp') {print "ok 5\n";} else {print "not ok 5\n";}
+if (! -s 'Op.stat.tmp') {print "ok 6\n";} else {print "not ok 6\n";}
+
+`echo hi >Op.stat.tmp`;
+if (! -z 'Op.stat.tmp') {print "ok 7\n";} else {print "not ok 7\n";}
+if (-s 'Op.stat.tmp') {print "ok 8\n";} else {print "not ok 8\n";}
+
+chmod 0,'Op.stat.tmp';
+if (! -r 'Op.stat.tmp') {print "ok 9\n";} else {print "not ok 9\n";}
+if (! -w 'Op.stat.tmp') {print "ok 10\n";} else {print "not ok 10\n";}
+if (! -x 'Op.stat.tmp') {print "ok 11\n";} else {print "not ok 11\n";}
+
+chmod 07,'Op.stat.tmp';
+if (-r 'Op.stat.tmp') {print "ok 12\n";} else {print "not ok 12\n";}
+if (-w 'Op.stat.tmp') {print "ok 13\n";} else {print "not ok 13\n";}
+if (-x 'Op.stat.tmp') {print "ok 14\n";} else {print "not ok 14\n";}
+
+chmod 070,'Op.stat.tmp';
+if (! -r 'Op.stat.tmp') {	# make silly file belong to our group
+				# on systems where group is inherited from .
+    ($group) = split(' ',`groups 2>/dev/null`);
+    chmod 0777,'Op.stat.tmp';
+    `chgrp $group Op.stat.tmp` if $group;  # if this fails, chgrp . by hand
+    chmod 070,'Op.stat.tmp';
+}
+if (-r 'Op.stat.tmp') {print "ok 15\n";} else {print "not ok 15\n";}
+if (-w 'Op.stat.tmp') {print "ok 16\n";} else {print "not ok 16\n";}
+if (-x 'Op.stat.tmp') {print "ok 17\n";} else {print "not ok 17\n";}
+
+chmod 0700,'Op.stat.tmp';
+if (-r 'Op.stat.tmp') {print "ok 18\n";} else {print "not ok 18\n";}
+if (-w 'Op.stat.tmp') {print "ok 19\n";} else {print "not ok 19\n";}
+if (-x 'Op.stat.tmp') {print "ok 20\n";} else {print "not ok 20\n";}
+
+if (-f 'Op.stat.tmp') {print "ok 21\n";} else {print "not ok 21\n";}
+if (! -d 'Op.stat.tmp') {print "ok 22\n";} else {print "not ok 22\n";}
+
+if (-d '.') {print "ok 23\n";} else {print "not ok 23\n";}
+if (! -f '.') {print "ok 24\n";} else {print "not ok 24\n";}
+
+if (`ls -l perl` =~ /^l.*->/) {
+    if (-l 'perl') {print "ok 25\n";} else {print "not ok 25\n";}
+}
+else {
+    print "ok 25\n";
+}
+
+if (-o 'Op.stat.tmp') {print "ok 26\n";} else {print "not ok 26\n";}
+
+if (-e 'Op.stat.tmp') {print "ok 27\n";} else {print "not ok 27\n";}
 `rm -f Op.stat.tmp Op.stat.tmp2`;
+if (! -e 'Op.stat.tmp') {print "ok 28\n";} else {print "not ok 28\n";}

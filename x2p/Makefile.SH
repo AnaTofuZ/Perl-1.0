@@ -18,9 +18,13 @@ case "$mallocsrc" in
 esac
 echo "Extracting x2p/Makefile (with variable substitutions)"
 cat >Makefile <<!GROK!THIS!
-# $Header: Makefile.SH,v 1.0.1.3 88/02/12 10:52:32 root Exp $
+# $Header: Makefile.SH,v 1.0.1.4 88/03/02 12:58:56 root Exp $
 #
 # $Log:	Makefile.SH,v $
+# Revision 1.0.1.4  88/03/02  12:58:56  root
+# patch24: a2p.o didn't depend on config.h
+# patch24: mv of old version was noisy
+# 
 # Revision 1.0.1.3  88/02/12  10:52:32  root
 # patch22: support for systems without . in path
 # 
@@ -85,11 +89,11 @@ a2p: $(obj) a2p.o
 	$(CC) $(LDFLAGS) $(LARGE) $(obj) a2p.o $(libs) -o a2p
 
 a2p.c: a2p.y
-	@ echo Expect 107 shift/reduce errors...
+	@ echo Expect 95 shift/reduce errors...
 	yacc a2p.y
 	mv y.tab.c a2p.c
 
-a2p.o: a2p.c a2py.c a2p.h EXTERN.h util.h INTERN.h handy.h
+a2p.o: a2p.c a2py.c a2p.h EXTERN.h util.h INTERN.h handy.h ../config.h
 	$(CC) -c $(CFLAGS) $(LARGE) a2p.c
 
 # if a .h file depends on another .h file...
@@ -98,14 +102,13 @@ $(h):
 install: a2p s2p
 # won't work with csh
 	export PATH || exit 1
-	- mv $(bin)/a2p $(bin)/a2p.old
+	- mv $(bin)/a2p $(bin)/a2p.old 2>/dev/null
 	- mv $(bin)/s2p $(bin)/s2p.old
 	- if test `pwd` != $(bin); then cp $(public) $(bin); fi
 	cd $(bin); \
 for pub in $(public); do \
 chmod +x `basename $$pub`; \
 done
-	- test $(bin) = /bin || rm -f /bin/a2p
 #	chmod +x makedir
 #	- makedir `filexp $(lib)`
 #	- \

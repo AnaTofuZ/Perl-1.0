@@ -20,9 +20,14 @@ esac
 
 echo "Extracting Makefile (with variable substitutions)"
 cat >Makefile <<!GROK!THIS!
-# $Header: Makefile.SH,v 1.0.1.8 88/02/12 10:16:02 root Exp $
+# $Header: Makefile.SH,v 1.0.1.9 88/03/02 11:28:31 root Exp $
 #
 # $Log:	Makefile.SH,v $
+# Revision 1.0.1.9  88/03/02  11:28:31  root
+# patch24: perl.o didn't depend on config.h
+# patch24: mv of old version was noisy if it didn't exist
+# patch24: "standard" location changed to /usr/bin
+# 
 # Revision 1.0.1.8  88/02/12  10:16:02  root
 # patch22: more glitches on systems without . in path.
 # 
@@ -115,7 +120,7 @@ perl.c: perl.y
 	yacc perl.y
 	mv y.tab.c perl.c
 
-perl.o: perl.c perly.c perl.h EXTERN.h search.h util.h INTERN.h handy.h
+perl.o: perl.c perly.c perl.h EXTERN.h search.h util.h INTERN.h handy.h config.h
 	$(CC) -c $(CFLAGS) $(LARGE) perl.c
 
 # if a .h file depends on another .h file...
@@ -128,14 +133,14 @@ perl.man: perl.man.1 perl.man.2
 install: perl perl.man
 # won't work with csh
 	export PATH || exit 1
-	- mv $(bin)/perl $(bin)/perl.old
+	- mv $(bin)/perl $(bin)/perl.old 2>/dev/null
 	- if test `pwd` != $(bin); then cp $(public) $(bin); fi
 	cd $(bin); \
 for pub in $(public); do \
 chmod +x `basename $$pub`; \
 done
-	- test $(bin) = /bin || rm -f /bin/perl
-	- test $(bin) = /bin || $(SLN) $(bin)/perl /bin || cp $(bin)/perl /bin
+	- test $(bin) = /usr/bin || rm -f /usr/bin/perl
+	- test $(bin) = /usr/bin || $(SLN) $(bin)/perl /usr/bin || cp $(bin)/perl /usr/bin
 #	chmod +x makedir
 #	- makedir `filexp $(lib)`
 #	- \

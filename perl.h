@@ -1,6 +1,10 @@
-/* $Header: perl.h,v 1.0.1.5 88/02/04 11:19:35 root Exp $
+/* $Header: perl.h,v 1.0.1.6 88/03/02 12:34:53 root Exp $
  *
  * $Log:	perl.h,v $
+ * Revision 1.0.1.6  88/03/02  12:34:53  root
+ * patch24: added include of <sys/param.h>
+ * patch24: made some identifiers unique in first 7 chars
+ * 
  * Revision 1.0.1.5  88/02/04  11:19:35  root
  * patch18: regularized includes.
  * 
@@ -36,6 +40,7 @@
 #include <setjmp.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/param.h>
 
 #ifdef TMINSYS
 #include <sys/time.h>
@@ -101,11 +106,11 @@ CMD *addcond();
 CMD *addloop();
 CMD *wopt();
 
-SPAT *stab_to_spat();
+SPAT *stab2spat();
 
 STAB *stabent();
 
-ARG *stab_to_arg();
+ARG *stab2arg();
 ARG *op_new();
 ARG *make_op();
 ARG *make_lval();

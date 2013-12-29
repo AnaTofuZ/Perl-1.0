@@ -1,6 +1,15 @@
-/* $Header: arg.c,v 1.0.1.12 88/02/25 11:34:59 root Exp $
+/* $Header: arg.c,v 1.0.1.13 88/03/02 11:29:29 root Exp $
  *
  * $Log:	arg.c,v $
+ * Revision 1.0.1.13  88/03/02  11:29:29  root
+ * patch24: upgraded runtime error messages
+ * patch24: sprintf blasts errno on Xenix
+ * patch24: return value of times() needed to be ignored on Pyramids
+ * patch24: added (char*) cast to 0 in execl()
+ * patch24: added new file test and symlink operators
+ * patch24: division by 0 now gives a reasonable message
+ * patch24: bad pattern optimization showed up when used with ..
+ * 
  * Revision 1.0.1.12  88/02/25  11:34:59  root
  * patch23: perl inappropriately modifies filename passed to open()
  * patch23: the -i switch with no backup extension truncates the file
@@ -62,8 +71,10 @@ register ARG *arg;
     register char *d;
     register char *t;
 
-    if (!spat || !s)
-	fatal("panic: do_match\n");
+    if (!spat)
+	return TRUE;
+    if (!s)
+	fatal("panic: do_match");
     if (spat->spat_flags & SPAT_USED) {
 #ifdef DEBUGGING
 	if (debug & 8)
@@ -79,9 +90,7 @@ register ARG *arg;
 #endif
 	if (d = compile(&spat->spat_compex,t,TRUE,
 	  spat->spat_flags & SPAT_FOLD )) {
-#ifdef DEBUGGING
-	    deb("/%s/: %s\n", t, d);
-#endif
+	    fatal("/%s/: %s", t, d);
 	    return FALSE;
 	}
 	if (!*spat->spat_compex.precomp && lastspat)
@@ -145,16 +154,14 @@ register ARG *arg;
     spat = arg[2].arg_ptr.arg_spat;
     s = str_get(str);
     if (!spat || !s)
-	fatal("panic: do_subst\n");
+	fatal("panic: do_subst");
     else if (spat->spat_runtime) {
 	char *d;
 
 	m = str_get(eval(spat->spat_runtime,Null(STR***)));
 	if (d = compile(&spat->spat_compex,m,TRUE,
 	  spat->spat_flags & SPAT_FOLD )) {
-#ifdef DEBUGGING
-	    deb("/%s/: %s\n", m, d);
-#endif
+	    fatal("/%s/: %s", m, d);
 	    return 0;
 	}
     }
@@ -183,7 +190,7 @@ register ARG *arg;
 	lastspat = spat;
 	do {
 	    if (iters++ > 10000)
-		fatal("Substitution loop?\n");
+		fatal("Substitution loop");
 	    if (spat->spat_compex.numsubs)
 		s = spat->spat_compex.subbase;
 	    str_ncat(dstr,s,m-s);
@@ -213,7 +220,7 @@ register ARG *arg;
     tbl = arg[2].arg_ptr.arg_cval;
     s = str_get(str);
     if (!tbl || !s)
-	fatal("panic: do_trans\n");
+	fatal("panic: do_trans");
 #ifdef DEBUGGING
     if (debug & 8) {
 	deb("2.TBL\n");
@@ -246,7 +253,7 @@ STR ***retary;
     int i;
 
     if (!spat || !s)
-	fatal("panic: do_split\n");
+	fatal("panic: do_split");
     else if (spat->spat_runtime) {
 	char *d;
 
@@ -262,9 +269,7 @@ STR ***retary;
 	}
 	if (d = compile(&spat->spat_compex,m,TRUE,
 	  spat->spat_flags & SPAT_FOLD )) {
-#ifdef DEBUGGING
-	    deb("/%s/: %s\n", m, d);
-#endif
+	    fatal("/%s/: %s", m, d);
 	    return FALSE;
 	}
     }
@@ -291,7 +296,7 @@ STR ***retary;
 	str_nset(dstr,s,m-s);
 	astore(ary, iters++, dstr);
 	if (iters > 10000)
-	    fatal("Substitution loop?\n");
+	    fatal("Substitution loop");
 	s = spat->spat_compex.subend[0];
     }
     if (*s) {			/* ignore field after final "whitespace" */
@@ -423,6 +428,8 @@ register char *name;
     return TRUE;
 }
 
+extern int errno;
+
 FILE *
 nextargv(stab)
 register STAB *stab;
@@ -451,6 +458,7 @@ register STAB *stab;
 		    UNLINK(oldname);
 		}
 		sprintf(tokenbuf,">%s",oldname);
+		errno = 0;		/* in case sprintf set errno */
 		do_open(argvoutstab,tokenbuf);
 		defoutstab = argvoutstab;
 	    }
@@ -633,8 +641,7 @@ STR ***retary;
     if (!ary)
 	myarray = ary = anew();
     ary->ary_fill = -1;
-    if (times(&timesbuf) < 0)
-	max = 0;
+    times(&timesbuf);
 
     if (retary) {
 	if (max) {
@@ -856,7 +863,7 @@ char *cmd;
 
     for (s = cmd; *s; s++) {
 	if (*s != ' ' && !isalpha(*s) && index("$&*(){}[]'\";\\|?<>~`",*s)) {
-	    execl("/bin/sh","sh","-c",cmd,0);
+	    execl("/bin/sh","sh","-c",cmd,(char*)0);
 	    return FALSE;
 	}
     }
@@ -1245,6 +1252,21 @@ init_eval()
     opargs[O_LINK] =		A(1,1,0);
     opargs[O_REPEAT] =		A(1,1,0);
     opargs[O_EVAL] =		A(1,0,0);
+    opargs[O_FTEREAD] =		A(1,0,0);
+    opargs[O_FTEWRITE] =	A(1,0,0);
+    opargs[O_FTEEXEC] =		A(1,0,0);
+    opargs[O_FTEOWNED] =	A(1,0,0);
+    opargs[O_FTRREAD] =		A(1,0,0);
+    opargs[O_FTRWRITE] =	A(1,0,0);
+    opargs[O_FTREXEC] =		A(1,0,0);
+    opargs[O_FTROWNED] =	A(1,0,0);
+    opargs[O_FTIS] =		A(1,0,0);
+    opargs[O_FTZERO] =		A(1,0,0);
+    opargs[O_FTSIZE] =		A(1,0,0);
+    opargs[O_FTFILE] =		A(1,0,0);
+    opargs[O_FTDIR] =		A(1,0,0);
+    opargs[O_FTLINK] =		A(1,0,0);
+    opargs[O_SYMLINK] =		A(1,1,0);
 }
 
 #ifdef VOIDSIG
@@ -1343,7 +1365,7 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 #endif
 	    str = eval(arg[anum].arg_ptr.arg_arg,Null(STR***));
 	    if (!str)
-		fatal("panic: A_LEXPR\n");
+		fatal("panic: A_LEXPR");
 	    goto do_crement;
 	case A_LVAL:
 #ifdef DEBUGGING
@@ -1354,7 +1376,7 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 #endif
 	    str = STAB_STR(arg[anum].arg_ptr.arg_stab);
 	    if (!str)
-		fatal("panic: A_LVAL\n");
+		fatal("panic: A_LVAL");
 	  do_crement:
 	    assigning = TRUE;
 	    if (argflags & AF_PRE) {
@@ -1545,12 +1567,15 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	value *= str_gnum(sarg[2]);
 	goto donumset;
     case O_DIVIDE:
-	value = str_gnum(sarg[1]);
-	value /= str_gnum(sarg[2]);
+    	if ((value = str_gnum(sarg[2])) == 0.0)
+    	    fatal("Illegal division by zero");
+	value = str_gnum(sarg[1]) / value;
 	goto donumset;
     case O_MODULO:
+    	if ((tmplong = (long) str_gnum(sarg[2])) == 0L)
+    	    fatal("Illegal modulus zero");
 	value = str_gnum(sarg[1]);
-	value = (double)(((long)value) % (long)str_gnum(sarg[2]));
+	value = (double)(((long)value) % tmplong);
 	goto donumset;
     case O_ADD:
 	value = str_gnum(sarg[1]);
@@ -1907,7 +1932,7 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	tmps = str_get(sarg[1]);
 	if (!tmps || !*tmps)
 	    exit(1);
-	fatal("%s\n",str_get(sarg[1]));
+	fatal("%s",str_get(sarg[1]));
 	value = 0.0;
 	goto donumset;
     case O_EXIT:
@@ -1961,7 +1986,7 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 #endif
 	}
 	if (loop_ptr < 0)
-	    fatal("Bad label: %s\n", maxarg > 0 ? tmps : "<null>");
+	    fatal("Bad label: %s", maxarg > 0 ? tmps : "<null>");
 	longjmp(loop_stack[loop_ptr].loop_env, optype);
     case O_GOTO:/* shudder */
 	goto_targ = str_get(sarg[1]);
@@ -2169,6 +2194,113 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	    do_eval(arg[1].arg_type != A_NULL ? sarg[1] : defstab->stab_val) );
 	STABSET(str);
 	break;
+
+    case O_FTRREAD:
+	maxarg = 0;
+	anum = S_IREAD;
+	goto check_perm;
+    case O_FTRWRITE:
+	maxarg = 0;
+	anum = S_IWRITE;
+	goto check_perm;
+    case O_FTREXEC:
+	maxarg = 0;
+	anum = S_IEXEC;
+	goto check_perm;
+    case O_FTEREAD:
+	maxarg = 1;
+	anum = S_IREAD;
+	goto check_perm;
+    case O_FTEWRITE:
+	maxarg = 1;
+	anum = S_IWRITE;
+	goto check_perm;
+    case O_FTEEXEC:
+	maxarg = 1;
+	anum = S_IEXEC;
+      check_perm:
+	if (stat(str_get(sarg[1]),&statbuf) < 0)
+	    str = &str_no;
+	else if (statbuf.st_mode & anum >> 6)
+	    str = &str_yes;	/* ok as "other" */
+	else if (statbuf.st_mode & anum &&
+	  statbuf.st_uid == (maxarg ? geteuid() : getuid()) )
+	    str = &str_yes;	/* ok as "user" */
+	else if (statbuf.st_mode & anum >> 3) {
+	    if (statbuf.st_gid == (maxarg ? getegid() : getgid()))
+		str = &str_yes;	/* ok as "group" */
+	    else {
+#ifdef NGROUPS
+		gid_t gary[NGROUPS];
+
+		str = &str_no;
+		anum = getgroups(NGROUPS,gary);
+		while (anum >= 0)
+		    if (gary[anum--] == statbuf.st_gid)
+			str = &str_yes;
+#else
+		str = &str_no;
+#endif
+	    }
+	}
+	else
+	    str = &str_no;
+	break;
+
+    case O_FTIS:
+	if (stat(str_get(sarg[1]),&statbuf) >= 0)
+	    str = &str_yes;
+	else
+	    str = &str_no;
+	break;
+    case O_FTEOWNED:
+    case O_FTROWNED:
+	if (stat(str_get(sarg[1]),&statbuf) >= 0 &&
+	  statbuf.st_uid == (optype == O_FTEOWNED ? geteuid() : getuid()) )
+	    str = &str_yes;
+	else
+	    str = &str_no;
+	break;
+    case O_FTZERO:
+	if (stat(str_get(sarg[1]),&statbuf) >= 0 && !statbuf.st_size)
+	    str = &str_yes;
+	else
+	    str = &str_no;
+	break;
+    case O_FTSIZE:
+	if (stat(str_get(sarg[1]),&statbuf) >= 0 && statbuf.st_size)
+	    str = &str_yes;
+	else
+	    str = &str_no;
+	break;
+
+    case O_FTFILE:
+	anum = S_IFREG;
+	goto check_file_type;
+    case O_FTDIR:
+	anum = S_IFDIR;
+      check_file_type:
+	if (stat(str_get(sarg[1]),&statbuf) >= 0 &&
+	  (statbuf.st_mode & S_IFMT) == anum )
+	    str = &str_yes;
+	else
+	    str = &str_no;
+	break;
+    case O_FTLINK:
+#ifdef SYMLINK
+	if (lstat(str_get(sarg[1]),&statbuf) >= 0 &&
+	  (statbuf.st_mode & S_IFMT) == S_IFLNK )
+	    str = &str_yes;
+	else
+#endif
+	    str = &str_no;
+	break;
+#ifdef SYMLINK
+    case O_SYMLINK:
+	tmps = str_get(sarg[1]);
+	value = (double)(symlink(tmps,str_get(sarg[2])) >= 0);
+	goto donumset;
+#endif
     }
 #ifdef DEBUGGING
     dlevel--;

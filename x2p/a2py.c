@@ -1,6 +1,10 @@
-/* $Header: a2py.c,v 1.0.1.4 88/02/25 11:56:30 root Exp $
+/* $Header: a2py.c,v 1.0.1.5 88/03/02 13:01:06 root Exp $
  *
  * $Log:	a2py.c,v $
+ * Revision 1.0.1.5  88/03/02  13:01:06  root
+ * patch24: warning message printed when unsure of some translations
+ * patch24: "standard" directory changed from /bin to /usr/bin
+ * 
  * Revision 1.0.1.4  88/02/25  11:56:30  root
  * patch23: added eval kludge for systems that don't grok #!.
  * 
@@ -22,6 +26,8 @@
 char *index();
 
 char *filename;
+
+int checkers = 0;
 
 main(argc,argv,env)
 register int argc;
@@ -125,7 +131,7 @@ register char **env;
     /* second pass to produce new program */
 
     tmpstr = walk(0,0,root,&i);
-    str = str_make("#!/bin/perl\neval \"exec /bin/perl $0 $*\"\n\
+    str = str_make("#!/usr/bin/perl\neval \"exec /usr/bin/perl $0 $*\"\n\
     if $running_under_some_shell;\n\
 			# this emulates #! processing on NIH machines.\n\
 			# (remove #! line above if indigestible)\n\n");
@@ -145,6 +151,13 @@ register char **env;
 #endif
     fixup(str);
     putlines(str);
+    if (checkers) {
+	fprintf(stderr,
+	  "Please check my work on the %d line%s I've marked with \"#???\".\n",
+		checkers, checkers == 1 ? "" : "s" );
+	fprintf(stderr,
+	  "The operation I've selected may be wrong for the operand types.\n");
+    }
     exit(0);
 }
 
@@ -862,11 +875,14 @@ putone()
 	if (*t == 127) {
 	    *t = ' ';
 	    strcpy(t+strlen(t)-1, "\t#???\n");
+	    checkers++;
 	}
     }
     t = tokenbuf;
     if (*t == '#') {
 	if (strnEQ(t,"#!/bin/awk",10) || strnEQ(t,"#! /bin/awk",11))
+	    return;
+	if (strnEQ(t,"#!/usr/bin/awk",14) || strnEQ(t,"#! /usr/bin/awk",15))
 	    return;
     }
     fputs(tokenbuf,stdout);

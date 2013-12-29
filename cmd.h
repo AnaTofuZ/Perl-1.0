@@ -1,6 +1,9 @@
-/* $Header: cmd.h,v 1.0.1.1 88/01/28 10:23:07 root Exp $
+/* $Header: cmd.h,v 1.0.1.2 88/03/02 12:33:15 root Exp $
  *
  * $Log:	cmd.h,v $
+ * Revision 1.0.1.2  88/03/02  12:33:15  root
+ * patch24: add line number to cmd structure for better runtime error messages
+ * 
  * Revision 1.0.1.1  88/01/28  10:23:07  root
  * patch8: added eval_root for eval operator.
  * 
@@ -103,6 +106,7 @@ struct cmd {
     } ucmd;
     short	c_flen;		/* len of c_first, if not null */
     short	c_flags;	/* optimization flags--see above */
+    unsigned short c_line;	/* line # of this command */
     char	c_type;		/* what this command does */
 };
 

@@ -1,7 +1,10 @@
 %{
-/* $Header: a2p.y,v 1.0.1.1 88/02/25 11:54:49 root Exp $
+/* $Header: a2p.y,v 1.0.1.2 88/03/02 12:59:39 root Exp $
  *
  * $Log:	a2p.y,v $
+ * Revision 1.0.1.2  88/03/02  12:59:39  root
+ * patch24: blank lines were being treated like they had semicolons on them
+ * 
  * Revision 1.0.1.1  88/02/25  11:54:49  root
  * patch23: some patterns ended up not enclosed in slashes.
  * 
@@ -201,14 +204,6 @@ variable: NUMBER
 		{ $$ = oper1(OVFLD,$2); }
 	;
 
-maybe	: NEWLINE
-		{ $$ = oper0(ONEWLINE); }
-	| /* NULL */
-		{ $$ = Nullop; }
-	| COMMENT
-		{ $$ = oper1(OCOMMENT,$1); }
-	;
-
 print_list
 	: expr
 	| clist
@@ -240,15 +235,27 @@ hunksep : ';'
 		{ $$ = oper1(OCOMMENT,$1); }
 	;
 
-separator
-	: ';'
-		{ $$ = oper0(OSEMICOLON); }
-	| SEMINEW
-		{ $$ = oper0(OSNEWLINE); }
-	| NEWLINE
-		{ $$ = oper0(OSNEWLINE); }
+maybe	: maybe nlstuff
+		{ $$ = oper2(OJUNK,$1,$2); }
+	| /* NULL */
+		{ $$ = Nullop; }
+	;
+
+nlstuff : NEWLINE
+		{ $$ = oper0(ONEWLINE); }
 	| COMMENT
-		{ $$ = oper1(OSCOMMENT,$1); }
+		{ $$ = oper1(OCOMMENT,$1); }
+	;
+
+separator
+	: ';' maybe
+		{ $$ = oper2(OJUNK,oper0(OSEMICOLON),$2); }
+	| SEMINEW maybe
+		{ $$ = oper2(OJUNK,oper0(OSNEWLINE),$2); }
+	| NEWLINE maybe
+		{ $$ = oper2(OJUNK,oper0(OSNEWLINE),$2); }
+	| COMMENT maybe
+		{ $$ = oper2(OJUNK,oper1(OSCOMMENT,$1),$2); }
 	;
 
 states	: states statement
@@ -260,7 +267,16 @@ states	: states statement
 statement
 	: simple separator
 		{ $$ = oper2(OSTATE,$1,$2); }
+	| ';' maybe
+		{ $$ = oper2(OSTATE,Nullop,oper2(OJUNK,oper0(OSEMICOLON),$2)); }
+	| SEMINEW maybe
+		{ $$ = oper2(OSTATE,Nullop,oper2(OJUNK,oper0(OSNEWLINE),$2)); }
 	| compound
+	;
+
+simpnull: simple
+	| /* NULL */
+		{ $$ = Nullop; }
 	;
 
 simple
@@ -295,8 +311,6 @@ simple
 		{ $$ = oper1(OEXIT,$2); }
 	| CONTINUE
 		{ $$ = oper0(OCONTINUE); }
-	| /* NULL */
-		{ $$ = Nullop; }
 	;
 
 redir	: RELOP
@@ -314,9 +328,9 @@ compound
 		{ $$ = oper3(OIF,$3,bl($6,$5),bl($9,$8)); }
 	| WHILE '(' cond ')' maybe statement
 		{ $$ = oper2(OWHILE,$3,bl($6,$5)); }
-	| FOR '(' simple ';' cond ';' simple ')' maybe statement
+	| FOR '(' simpnull ';' cond ';' simpnull ')' maybe statement
 		{ $$ = oper4(OFOR,$3,$5,$7,bl($10,$9)); }
-	| FOR '(' simple ';'  ';' simple ')' maybe statement
+	| FOR '(' simpnull ';'  ';' simpnull ')' maybe statement
 		{ $$ = oper4(OFOR,$3,string("",0),$6,bl($9,$8)); }
 	| FOR '(' VAR IN VAR ')' maybe statement
 		{ $$ = oper3(OFORIN,$3,$5,bl($8,$7)); }

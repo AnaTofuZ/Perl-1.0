@@ -1,6 +1,10 @@
-/* $Header: cmd.c,v 1.0.1.4 88/02/12 10:22:09 root Exp $
+/* $Header: cmd.c,v 1.0.1.5 88/03/02 12:05:09 root Exp $
  *
  * $Log:	cmd.c,v $
+ * Revision 1.0.1.5  88/03/02  12:05:09  root
+ * patch24: improved runtime error messages
+ * patch24: files ending in "0" with no newline not treated consistently
+ * 
  * Revision 1.0.1.4  88/02/12  10:22:09  root
  * patch22: a fix for cray, who for some reason takes SVID seriously
  * 
@@ -187,6 +191,10 @@ until_loop:
     while (tmps_max >= 0)		/* clean up after last eval */
 	str_free(tmps_list[tmps_max--]);
 
+    /* Set line number so run-time errors can be located */
+
+    line = cmd->c_line;
+
     /* Here is some common optimization */
 
     if (cmdflags & CF_COND) {
@@ -260,8 +268,11 @@ until_loop:
 	    fp = last_in_stab->stab_io->fp;
 	    retstr = defstab->stab_val;
 	    if (fp && str_gets(retstr, fp)) {
+		if (*retstr->str_ptr == '0' && !retstr->str_ptr[1])
+		    match = FALSE;
+		else
+		    match = TRUE;
 		last_in_stab->stab_io->lines++;
-		match = TRUE;
 	    }
 	    else if (last_in_stab->stab_io->flags & IOF_ARGV)
 		goto doeval;	/* doesn't necessarily count as EOF yet */
@@ -331,7 +342,7 @@ until_loop:
 
     switch (cmd->c_type) {
     case C_NULL:
-	fatal("panic: cmd_exec\n");
+	fatal("panic: cmd_exec");
     case C_EXPR:			/* evaluated for side effects */
 	if (cmd->ucmd.acmd.ac_expr) {	/* more to do? */
 	    retstr = eval(cmd->ucmd.acmd.ac_expr,Null(char***));
@@ -429,6 +440,9 @@ until_loop:
     }
     if (cmdflags & CF_LOOP) {
 	cmdflags |= CF_COND;		/* now test the condition */
+#ifdef DEBUGGING
+	dlevel = entdlevel;
+#endif
 	goto until_loop;
     }
   next_cmd:

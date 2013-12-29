@@ -1,6 +1,9 @@
-/* $Header: walk.c,v 1.0.1.3 88/02/02 11:54:58 root Exp $
+/* $Header: walk.c,v 1.0.1.4 88/03/02 13:03:10 root Exp $
  *
  * $Log:	walk.c,v $
+ * Revision 1.0.1.4  88/03/02  13:03:10  root
+ * patch24: some print statements need parens around them
+ * 
  * Revision 1.0.1.3  88/02/02  11:54:58  root
  * patch14: got return value of each() backwards in translating 'for (a in b)'.
  * 
@@ -23,6 +26,8 @@
 bool exitval = FALSE;
 bool realexit = FALSE;
 int maxtmp = 0;
+char *lparen;
+char *rparen;
 
 STR *
 walk(useval,level,node,numericptr)
@@ -683,6 +688,8 @@ sub Pick {\n\
 	break;
     case OPRINTF:
     case OPRINT:
+	lparen = "";	/* set to parens if necessary */
+	rparen = "";
 	str = str_new(0);
 	if (len == 3) {		/* output redirection */
 	    tmpstr = walk(1,level,ops[node+3].ival,&numarg);
@@ -732,10 +739,13 @@ sub Pick {\n\
 		*tokenbuf = '\0';
 		str_free(tmpstr);
 		str_free(tmp2str);
+		lparen = "(";
+		rparen = ")";
 	    }
 	}
 	else
 	    strcpy(tokenbuf,"stdout");
+	str_cat(str,lparen);	/* may be null */
 	if (type == OPRINTF)
 	    str_cat(str,"printf");
 	else
@@ -774,6 +784,7 @@ sub Pick {\n\
 	else {
 	    str_cat(str," $_");
 	}
+	str_cat(str,rparen);	/* may be null */
 	str_free(tmpstr);
 	break;
     case OLENGTH:

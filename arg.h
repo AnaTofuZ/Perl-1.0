@@ -1,6 +1,9 @@
-/* $Header: arg.h,v 1.0.1.1 88/01/28 10:22:40 root Exp $
+/* $Header: arg.h,v 1.0.1.2 88/03/02 11:53:08 root Exp $
  *
  * $Log:	arg.h,v $
+ * Revision 1.0.1.2  88/03/02  11:53:08  root
+ * patch24: added new file test and symlink operators
+ * 
  * Revision 1.0.1.1  88/01/28  10:22:40  root
  * patch8: added eval operator.
  * 
@@ -115,7 +118,22 @@
 #define O_LINK 103
 #define O_REPEAT 104
 #define O_EVAL 105
-#define MAXO 106
+#define O_FTEREAD 106
+#define O_FTEWRITE 107
+#define O_FTEEXEC 108
+#define O_FTEOWNED 109
+#define O_FTRREAD 110
+#define O_FTRWRITE 111
+#define O_FTREXEC 112
+#define O_FTROWNED 113
+#define O_FTIS 114
+#define O_FTZERO 115
+#define O_FTSIZE 116
+#define O_FTFILE 117
+#define O_FTDIR 118
+#define O_FTLINK 119
+#define O_SYMLINK 120
+#define MAXO 121
 
 #ifndef DOINIT
 extern char *opname[];
@@ -227,7 +245,22 @@ char *opname[] = {
     "LINK",
     "REPEAT",
     "EVAL",
-    "106"
+    "FTEREAD",
+    "FTEWRITE",
+    "FTEEXEC",
+    "FTEOWNED",
+    "FTRREAD",
+    "FTRWRITE",
+    "FTREXEC",
+    "FTROWNED",
+    "FTIS",
+    "FTZERO",
+    "FTSIZE",
+    "FTFILE",
+    "FTDIR",
+    "FTLINK",
+    "SYMLINK",
+    "120"
 };
 #endif
 

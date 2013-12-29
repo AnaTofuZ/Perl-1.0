@@ -1,7 +1,10 @@
 .rn '' }`
-''' $Header: perl.man.1,v 1.0.1.6 88/02/25 11:42:26 root Exp $
+''' $Header: perl.man.1,v 1.0.1.7 88/03/02 12:36:18 root Exp $
 ''' 
 ''' $Log:	perl.man.1,v $
+''' Revision 1.0.1.7  88/03/02  12:36:18  root
+''' patch24: documented file tests
+''' 
 ''' Revision 1.0.1.6  88/02/25  11:42:26  root
 ''' patch23: two typos and an omission.
 ''' 
@@ -769,6 +772,41 @@ Examples:
     s/^/> / if (/^$/ .. eof());	# quote body
 
 .fi
+.Ip -x 8
+A file test.
+This unary operator takes one argument, a filename, and tests the file
+to see if something is true about it.
+It returns 1 for true and '' for false.
+Precedence is higher than logical and relational operators, but lower than
+arithmetic operators.
+The operator may be any of:
+.nf
+	-r	File is readable by effective uid.
+	-w	File is writeable by effective uid.
+	-x	File is executable by effective uid.
+	-o	File is owned by effective uid.
+	-R	File is readable by real uid.
+	-W	File is writeable by real uid.
+	-X	File is executable by real uid.
+	-O	File is owned by real uid.
+	-e	File exists.
+	-z	File has zero size.
+	-s	File has non-zero size.
+	-f	File is a plain file.
+	-d	File is a directory.
+	-l	File is a symbolic link.
+
+.ne 7
+Example:
+	
+	while (<>) {
+		chop;
+		next unless -f $_;	# ignore specials
+		...
+	}
+
+.fi
+Note that -s/a/b/ does not do a negated substitution.
 .PP
 Here is what C has that
 .I perl
