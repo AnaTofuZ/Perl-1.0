@@ -74,7 +74,6 @@ register char **env;
 {
     register STR *str;
     register char *s;
-    char *index(), *strcpy();
 
     uid = (int)getuid();
     euid = (int)geteuid();
@@ -2028,8 +2027,6 @@ register ARG *arg;
     register char *tmps;
     int i;
     long tmplong;
-    double exp(), log(), sqrt(), modf();
-    char *crypt();
 
     if (!arg || !arg->arg_len)
 	return;

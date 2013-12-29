@@ -84,7 +84,6 @@
 #include <signal.h>
 
 ARG *debarg;
-long time();
 
 bool
 do_match(s,arg)
@@ -475,8 +474,6 @@ register char *name;
     stio->fp = fp;
     return TRUE;
 }
-
-extern int errno;
 
 FILE *
 nextargv(stab)
@@ -1386,8 +1383,6 @@ STR ***retary;		/* where to return an array to, null if nowhere */
     STAB *stab;
     ARRAY *ary;
     bool assigning = FALSE;
-    double exp(), log(), sqrt(), modf();
-    char *crypt(), *getenv();
 
     if (!arg)
 	return &str_no;

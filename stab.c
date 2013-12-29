@@ -78,10 +78,6 @@ static char *sig_name[] = {
     ,0
     };
 
-extern int errno;
-extern int sys_nerr;
-extern char *sys_errlist[];
-
 STR *
 stab_str(stab)
 STAB *stab;

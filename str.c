@@ -75,8 +75,6 @@ double num;
     str->str_nok = 1;		/* validate number */
 }
 
-extern int errno;
-
 char *
 str_2ptr(str)
 register STR *str;

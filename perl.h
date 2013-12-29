@@ -43,6 +43,7 @@
 
 #include <stdio.h>
 #include <ctype.h>
+#include <errno.h>
 #include <setjmp.h>
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -77,12 +78,6 @@ typedef struct compex COMPEX;
 #include "cmd.h"
 #include "array.h"
 #include "hash.h"
-
-#ifdef CHARSPRINTF
-    char *sprintf();
-#else
-    int sprintf();
-#endif
 
 /* A string is TRUE if not "" or "0". */
 #define True(val) (tmps = (val), (*tmps && !(*tmps == '0' && !tmps[1])))
@@ -202,10 +197,6 @@ EXT struct stat statbuf;
 EXT struct tms timesbuf;
 EXT int uid;
 EXT int euid;
-Uid_t getuid();
-Uid_t geteuid();
-Gid_t getgid();
-Gid_t getegid();
 EXT int unsafe;
 
 #ifdef DEBUGGING
@@ -233,10 +224,6 @@ EXT jmp_buf top_env;
 EXT jmp_buf eval_env;
 
 EXT char *goto_targ INIT(Nullch);	/* cmd_exec gets strange when set */
-
-double atof();
-long time();
-struct tm *gmtime(), *localtime();
 
 #ifdef EUNICE_SYSTEM
 #define UNLINK unlnk

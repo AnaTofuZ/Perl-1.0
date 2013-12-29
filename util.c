@@ -43,7 +43,6 @@ safemalloc(size)
 MEM_SIZE size;
 {
     char *ptr;
-    char *malloc();
 
     ptr = malloc(size?size:1);	/* malloc(0) is NASTY on our system */
 #ifdef DEBUGGING
@@ -67,7 +66,6 @@ char *where;
 MEM_SIZE size;
 {
     char *ptr;
-    char *realloc();
 
     if (!where)
 	fatal("Null realloc");
@@ -219,8 +217,6 @@ int newlen;
 	*curlen = newlen;
     }
 }
-
-extern int errno;
 
 /*VARARGS1*/
 fatal(pat,a1,a2,a3,a4)
