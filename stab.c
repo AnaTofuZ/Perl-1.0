@@ -1,6 +1,9 @@
-/* $Header: stab.c,v 1.0.1.3 88/02/04 00:13:15 root Exp $
+/* $Header: stab.c,v 1.0.1.4 88/02/04 10:26:31 root Exp $
  *
  * $Log:	stab.c,v $
+ * Revision 1.0.1.4  88/02/04  10:26:31  root
+ * patch17: now prints warning if no signal handler defined.
+ * 
  * Revision 1.0.1.3  88/02/04  00:13:15  root
  * patch16: stabset didn't copy some strings it should have.
  * 
@@ -285,14 +288,19 @@ int sig;
     STR *str;
 
     stab = stabent(str_get(hfetch(sigstab->stab_hash,sig_name[sig])),TRUE);
-    savearray = defstab->stab_array;
-    defstab->stab_array = anew();
-    str = str_new(0);
-    str_set(str,sig_name[sig]);
-    apush(defstab->stab_array,str);
-    str = cmd_exec(stab->stab_sub);
-    afree(defstab->stab_array);  /* put back old $_[] */
-    defstab->stab_array = savearray;
+    if (stab->stab_sub) {
+	savearray = defstab->stab_array;
+	defstab->stab_array = anew();
+	str = str_new(0);
+	str_set(str,sig_name[sig]);
+	apush(defstab->stab_array,str);
+	str = cmd_exec(stab->stab_sub);
+	afree(defstab->stab_array);  /* put back old $_[] */
+	defstab->stab_array = savearray;
+    }
+    else
+	fprintf(stderr,"perl warning: SIG%s handler \"%s\" not defined.\n",
+	    sig_name[sig], stab->stab_name );
 }
 
 char *

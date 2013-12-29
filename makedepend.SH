@@ -15,9 +15,12 @@ esac
 echo "Extracting makedepend (with variable substitutions)"
 $spitshell >makedepend <<!GROK!THIS!
 $startsh
-# $Header: makedepend.SH,v 1.0.1.1 88/02/02 11:24:05 root Exp $
+# $Header: makedepend.SH,v 1.0.1.2 88/02/04 10:26:06 root Exp $
 #
 # $Log:	makedepend.SH,v $
+# Revision 1.0.1.2  88/02/04  10:26:06  root
+# patch17: changed chmod 755 to +x.
+# 
 # Revision 1.0.1.1  88/02/02  11:24:05  root
 # patch13: removed spurious -I./h.
 # 
@@ -145,7 +148,7 @@ $rm -f .deptmp `sed 's/\.c/.c.c/' .clist` .shlist .clist .hlist .hsed
 
 !NO!SUBS!
 $eunicefix makedepend
-chmod 755 makedepend
+chmod +x makedepend
 case `pwd` in
 *SH)
     $rm -f ../makedepend

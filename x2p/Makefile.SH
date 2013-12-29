@@ -18,9 +18,12 @@ case "$mallocsrc" in
 esac
 echo "Extracting x2p/Makefile (with variable substitutions)"
 cat >Makefile <<!GROK!THIS!
-# $Header: Makefile.SH,v 1.0.1.1 88/01/26 14:15:24 root Exp $
+# $Header: Makefile.SH,v 1.0.1.2 88/02/04 10:27:04 root Exp $
 #
 # $Log:	Makefile.SH,v $
+# Revision 1.0.1.2  88/02/04  10:27:04  root
+# patch17: changed chmod 755 to +x.
+# 
 # Revision 1.0.1.1  88/01/26  14:15:24  root
 # Added mallocsrc stuff.
 # 
@@ -97,10 +100,10 @@ install: a2p s2p
 	- if test `pwd` != $(bin); then cp $(public) $(bin); fi
 	cd $(bin); \
 for pub in $(public); do \
-chmod 755 `basename $$pub`; \
+chmod +x `basename $$pub`; \
 done
 	- test $(bin) = /bin || rm -f /bin/a2p
-#	chmod 755 makedir
+#	chmod +x makedir
 #	- makedir `filexp $(lib)`
 #	- \
 #if test `pwd` != `filexp $(lib)`; then \
@@ -108,7 +111,7 @@ done
 #fi
 #	cd `filexp $(lib)`; \
 #for priv in $(private); do \
-#chmod 755 `basename $$priv`; \
+#chmod +x `basename $$priv`; \
 #done
 	- if test `pwd` != $(mansrc); then \
 for page in $(manpages); do \

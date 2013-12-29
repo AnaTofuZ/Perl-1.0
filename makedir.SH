@@ -15,9 +15,12 @@ esac
 echo "Extracting makedir (with variable substitutions)"
 $spitshell >makedir <<!GROK!THIS!
 $startsh
-# $Header: makedir.SH,v 1.0 87/12/18 13:05:32 root Exp $
+# $Header: makedir.SH,v 1.0.1.1 88/02/04 10:26:18 root Exp $
 # 
 # $Log:	makedir.SH,v $
+# Revision 1.0.1.1  88/02/04  10:26:18  root
+# patch17: changed chmod 755 to +x.
+# 
 # Revision 1.0  87/12/18  13:05:32  root
 # Initial revision
 # 
@@ -74,4 +77,4 @@ for dir do
 done
 !GROK!THIS!
 $eunicefix makedir
-chmod 755 makedir
+chmod +x makedir
