@@ -1,6 +1,9 @@
-/* $Header: search.c,v 1.0.1.2 88/01/28 10:30:46 root Exp $
+/* $Header: search.c,v 1.0.1.3 88/02/04 11:16:48 root Exp $
  *
  * $Log:	search.c,v $
+ * Revision 1.0.1.3  88/02/04  11:16:48  root
+ * patch18: regularized includes.
+ * 
  * Revision 1.0.1.2  88/01/28  10:30:46  root
  * patch8: uncommented free_compex for use with eval operator.
  * 
@@ -14,11 +17,6 @@
 
 /* string search routines */
  
-#include "EXTERN.h"
-#include "handy.h"
-#include "util.h"
-#include "INTERN.h"
-#include "search.h"
 #include "EXTERN.h"
 #include "perl.h"
 

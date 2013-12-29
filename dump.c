@@ -1,15 +1,15 @@
-/* $Header: dump.c,v 1.0 87/12/18 13:05:03 root Exp $
+/* $Header: dump.c,v 1.0.1.1 88/02/04 11:16:02 root Exp $
  *
  * $Log:	dump.c,v $
+ * Revision 1.0.1.1  88/02/04  11:16:02  root
+ * patch18: regularized includes.
+ * 
  * Revision 1.0  87/12/18  13:05:03  root
  * Initial revision
  * 
  */
 
-#include "handy.h"
 #include "EXTERN.h"
-#include "search.h"
-#include "util.h"
 #include "perl.h"
 
 #ifdef DEBUGGING

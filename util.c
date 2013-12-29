@@ -1,6 +1,9 @@
-/* $Header: util.c,v 1.0.1.2 88/02/04 00:15:15 root Exp $
+/* $Header: util.c,v 1.0.1.3 88/02/04 11:17:05 root Exp $
  *
  * $Log:	util.c,v $
+ * Revision 1.0.1.3  88/02/04  11:17:05  root
+ * patch18: regularized includes.
+ * 
  * Revision 1.0.1.2  88/02/04  00:15:15  root
  * patch16: safefree wasn't safe from null pointers.
  * 
@@ -12,14 +15,8 @@
  * 
  */
 
-#include <stdio.h>
-
-#include "handy.h"
 #include "EXTERN.h"
-#include "search.h"
 #include "perl.h"
-#include "INTERN.h"
-#include "util.h"
 
 #define FLUSH
 #define MEM_SIZE unsigned int

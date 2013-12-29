@@ -1,6 +1,9 @@
-/* $Header: stab.c,v 1.0.1.4 88/02/04 10:26:31 root Exp $
+/* $Header: stab.c,v 1.0.1.5 88/02/04 11:16:57 root Exp $
  *
  * $Log:	stab.c,v $
+ * Revision 1.0.1.5  88/02/04  11:16:57  root
+ * patch18: regularized includes.
+ * 
  * Revision 1.0.1.4  88/02/04  10:26:31  root
  * patch17: now prints warning if no signal handler defined.
  * 
@@ -18,12 +21,10 @@
  * 
  */
 
-#include <signal.h>
-#include "handy.h"
 #include "EXTERN.h"
-#include "search.h"
-#include "util.h"
 #include "perl.h"
+
+#include <signal.h>
 
 static char *sig_name[] = {
     "",

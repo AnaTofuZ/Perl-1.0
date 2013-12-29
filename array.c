@@ -1,16 +1,15 @@
-/* $Header: array.c,v 1.0 87/12/18 13:04:42 root Exp $
+/* $Header: array.c,v 1.0.1.1 88/02/04 11:15:54 root Exp $
  *
  * $Log:	array.c,v $
+ * Revision 1.0.1.1  88/02/04  11:15:54  root
+ * patch18: regularized includes.
+ * 
  * Revision 1.0  87/12/18  13:04:42  root
  * Initial revision
  * 
  */
 
-#include <stdio.h>
 #include "EXTERN.h"
-#include "handy.h"
-#include "util.h"
-#include "search.h"
 #include "perl.h"
 
 STR *

@@ -1,6 +1,9 @@
-/* $Header: cmd.c,v 1.0.1.1 88/01/21 21:24:16 root Exp $
+/* $Header: cmd.c,v 1.0.1.2 88/02/04 11:15:58 root Exp $
  *
  * $Log:	cmd.c,v $
+ * Revision 1.0.1.2  88/02/04  11:15:58  root
+ * patch18: regularized includes.
+ * 
  * Revision 1.0.1.1  88/01/21  21:24:16  root
  * The redo cmd got a segmentation fault because trace context stack overflowed.
  * 
@@ -9,10 +12,7 @@
  * 
  */
 
-#include "handy.h"
 #include "EXTERN.h"
-#include "search.h"
-#include "util.h"
 #include "perl.h"
 
 static STR str_chop;

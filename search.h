@@ -1,6 +1,10 @@
-/* $Header: search.h,v 1.0 87/12/18 13:06:06 root Exp $
+/* $Header: search.h,v 1.0.1.1 88/02/04 11:20:02 root Exp $
  *
  * $Log:	search.h,v $
+ * Revision 1.0.1.1  88/02/04  11:20:02  root
+ * patch18: regularized includes.  Changed typedef COMPEX to struct compex
+ * 	so that typedef COMPEX could be done as a forward declaration.
+ * 
  * Revision 1.0  87/12/18  13:06:06  root
  * Initial revision
  * 
@@ -10,7 +14,7 @@
 #define	MAXSUB	10		/* how many sub-patterns are allowed */
 #define MAXALT	10		/* how many alternatives are allowed */
  
-typedef struct {	
+struct compex {	
     char *precomp;		/* the original pattern, for debug output */
     char *compbuf;		/* the compiled pattern */
     int complen;		/* length of compbuf */
@@ -21,7 +25,7 @@ typedef struct {
     char lastparen;		/* which subpattern matched last */
     char numsubs;		/* how many subpatterns the compiler saw */
     bool do_folding;		/* fold upper and lower case? */
-} COMPEX;
+};
 
 EXT int multiline INIT(0);
 

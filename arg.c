@@ -1,6 +1,9 @@
-/* $Header: arg.c,v 1.0.1.7 88/02/02 11:22:19 root Exp $
+/* $Header: arg.c,v 1.0.1.8 88/02/04 11:14:58 root Exp $
  *
  * $Log:	arg.c,v $
+ * Revision 1.0.1.8  88/02/04  11:14:58  root
+ * patch18: regularized includes.
+ * 
  * Revision 1.0.1.7  88/02/02  11:22:19  root
  * patch13: fixed split(' ') to work right second time.  Added CRYPT dependency.
  * 
@@ -24,12 +27,10 @@
  * 
  */
 
-#include <signal.h>
-#include "handy.h"
 #include "EXTERN.h"
-#include "search.h"
-#include "util.h"
 #include "perl.h"
+
+#include <signal.h>
 
 ARG *debarg;
 

@@ -1,6 +1,9 @@
-/* $Header: str.c,v 1.0.1.1 88/01/21 21:28:39 root Exp $
+/* $Header: str.c,v 1.0.1.2 88/02/04 11:17:02 root Exp $
  *
  * $Log:	str.c,v $
+ * Revision 1.0.1.2  88/02/04  11:17:02  root
+ * patch18: regularized includes.
+ * 
  * Revision 1.0.1.1  88/01/21  21:28:39  root
  * Suppressed warning messages on signed vs unsigned chars in str_gets().
  * 
@@ -9,10 +12,7 @@
  * 
  */
 
-#include "handy.h"
 #include "EXTERN.h"
-#include "search.h"
-#include "util.h"
 #include "perl.h"
 
 str_reset(s)

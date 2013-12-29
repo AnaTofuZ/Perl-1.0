@@ -1,6 +1,9 @@
-/* $Header: perl.y,v 1.0.1.1 88/01/28 10:25:31 root Exp $
+/* $Header: perl.y,v 1.0.1.2 88/02/04 11:17:12 root Exp $
  *
  * $Log:	perl.y,v $
+ * Revision 1.0.1.2  88/02/04  11:17:12  root
+ * patch18: regularized includes.
+ * 
  * Revision 1.0.1.1  88/01/28  10:25:31  root
  * patch8: added eval operator.
  * 
@@ -10,12 +13,9 @@
  */
 
 %{
-#include "handy.h"
-#include "EXTERN.h"
-#include "search.h"
-#include "util.h"
 #include "INTERN.h"
 #include "perl.h"
+
 char *tokename[] = {
 "256",
 "word",

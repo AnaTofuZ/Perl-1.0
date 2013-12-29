@@ -1,6 +1,9 @@
-/* $Header: perl.h,v 1.0.1.4 88/01/30 08:54:00 root Exp $
+/* $Header: perl.h,v 1.0.1.5 88/02/04 11:19:35 root Exp $
  *
  * $Log:	perl.h,v $
+ * Revision 1.0.1.5  88/02/04  11:19:35  root
+ * patch18: regularized includes.
+ * 
  * Revision 1.0.1.4  88/01/30  08:54:00  root
  * patch9: changed #define YYDEBUG; to #define YYDEBUG 1
  * 
@@ -51,7 +54,11 @@ typedef struct stio STIO;
 typedef struct string STR;
 typedef struct atbl ARRAY;
 typedef struct htbl HASH;
+typedef struct compex COMPEX;
 
+#include "handy.h"
+#include "search.h"
+#include "util.h"
 #include "str.h"
 #include "form.h"
 #include "stab.h"

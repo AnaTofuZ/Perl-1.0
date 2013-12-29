@@ -1,6 +1,9 @@
-/* $Header: malloc.c,v 1.0.1.1 88/01/24 03:53:23 root Exp $
+/* $Header: malloc.c,v 1.0.1.2 88/02/04 11:16:24 root Exp $
  *
  * $Log:	malloc.c,v $
+ * Revision 1.0.1.2  88/02/04  11:16:24  root
+ * patch18: regularized includes.
+ * 
  * Revision 1.0.1.1  88/01/24  03:53:23  root
  * patch 2: made depend on perl.h.
  * 
@@ -12,7 +15,6 @@
 #ifndef lint
 static char sccsid[] = "@(#)malloc.c	4.3 (Berkeley) 9/16/83";
 #endif
-#include <stdio.h>
 
 #define RCHECK
 /*
@@ -28,8 +30,6 @@ static char sccsid[] = "@(#)malloc.c	4.3 (Berkeley) 9/16/83";
  */
 
 #include "EXTERN.h"
-#include "handy.h"
-#include "search.h"
 #include "perl.h"
 
 /* I don't much care whether these are defined in sys/types.h--LAW */
