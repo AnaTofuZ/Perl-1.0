@@ -6,7 +6,7 @@ case $CONFIG in
 	ln ../../../config.sh . || \
 	(echo "Can't find config.sh."; exit 1)
     fi
-    . config.sh
+    . ./config.sh
     ;;
 esac
 case "$0" in
@@ -20,9 +20,12 @@ esac
 
 echo "Extracting Makefile (with variable substitutions)"
 cat >Makefile <<!GROK!THIS!
-# $Header: Makefile.SH,v 1.0.1.7 88/02/04 10:25:41 root Exp $
+# $Header: Makefile.SH,v 1.0.1.8 88/02/12 10:16:02 root Exp $
 #
 # $Log:	Makefile.SH,v $
+# Revision 1.0.1.8  88/02/12  10:16:02  root
+# patch22: more glitches on systems without . in path.
+# 
 # Revision 1.0.1.7  88/02/04  10:25:41  root
 # patch17: changed chmod 755 to +x.
 # 

@@ -1,6 +1,9 @@
-/* $Header: a2py.c,v 1.0.1.2 88/02/04 00:19:38 root Exp $
+/* $Header: a2py.c,v 1.0.1.3 88/02/12 10:53:13 root Exp $
  *
  * $Log:	a2py.c,v $
+ * Revision 1.0.1.3  88/02/12  10:53:13  root
+ * patch22: tokener wasn't creating proper value for "~" or lexing numbers right
+ * 
  * Revision 1.0.1.2  88/02/04  00:19:38  root
  * patch16: yylex() didn't recognize >> as GRGR token.
  * 
@@ -217,6 +220,7 @@ yylex()
 	XTERM(tmp);
     case '~':
 	s++;
+	yylval = string("~",1);
 	XTERM(MATCHOP);
     case '+':
     case '-':
@@ -569,18 +573,22 @@ register char *s;
     case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case '0' : case '.':
 	d = tokenbuf;
-	while (isdigit(*s) || *s == '_')
+	while (isdigit(*s)) {
 	    *d++ = *s++;
-	if (*s == '.' && index("0123456789eE",s[1]))
+	}
+	if (*s == '.' && index("0123456789eE",s[1])) {
 	    *d++ = *s++;
-	while (isdigit(*s) || *s == '_')
+	    while (isdigit(*s)) {
+		*d++ = *s++;
+	    }
+	}
+	if (index("eE",*s) && index("+-0123456789",s[1])) {
 	    *d++ = *s++;
-	if (index("eE",*s) && index("+-0123456789",s[1]))
-	    *d++ = *s++;
-	if (*s == '+' || *s == '-')
-	    *d++ = *s++;
-	while (isdigit(*s))
-	    *d++ = *s++;
+	    if (*s == '+' || *s == '-')
+		*d++ = *s++;
+	    while (isdigit(*s))
+		*d++ = *s++;
+	}
 	*d = '\0';
 	yylval = string(tokenbuf,0);
 	break;

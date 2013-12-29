@@ -1,6 +1,9 @@
-/* $Header: cmd.c,v 1.0.1.3 88/02/06 00:18:47 root Exp $
+/* $Header: cmd.c,v 1.0.1.4 88/02/12 10:22:09 root Exp $
  *
  * $Log:	cmd.c,v $
+ * Revision 1.0.1.4  88/02/12  10:22:09  root
+ * patch22: a fix for cray, who for some reason takes SVID seriously
+ * 
  * Revision 1.0.1.3  88/02/06  00:18:47  root
  * patch21: fixed loop and block exits to pop label stack consistently.
  * 
@@ -27,7 +30,11 @@ static STR str_chop;
 
 STR *
 cmd_exec(cmd)
+#ifdef cray	/* nobody else has complained yet */
+CMD *cmd;
+#else
 register CMD *cmd;
+#endif
 {
     SPAT *oldspat;
 #ifdef DEBUGGING

@@ -1,6 +1,9 @@
-/* $Header: malloc.c,v 1.0.1.2 88/02/04 11:16:24 root Exp $
+/* $Header: malloc.c,v 1.0.1.3 88/02/12 10:26:09 root Exp $
  *
  * $Log:	malloc.c,v $
+ * Revision 1.0.1.3  88/02/12  10:26:09  root
+ * patch22: made yell about bad free()
+ * 
  * Revision 1.0.1.2  88/02/04  11:16:24  root
  * patch18: regularized includes.
  * 
@@ -66,6 +69,7 @@ union	overhead {
 };
 
 #define	MAGIC		0xff		/* magic # on accounting info */
+#define OLDMAGIC	0x7f		/* same after a free() */
 #define RMAGIC		0x55555555	/* magic # on range info */
 #ifdef RCHECK
 #define	RSLOP		sizeof (u_int)
@@ -218,8 +222,12 @@ free(cp)
 #ifdef debug
   	ASSERT(op->ov_magic == MAGIC);		/* make sure it was in use */
 #else
-	if (op->ov_magic != MAGIC)
+	if (op->ov_magic != MAGIC) {
+		fprintf(stderr,"%s free() ignored\n",
+		    op->ov_magic == OLDMAGIC ? "Duplicate" : "Bad");
 		return;				/* sanity */
+	}
+	op->ov_magic = OLDMAGIC;
 #endif
 #ifdef RCHECK
   	ASSERT(op->ov_rmagic == RMAGIC);

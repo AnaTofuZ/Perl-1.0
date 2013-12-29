@@ -1,7 +1,10 @@
 .rn '' }`
-''' $Header: perl.man.1,v 1.0.1.4 88/02/06 00:19:44 root Exp $
+''' $Header: perl.man.1,v 1.0.1.5 88/02/12 10:26:35 root Exp $
 ''' 
 ''' $Log:	perl.man.1,v $
+''' Revision 1.0.1.5  88/02/12  10:26:35  root
+''' patch22: some systems don't have \(bs
+''' 
 ''' Revision 1.0.1.4  88/02/06  00:19:44  root
 ''' patch21: documented -v, /foo/i.
 ''' 
@@ -40,11 +43,11 @@
 '''     string Tr holds user defined translation string.
 '''     Bell System Logo is used as a dummy character.
 '''
-.tr \(bs-|\(bv\*(Tr
+.tr \(*W-|\(bv\*(Tr
 .ie n \{\
-.ds -- \(bs-
-.if (\n(.H=4u)&(1m=24u) .ds -- \(bs\h'-12u'\(bs\h'-12u'-\" diablo 10 pitch
-.if (\n(.H=4u)&(1m=20u) .ds -- \(bs\h'-12u'\(bs\h'-8u'-\" diablo 12 pitch
+.ds -- \(*W-
+.if (\n(.H=4u)&(1m=24u) .ds -- \(*W\h'-12u'\(*W\h'-12u'-\" diablo 10 pitch
+.if (\n(.H=4u)&(1m=20u) .ds -- \(*W\h'-12u'\(*W\h'-8u'-\" diablo 12 pitch
 .ds L" ""
 .ds R" ""
 .ds L' '

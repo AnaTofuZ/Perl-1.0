@@ -6,7 +6,7 @@ case $CONFIG in
 	ln ../../../config.sh . || \
 	(echo "Can't find config.sh."; exit 1)
     fi
-    . config.sh
+    . ./config.sh
     ;;
 esac
 case "$0" in
@@ -15,9 +15,12 @@ esac
 echo "Extracting makedir (with variable substitutions)"
 $spitshell >makedir <<!GROK!THIS!
 $startsh
-# $Header: makedir.SH,v 1.0.1.1 88/02/04 10:26:18 root Exp $
+# $Header: makedir.SH,v 1.0.1.2 88/02/12 10:25:55 root Exp $
 # 
 # $Log:	makedir.SH,v $
+# Revision 1.0.1.2  88/02/12  10:25:55  root
+# patch22: fix for systems without . in path
+# 
 # Revision 1.0.1.1  88/02/04  10:26:18  root
 # patch17: changed chmod 755 to +x.
 # 

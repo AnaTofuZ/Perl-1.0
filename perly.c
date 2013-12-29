@@ -1,6 +1,10 @@
-char rcsid[] = "$Header: perly.c,v 1.0.1.5 88/02/06 00:22:51 root Exp $";
+char rcsid[] = "$Header: perly.c,v 1.0.1.6 88/02/12 10:27:36 root Exp $";
 /*
  * $Log:	perly.c,v $
+ * Revision 1.0.1.6  88/02/12  10:27:36  root
+ * patch22: fixed a null pointer problem on strings that run to EOF
+ * 	fixed some expressions that blew up some SysV compilers
+ * 
  * Revision 1.0.1.5  88/02/06  00:22:51  root
  * patch21: added /foo/i, /$var/.
  * 
@@ -1676,7 +1680,7 @@ register char *s;
 	    s = str_append_till(tmpstr,s+1,term,leave);
 	    while (!*s) {	/* multiple line string? */
 		s = str_gets(linestr, rsfp);
-		if (!*s)
+		if (!s)
 		    fatal("EOF in string at line %d\n",sqstart);
 		line++;
 		s = str_append_till(tmpstr,s,term,leave);
@@ -1905,6 +1909,7 @@ register ARG *arg;
     double value;		/* must not be register */
     register char *tmps;
     int i;
+    long tmplong;
     double exp(), log(), sqrt(), modf();
     char *crypt();
 
@@ -1955,11 +1960,13 @@ register ARG *arg;
 	    break;
 	case O_LEFT_SHIFT:
 	    value = str_gnum(s1);
-	    str_numset(str,(double)(((long)value) << ((long)str_gnum(s2))));
+    tmplong = (long)str_gnum(s2);
+	    str_numset(str,(double)(((long)value) << tmplong));
 	    break;
 	case O_RIGHT_SHIFT:
 	    value = str_gnum(s1);
-	    str_numset(str,(double)(((long)value) >> ((long)str_gnum(s2))));
+    tmplong = (long)str_gnum(s2);
+	    str_numset(str,(double)(((long)value) >> tmplong));
 	    break;
 	case O_LT:
 	    value = str_gnum(s1);

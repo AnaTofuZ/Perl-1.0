@@ -1,6 +1,9 @@
-/* $Header: str.c,v 1.0 87/12/18 13:07:26 root Exp $
+/* $Header: str.c,v 1.0.1.1 88/02/12 10:54:41 root Exp $
  *
  * $Log:	str.c,v $
+ * Revision 1.0.1.1  88/02/12  10:54:41  root
+ * patch22: propagated STDCHAR patch from str.c in ..
+ * 
  * Revision 1.0  87/12/18  13:07:26  root
  * Initial revision
  * 
@@ -281,7 +284,7 @@ register FILE *fp;
 
     register char *bp;		/* we're going to steal some values */
     register int cnt;		/*  from the stdio struct and put EVERYTHING */
-    register char *ptr;		/*   in the innermost loop into registers */
+    register STDCHAR *ptr;	/*   in the innermost loop into registers */
     register char newline = '\n';	/* (assuming at least 6 registers) */
     int i;
     int bpx;

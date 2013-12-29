@@ -7,7 +7,7 @@ case $CONFIG in
 	(echo "Can't find config.sh."; exit 1)
 	echo "Using config.sh from above..."
     fi
-    . config.sh
+    . ./config.sh
     ;;
 esac
 echo "Extracting config.h (with variable substitutions)"

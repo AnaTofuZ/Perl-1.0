@@ -8,7 +8,7 @@
 # and edit it to reflect your system.  Some packages may include samples
 # of config.h for certain machines, so you might look for one of those.)
 #
-# $Header: Configure,v 1.0.1.6 88/02/02 11:20:07 root Exp $
+# $Header: Configure,v 1.0.1.7 88/02/12 10:14:22 root Exp $
 #
 # Yes, you may rip this off to use in other distribution packages.
 # (Note: this Configure script was generated automatically.  Rather than
@@ -144,7 +144,7 @@ contains*)
     cat >contains <<'EOSS'
 grep "$1" "$2" >.greptmp && cat .greptmp && test -s .greptmp
 EOSS
-chmod 755 contains
+chmod +x contains
 esac
 
 : first determine how to suppress newline on echo command
@@ -280,7 +280,7 @@ done
 echo \$dflt
 exit 1
 EOSC
-chmod 755 loc
+chmod +x loc
 $eunicefix loc
 loclist="
 expr
@@ -398,6 +398,9 @@ if test -f /lib/libc.a; then
     libc=/lib/libc.a
 else
     ans=`loc libc.a blurfl/dyick $libpth`
+    if test ! -f $ans; then
+	ans=`loc clib blurfl/dyick $libpth`
+    fi
     if test -f $ans; then
 	echo "Your C library is in $ans, of all places."
 	libc=$ans
@@ -481,7 +484,7 @@ else
     echo "It's not Xenix..."
     echo "exit 1" >xenix
 fi
-chmod 755 xenix
+chmod +x xenix
 if test -f /venix; then
     echo "Actually, this looks more like a VENIX system..."
     echo "exit 0" >venix
@@ -494,7 +497,7 @@ else
     fi
     echo "exit 1" >venix
 fi
-chmod 755 bsd usg v7 eunice venix xenix
+chmod +x bsd usg v7 eunice venix xenix
 $eunicefix bsd usg v7 eunice venix xenix
 rmlist="$rmlist bsd usg v7 eunice venix xenix"
 
@@ -509,7 +512,7 @@ if sh -c '#' >/dev/null 2>&1 ; then
     echo "Okay, let's see if #! works on this system..."
     echo "#!/bin/echo hi" > try
     $eunicefix try
-    chmod 755 try
+    chmod +x try
     try > today
     if test -s today; then
 	echo "It does."
@@ -517,7 +520,7 @@ if sh -c '#' >/dev/null 2>&1 ; then
     else
 	echo "#! /bin/echo hi" > try
 	$eunicefix try
-	chmod 755 try
+	chmod +x try
 	try > today
 	if test -s today; then
 	    echo "It does."
@@ -531,7 +534,7 @@ else
     echo "Your sh doesn't grok # comments--I will strip them later on."
     shsharp=false
     echo "exec grep -v '^#'" >spitshell
-    chmod 755 spitshell
+    chmod +x spitshell
     $eunicefix spitshell
     spitshell=`pwd`/spitshell
     echo "I presume that if # doesn't work, #! won't work either!"
@@ -549,7 +552,7 @@ set abc
 test "$?abc" != 1
 EOSS
 
-chmod 755 try
+chmod +x try
 $eunicefix try
 if try; then
     echo "Yup, it does."
@@ -680,23 +683,27 @@ fi
 echo " "
 dflt=y
 if $contains index libc.list >/dev/null 2>&1 ; then
-    echo "Your system appears to use index() and rindex() rather than strchr()"
-    $echo $n "and strrchr().  Is this correct? [$dflt] $c"
-    rp='index() rather than strchr()? [$dflt]'
-    . myread
-    case "$ans" in
-	n*|f*) d_index="$define" ;;
-	*)     d_index="$undef" ;;
-    esac
+    if $contains strchr libc.list >/dev/null 2>&1 ; then
+	echo "Your system has both index() and strchr().  Shall I use"
+	rp="index() rather than strchr()? [$dflt]"
+	$echo $n "$rp $c"
+	. myread
+	case "$ans" in
+	    n*) d_index="$define" ;;
+	    *)  d_index="$undef" ;;
+	esac
+    else
+	d_index="$undef"
+	echo "index() found."
+    fi
 else
-    echo "Your system appears to use strchr() and strrchr() rather than index()"
-    $echo $n "and rindex().  Is this correct? [$dflt] $c"
-    rp='strchr() rather than index()? [$dflt]'
-    . myread
-    case "$ans" in
-	n*|f*) d_index="$undef" ;;
-	*)     d_index="$define" ;;
-    esac
+    if $contains strchr libc.list >/dev/null 2>&1 ; then
+	d_index="$define"
+	echo "strchr() found."
+    else
+	echo "No index() or strchr() found!"
+	d_index="$undef"
+    fi
 fi
 
 : see if stat knows about block sizes
@@ -900,7 +907,7 @@ case "\$1" in
     ;;
 esac
 EOSS
-chmod 755 filexp
+chmod +x filexp
 $eunicefix filexp
 
 : determine where public executables go
@@ -1019,7 +1026,7 @@ esac
 $rm -f /tmp/Cppsym\$\$ /tmp/Cppsym2\$\$
 exit \$status
 EOSS
-chmod 755 Cppsym
+chmod +x Cppsym
 $eunicefix Cppsym
 echo "Your C preprocessor defines the following symbols:"
 Cppsym -l $attrlist >Cppsym.true

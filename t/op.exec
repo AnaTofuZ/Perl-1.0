@@ -1,18 +1,21 @@
 #!./perl
 
-# $Header: op.exec,v 1.0.1.1 88/02/04 17:49:08 root Exp $
+# $Header: op.exec,v 1.0.1.2 88/02/12 10:50:53 root Exp $
 
 $| = 1;				# flush stdout
-print "1..7\n";
+print "1..8\n";
 
 print "not ok 1\n" if system "echo ok \\1";	# shell interpreted
 print "not ok 2\n" if system "echo ok 2";	# split and directly called
 print "not ok 3\n" if system "echo", "ok", "3"; # directly called
 
-if ((system "false") == 256) {print "ok 4\n";} else {print "not ok 4\n";}
+if (system "true") {print "not ok 4\n";} else {print "ok 4\n";}
 
-if ((system "lskdfj") == 255 * 256) {print "ok 5\n";} else {print "not ok 5\n";}
+if ((system "/bin/sh -c 'exit 1'") != 256) { print "not "; }
+print "ok 5\n";
 
-unless (exec "lskdjfalksdjfdjfkls") {print "ok 6\n";} else {print "not ok 6\n";}
+if ((system "lskdfj") == 255 << 8) {print "ok 6\n";} else {print "not ok 6\n";}
 
-exec "echo","ok","7";
+unless (exec "lskdjfalksdjfdjfkls") {print "ok 7\n";} else {print "not ok 7\n";}
+
+exec "echo","ok","8";

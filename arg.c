@@ -1,6 +1,15 @@
-/* $Header: arg.c,v 1.0.1.10 88/02/06 00:17:48 root Exp $
+/* $Header: arg.c,v 1.0.1.11 88/02/12 10:46:30 root Exp $
  *
  * $Log:	arg.c,v $
+ * Revision 1.0.1.11  88/02/12  10:46:30  root
+ * patch22: fixed double free() problem, null ptr dereference, unwanted
+ * 	sign extension on return status from wait().
+ * 
+ * Revision 1.0.1.11  88/02/12  10:17:37  root
+ * patch22: fixed a double free() (one was actually a realloc())
+ * 	fixed possible null pointer dereference
+ * 	prevented sign extension on system return value
+ * 
  * Revision 1.0.1.10  88/02/06  00:17:48  root
  * patch21: fixed code so /foo/ && s//bar/ would work.  Also /foo/i.
  * 
@@ -1044,10 +1053,9 @@ register ARG *arg;
 }
 
 int
-do_kv(hash,kv,sarg,retary)
+do_kv(hash,kv,retary)
 HASH *hash;
 int kv;
-register STR **sarg;
 STR ***retary;
 {
     register ARRAY *ary;
@@ -1055,6 +1063,7 @@ STR ***retary;
     int i;
     static ARRAY *myarray = Null(ARRAY*);
     register HENT *entry;
+    register STR **sarg;
 
     ary = myarray;
     if (!ary)
@@ -1070,7 +1079,7 @@ STR ***retary;
 	    apush(ary,str_make(str_get(hiterval(entry))));
     }
     if (retary) { /* array wanted */
-	sarg = (STR**)saferealloc((char*)sarg,(max+2)*sizeof(STR*));
+	sarg = (STR**)safemalloc((max+2)*sizeof(STR*));
 	sarg[0] = Nullstr;
 	sarg[max+1] = Nullstr;
 	for (i = 1; i <= max; i++)
@@ -1081,14 +1090,14 @@ STR ***retary;
 }
 
 STR *
-do_each(hash,sarg,retary)
+do_each(hash,retary)
 HASH *hash;
-register STR **sarg;
 STR ***retary;
 {
     static STR *mystr = Nullstr;
     STR *retstr;
     HENT *entry = hiternext(hash);
+    register STR **sarg;
 
     if (mystr) {
 	str_free(mystr);
@@ -1097,7 +1106,7 @@ STR ***retary;
 
     if (retary) { /* array wanted */
 	if (entry) {
-	    sarg = (STR**)saferealloc((char*)sarg,4*sizeof(STR*));
+	    sarg = (STR**)safemalloc(4*sizeof(STR*));
 	    sarg[0] = Nullstr;
 	    sarg[3] = Nullstr;
 	    sarg[1] = mystr = str_make(hiterkey(entry));
@@ -1105,7 +1114,7 @@ STR ***retary;
 	    *retary = sarg;
 	}
 	else {
-	    sarg = (STR**)saferealloc((char*)sarg,2*sizeof(STR*));
+	    sarg = (STR**)safemalloc(2*sizeof(STR*));
 	    sarg[0] = Nullstr;
 	    sarg[1] = retstr = Nullstr;
 	    *retary = sarg;
@@ -1543,11 +1552,13 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	goto donumset;
     case O_LEFT_SHIFT:
 	value = str_gnum(sarg[1]);
-	value = (double)(((long)value) << (long)str_gnum(sarg[2]));
+	tmplong = (long)str_gnum(sarg[2]);
+	value = (double)(((long)value) << tmplong);
 	goto donumset;
     case O_RIGHT_SHIFT:
 	value = str_gnum(sarg[1]);
-	value = (double)(((long)value) >> (long)str_gnum(sarg[2]));
+	tmplong = (long)str_gnum(sarg[2]);
+	value = (double)(((long)value) >> tmplong);
 	goto donumset;
     case O_LT:
 	value = str_gnum(sarg[1]);
@@ -1702,15 +1713,15 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	STABSET(str);
 	break;
     case O_EACH:
-	str_sset(str,do_each(arg[1].arg_ptr.arg_stab->stab_hash,sarg,retary));
+	str_sset(str,do_each(arg[1].arg_ptr.arg_stab->stab_hash,retary));
 	retary = Null(STR***);		/* do_each already did retary */
 	STABSET(str);
 	break;
     case O_VALUES:
     case O_KEYS:
 	value = (double) do_kv(arg[1].arg_ptr.arg_stab->stab_hash,
-	  optype,sarg,retary);
-	retary = Null(STR***);		/* do_keys already did retary */
+	  optype,retary);
+	retary = Null(STR***);		/* do_kv already did retary */
 	goto donumset;
     case O_ARRAY:
 	if (maxarg == 1) {
@@ -1862,15 +1873,17 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 	}
 	if (!stab->stab_io)
 	    value = 0.0;
-	else if (arg[1].arg_flags & AF_SPECIAL)
-	    value = (double)do_aprint(arg,stab->stab_io->fp);
 	else {
-	    value = (double)do_print(str_get(sarg[1]),stab->stab_io->fp);
-	    if (ors && optype == O_PRINT)
-		do_print(ors, stab->stab_io->fp);
+	    if (arg[1].arg_flags & AF_SPECIAL)
+		value = (double)do_aprint(arg,stab->stab_io->fp);
+	    else {
+		value = (double)do_print(str_get(sarg[1]),stab->stab_io->fp);
+		if (ors && optype == O_PRINT)
+		    do_print(ors, stab->stab_io->fp);
+	    }
+	    if (stab->stab_io->flags & IOF_FLUSH && stab->stab_io->fp)
+		fflush(stab->stab_io->fp);
 	}
-	if (stab->stab_io->flags & IOF_FLUSH)
-	    fflush(stab->stab_io->fp);
 	goto donumset;
     case O_CHDIR:
 	tmps = str_get(sarg[1]);
@@ -2039,6 +2052,9 @@ STR ***retary;		/* where to return an array to, null if nowhere */
 		;
 	    if (maxarg == -1)
 		argflags = -1;
+	    else {
+		argflags &= 0xffff;
+	    }
 	    signal(SIGINT, ihand);
 	    signal(SIGQUIT, qhand);
 	    value = (double)argflags;
