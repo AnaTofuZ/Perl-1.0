@@ -1,8 +1,12 @@
-#!/bin/perl
+#!/usr/bin/perl
 
-# $Header: perldb,v 1.0.1.4 88/02/25 11:46:57 root Exp $
+# $Header: perldb,v 1.0.1.5 88/03/02 12:42:34 root Exp $
 #
 # $Log:	perldb,v $
+# Revision 1.0.1.5  88/03/02  12:42:34  root
+# patch24: / was treated like operator when it should have been match delim
+# patch24: "standard" directory changed from /bin to /usr/bin
+# 
 # Revision 1.0.1.4  88/02/25  11:46:57  root
 # patch23: perldb doesn't correctly handle "else" and "continue".
 # 
@@ -34,7 +38,7 @@ open(script,$filename) || die "Can't find $filename";
 
 open(tmp, ">$tmp") || die "Can't make temp script";
 
-$perl = '/bin/perl';
+$perl = '/usr/bin/perl';
 $init = 1;
 $state = 'statement';
 
@@ -284,7 +288,7 @@ sub parse {
 	    $state = 'term', next	if s/^<[A-Za-z_0-9]*>//;
 	    next			if s/^\+\+//;
 	    next			if s/^--//;
-	    $state = 'operator', next	if s/^[(!%&*-=+:,.<>]//;
+	    $state = 'operator', next	if s/^[-(!%&*=+:,.<>]//;
 	    $state = 'term', next	if s/^\)+//;
 	    do quote($ord,1), next	if s/^'//;
 	    do quote($ord,1), next	if s/^"//;

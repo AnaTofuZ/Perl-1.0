@@ -1,6 +1,9 @@
-/* $Header: search.c,v 1.0.1.4 88/02/25 11:52:17 root Exp $
+/* $Header: search.c,v 1.0.1.5 88/03/02 12:55:48 root Exp $
  *
  * $Log:	search.c,v $
+ * Revision 1.0.1.5  88/03/02  12:55:48  root
+ * patch24: improved runtime error messages
+ * 
  * Revision 1.0.1.4  88/02/25  11:52:17  root
  * patch23: (.*) in pattern wouldn't match null string.
  * 
@@ -24,7 +27,6 @@
 #include "perl.h"
 
 #define VERBOSE
-#define FLUSH
 #define MEM_SIZE int
 
 #ifndef BITSPERBYTE
@@ -403,7 +405,7 @@ int fold;
 		case '|':
 		    if (parenp>paren) {
 #ifdef VERBOSE
-			retmes = "No | in subpattern";	/* Sigh! */
+			retmes = "No | allowed in subpattern";	/* Sigh! */
 #endif
 			goto badcomp;
 		    }
@@ -691,11 +693,8 @@ register char *sp;
 		continue;
  
 	    case REF:
-		if (compex->subend[i = *cp++] == 0) {
-		    fputs("Bad subpattern reference\n",stdout) FLUSH;
-		    err = FATAL;
-		    goto wrong;
-		}
+		if (compex->subend[i = *cp++] == 0)
+		    fatal("Bad subpattern reference");
 		basesp = sp;
 		backlen = compex->subend[i] - compex->subbeg[i];
 		if (code & MAXINF)
@@ -705,9 +704,7 @@ register char *sp;
 		goto backoff;
  
 	    default:
-		fputs("Botched pattern compilation\n",stdout) FLUSH;
-		err = FATAL;
-		return -1;
+		fatal("Botched pattern compilation");
 	}
     }
     if (*cp == FINIS || *cp == END) {

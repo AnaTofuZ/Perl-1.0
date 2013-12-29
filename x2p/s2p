@@ -132,6 +132,7 @@ line: while (<>) {
 	$addr1 .= " .. $addr2";
     }
 					# a { to keep vi happy
+    s/^[ \t]+//;
     if ($_ eq '}') {
 	$indent -= 4;
 	next;

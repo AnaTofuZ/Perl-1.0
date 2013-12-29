@@ -1,6 +1,9 @@
-/* $Header: util.c,v 1.0.1.4 88/02/06 00:28:14 root Exp $
+/* $Header: util.c,v 1.0.1.5 88/03/02 12:58:14 root Exp $
  *
  * $Log:	util.c,v $
+ * Revision 1.0.1.5  88/03/02  12:58:14  root
+ * patch24: upgraded runtime error messages
+ * 
  * Revision 1.0.1.4  88/02/06  00:28:14  root
  * patch21: added trap in saferealloc() for null pointer on input.
  * 
@@ -62,7 +65,7 @@ MEM_SIZE size;
     char *realloc();
 
     if (!where)
-	fatal("Null realloc\n");
+	fatal("Null realloc");
     ptr = realloc(where,size?size:1);	/* realloc(0) is NASTY on our system */
 #ifdef DEBUGGING
     if (debug & 128) {
@@ -214,13 +217,27 @@ char *pat;
 {
     extern FILE *e_fp;
     extern char *e_tmpname;
+    char *s;
 
+    s = tokenbuf;
+    sprintf(s,pat,a1,a2,a3,a4);
+    s += strlen(s);
+    if (line) {
+	sprintf(s," at line %d",line);
+	s += strlen(s);
+    }
+    if (last_in_stab && last_in_stab->stab_io && last_in_stab->stab_io->lines) {
+	sprintf(s,", <%s> line %d",
+	  last_in_stab == argvstab ? "" : last_in_stab->stab_name,
+	  last_in_stab->stab_io->lines);
+	s += strlen(s);
+    }
+    strcpy(s,".\n");
     if (in_eval) {
-	sprintf(tokenbuf,pat,a1,a2,a3,a4);
 	str_set(stabent("@",TRUE)->stab_val,tokenbuf);
 	longjmp(eval_env,1);
     }
-    fprintf(stderr,pat,a1,a2,a3,a4);
+    fputs(tokenbuf,stderr);
     if (e_fp)
 	UNLINK(e_tmpname);
     exit(1);

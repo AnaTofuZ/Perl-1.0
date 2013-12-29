@@ -1,6 +1,11 @@
-/* $Header: perl.y,v 1.0.1.3 88/02/25 11:45:20 root Exp $
+/* $Header: perl.y,v 1.0.1.4 88/03/02 12:37:25 root Exp $
  *
  * $Log:	perl.y,v $
+ * Revision 1.0.1.4  88/03/02  12:37:25  root
+ * patch24: made stab_to_* unique in 7 chars
+ * patch24: added file tests
+ * patch24: added line numbers for runtime errors
+ * 
  * Revision 1.0.1.3  88/02/25  11:45:20  root
  * patch23: label on null statement can cause core dump.
  * 
@@ -27,7 +32,7 @@ char *tokename[] = {
 "while","until","if","unless","else","elsif","continue","split","sprintf",
 "for", "eof", "tell", "seek", "stat",
 "function(no args)","function(1 arg)","function(2 args)","function(3 args)","array function",
-"join", "sub",
+"join", "sub", "file test",
 "format lines",
 "register","array_length", "array",
 "s","pattern",
@@ -65,7 +70,7 @@ char *tokename[] = {
 %token <ival> WHILE UNTIL IF UNLESS ELSE ELSIF CONTINUE SPLIT SPRINTF
 %token <ival> FOR FEOF TELL SEEK STAT 
 %token <ival> FUNC0 FUNC1 FUNC2 FUNC3 STABFUN
-%token <ival> JOIN SUB
+%token <ival> JOIN SUB FILETEST
 %token <formval> FORMLIST
 %token <stabval> REG ARYLEN ARY
 %token <arg> SUBST PATTERN
@@ -92,6 +97,7 @@ char *tokename[] = {
 %left '&'
 %nonassoc EQ NE SEQ SNE
 %nonassoc '<' '>' LE GE SLT SGT SLE SGE
+%nonassoc FILETEST
 %left LS RS
 %left '+' '-' '.'
 %left '*' '/' '%' 'x'
@@ -120,7 +126,8 @@ else	:	/* NULL */
 	|	ELSE block
 			{ $$ = $2; }
 	|	ELSIF '(' expr ')' compblock
-			{ $$ = make_ccmd(C_IF,$3,$5); }
+			{ cmdline = $1;
+			    $$ = make_ccmd(C_IF,$3,$5); }
 	;
 
 block	:	'{' lineseq '}'
@@ -159,31 +166,40 @@ sideff	:	expr
 	;
 
 cond	:	IF '(' expr ')' compblock
-			{ $$ = make_ccmd(C_IF,$3,$5); }
+			{ cmdline = $1;
+			    $$ = make_ccmd(C_IF,$3,$5); }
 	|	UNLESS '(' expr ')' compblock
-			{ $$ = invert(make_ccmd(C_IF,$3,$5)); }
+			{ cmdline = $1;
+			    $$ = invert(make_ccmd(C_IF,$3,$5)); }
 	|	IF block compblock
-			{ $$ = make_ccmd(C_IF,cmd_to_arg($2),$3); }
+			{ cmdline = $1;
+			    $$ = make_ccmd(C_IF,cmd_to_arg($2),$3); }
 	|	UNLESS block compblock
-			{ $$ = invert(make_ccmd(C_IF,cmd_to_arg($2),$3)); }
+			{ cmdline = $1;
+			    $$ = invert(make_ccmd(C_IF,cmd_to_arg($2),$3)); }
 	;
 
 loop	:	label WHILE '(' texpr ')' compblock
-			{ $$ = wopt(add_label($1,
+			{ cmdline = $2;
+			    $$ = wopt(add_label($1,
 			    make_ccmd(C_WHILE,$4,$6) )); }
 	|	label UNTIL '(' expr ')' compblock
-			{ $$ = wopt(add_label($1,
+			{ cmdline = $2;
+			    $$ = wopt(add_label($1,
 			    invert(make_ccmd(C_WHILE,$4,$6)) )); }
 	|	label WHILE block compblock
-			{ $$ = wopt(add_label($1,
+			{ cmdline = $2;
+			    $$ = wopt(add_label($1,
 			    make_ccmd(C_WHILE, cmd_to_arg($3),$4) )); }
 	|	label UNTIL block compblock
-			{ $$ = wopt(add_label($1,
+			{ cmdline = $2;
+			    $$ = wopt(add_label($1,
 			    invert(make_ccmd(C_WHILE, cmd_to_arg($3),$4)) )); }
 	|	label FOR '(' nexpr ';' texpr ';' nexpr ')' block
 			/* basically fake up an initialize-while lineseq */
 			{   yyval.compval.comp_true = $10;
 			    yyval.compval.comp_alt = $8;
+			    cmdline = $2;
 			    $$ = append_line($4,wopt(add_label($1,
 				make_ccmd(C_WHILE,$6,yyval.compval) ))); }
 	|	label compblock	/* a block is a loop that happens once */
@@ -358,6 +374,8 @@ term	:	'-' term %prec UMINUS
 			{ $$ = make_op(O_NOT, 1, $2, Nullarg, Nullarg,0); }
 	|	'~' term
 			{ $$ = make_op(O_COMPLEMENT, 1, $2, Nullarg, Nullarg,0);}
+	|	FILETEST sexpr
+			{ $$ = make_op($1, 1, $2, Nullarg, Nullarg,0); }
 	|	'(' expr ')'
 			{ $$ = make_list(hide_ary($2)); }
 	|	'(' ')'
@@ -365,19 +383,19 @@ term	:	'-' term %prec UMINUS
 	|	DO block	%prec '('
 			{ $$ = cmd_to_arg($2); }
 	|	REG	%prec '('
-			{ $$ = stab_to_arg(A_STAB,$1); }
+			{ $$ = stab2arg(A_STAB,$1); }
 	|	REG '[' expr ']'	%prec '('
 			{ $$ = make_op(O_ARRAY, 2,
-				$3, stab_to_arg(A_STAB,aadd($1)), Nullarg,0); }
+				$3, stab2arg(A_STAB,aadd($1)), Nullarg,0); }
 	|	ARY 	%prec '('
 			{ $$ = make_op(O_ARRAY, 1,
-				stab_to_arg(A_STAB,$1),
+				stab2arg(A_STAB,$1),
 				Nullarg, Nullarg, 1); }
 	|	REG '{' expr '}'	%prec '('
 			{ $$ = make_op(O_HASH, 2,
-				$3, stab_to_arg(A_STAB,hadd($1)), Nullarg,0); }
+				$3, stab2arg(A_STAB,hadd($1)), Nullarg,0); }
 	|	ARYLEN	%prec '('
-			{ $$ = stab_to_arg(A_ARYLEN,$1); }
+			{ $$ = stab2arg(A_ARYLEN,$1); }
 	|	RSTRING	%prec '('
 			{ $$ = $1; }
 	|	PATTERN	%prec '('
@@ -389,12 +407,12 @@ term	:	'-' term %prec UMINUS
 	|	DO WORD '(' expr ')'
 			{ $$ = make_op(O_SUBR, 2,
 				make_list($4),
-				stab_to_arg(A_STAB,stabent($2,TRUE)),
+				stab2arg(A_STAB,stabent($2,TRUE)),
 				Nullarg,1); }
 	|	DO WORD '(' ')'
 			{ $$ = make_op(O_SUBR, 2,
 				make_list(Nullarg),
-				stab_to_arg(A_STAB,stabent($2,TRUE)),
+				stab2arg(A_STAB,stabent($2,TRUE)),
 				Nullarg,1); }
 	|	LOOPEX
 			{ $$ = make_op($1,0,Nullarg,Nullarg,Nullarg,0); }
@@ -413,107 +431,107 @@ term	:	'-' term %prec UMINUS
 			    Nullarg, Nullarg, Nullarg,0); }
 	|	WRITE '(' WORD ')'
 			{ $$ = l(make_op(O_WRITE, 1,
-			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+			    stab2arg(A_STAB,stabent($3,TRUE)),
 			    Nullarg, Nullarg,0)); safefree($3); }
 	|	WRITE '(' expr ')'
 			{ $$ = make_op(O_WRITE, 1, $3, Nullarg, Nullarg,0); }
 	|	SELECT '(' WORD ')'
 			{ $$ = l(make_op(O_SELECT, 1,
-			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+			    stab2arg(A_STAB,stabent($3,TRUE)),
 			    Nullarg, Nullarg,0)); safefree($3); }
 	|	SELECT '(' expr ')'
 			{ $$ = make_op(O_SELECT, 1, $3, Nullarg, Nullarg,0); }
 	|	OPEN WORD	%prec '('
 			{ $$ = make_op(O_OPEN, 2,
-			    stab_to_arg(A_STAB,stabent($2,TRUE)),
-			    stab_to_arg(A_STAB,stabent($2,TRUE)),
+			    stab2arg(A_STAB,stabent($2,TRUE)),
+			    stab2arg(A_STAB,stabent($2,TRUE)),
 			    Nullarg,0); }
 	|	OPEN '(' WORD ')'
 			{ $$ = make_op(O_OPEN, 2,
-			    stab_to_arg(A_STAB,stabent($3,TRUE)),
-			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+			    stab2arg(A_STAB,stabent($3,TRUE)),
+			    stab2arg(A_STAB,stabent($3,TRUE)),
 			    Nullarg,0); }
 	|	OPEN '(' WORD ',' expr ')'
 			{ $$ = make_op(O_OPEN, 2,
-			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+			    stab2arg(A_STAB,stabent($3,TRUE)),
 			    $5, Nullarg,0); }
 	|	CLOSE '(' WORD ')'
 			{ $$ = make_op(O_CLOSE, 1,
-			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+			    stab2arg(A_STAB,stabent($3,TRUE)),
 			    Nullarg, Nullarg,0); }
 	|	CLOSE WORD	%prec '('
 			{ $$ = make_op(O_CLOSE, 1,
-			    stab_to_arg(A_STAB,stabent($2,TRUE)),
+			    stab2arg(A_STAB,stabent($2,TRUE)),
 			    Nullarg, Nullarg,0); }
 	|	FEOF '(' WORD ')'
 			{ $$ = make_op(O_EOF, 1,
-			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+			    stab2arg(A_STAB,stabent($3,TRUE)),
 			    Nullarg, Nullarg,0); }
 	|	FEOF '(' ')'
 			{ $$ = make_op(O_EOF, 0,
-			    stab_to_arg(A_STAB,stabent("ARGV",TRUE)),
+			    stab2arg(A_STAB,stabent("ARGV",TRUE)),
 			    Nullarg, Nullarg,0); }
 	|	FEOF
 			{ $$ = make_op(O_EOF, 0,
 			    Nullarg, Nullarg, Nullarg,0); }
 	|	TELL '(' WORD ')'
 			{ $$ = make_op(O_TELL, 1,
-			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+			    stab2arg(A_STAB,stabent($3,TRUE)),
 			    Nullarg, Nullarg,0); }
 	|	TELL
 			{ $$ = make_op(O_TELL, 0,
 			    Nullarg, Nullarg, Nullarg,0); }
 	|	SEEK '(' WORD ',' sexpr ',' expr ')'
 			{ $$ = make_op(O_SEEK, 3,
-			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+			    stab2arg(A_STAB,stabent($3,TRUE)),
 			    $5, $7,1); }
 	|	PUSH '(' WORD ',' expr ')'
 			{ $$ = make_op($1, 2,
 			    make_list($5),
-			    stab_to_arg(A_STAB,aadd(stabent($3,TRUE))),
+			    stab2arg(A_STAB,aadd(stabent($3,TRUE))),
 			    Nullarg,1); }
 	|	PUSH '(' ARY ',' expr ')'
 			{ $$ = make_op($1, 2,
 			    make_list($5),
-			    stab_to_arg(A_STAB,$3),
+			    stab2arg(A_STAB,$3),
 			    Nullarg,1); }
 	|	POP WORD	%prec '('
 			{ $$ = make_op(O_POP, 1,
-			    stab_to_arg(A_STAB,aadd(stabent($2,TRUE))),
+			    stab2arg(A_STAB,aadd(stabent($2,TRUE))),
 			    Nullarg, Nullarg,0); }
 	|	POP '(' WORD ')'
 			{ $$ = make_op(O_POP, 1,
-			    stab_to_arg(A_STAB,aadd(stabent($3,TRUE))),
+			    stab2arg(A_STAB,aadd(stabent($3,TRUE))),
 			    Nullarg, Nullarg,0); }
 	|	POP ARY	%prec '('
 			{ $$ = make_op(O_POP, 1,
-			    stab_to_arg(A_STAB,$2),
+			    stab2arg(A_STAB,$2),
 			    Nullarg,
 			    Nullarg,
 			    0); }
 	|	POP '(' ARY ')'
 			{ $$ = make_op(O_POP, 1,
-			    stab_to_arg(A_STAB,$3),
+			    stab2arg(A_STAB,$3),
 			    Nullarg,
 			    Nullarg,
 			    0); }
 	|	SHIFT WORD	%prec '('
 			{ $$ = make_op(O_SHIFT, 1,
-			    stab_to_arg(A_STAB,aadd(stabent($2,TRUE))),
+			    stab2arg(A_STAB,aadd(stabent($2,TRUE))),
 			    Nullarg, Nullarg,0); }
 	|	SHIFT '(' WORD ')'
 			{ $$ = make_op(O_SHIFT, 1,
-			    stab_to_arg(A_STAB,aadd(stabent($3,TRUE))),
+			    stab2arg(A_STAB,aadd(stabent($3,TRUE))),
 			    Nullarg, Nullarg,0); }
 	|	SHIFT ARY	%prec '('
 			{ $$ = make_op(O_SHIFT, 1,
-			    stab_to_arg(A_STAB,$2), Nullarg, Nullarg,0); }
+			    stab2arg(A_STAB,$2), Nullarg, Nullarg,0); }
 	|	SHIFT '(' ARY ')'
 			{ $$ = make_op(O_SHIFT, 1,
-			    stab_to_arg(A_STAB,$3), Nullarg, Nullarg,0); }
+			    stab2arg(A_STAB,$3), Nullarg, Nullarg,0); }
 	|	SHIFT	%prec '('
 			{ $$ = make_op(O_SHIFT, 1,
-			    stab_to_arg(A_STAB,aadd(stabent("ARGV",TRUE))),
+			    stab2arg(A_STAB,aadd(stabent("ARGV",TRUE))),
 			    Nullarg, Nullarg,0); }
 	|	SPLIT	%prec '('
 			{ scanpat("/[ \t\n]+/");
@@ -531,12 +549,12 @@ term	:	'-' term %prec UMINUS
 			{ $$ = mod_match(O_MATCH, $5, make_split(defstab,$3) ); }
 	|	SPLIT '(' sexpr ')'
 			{ $$ = mod_match(O_MATCH,
-			    stab_to_arg(A_STAB,defstab),
+			    stab2arg(A_STAB,defstab),
 			    make_split(defstab,$3) ); }
 	|	JOIN '(' WORD ',' expr ')'
 			{ $$ = make_op(O_JOIN, 2,
 			    $5,
-			    stab_to_arg(A_STAB,aadd(stabent($3,TRUE))),
+			    stab2arg(A_STAB,aadd(stabent($3,TRUE))),
 			    Nullarg,0); }
 	|	JOIN '(' sexpr ',' expr ')'
 			{ $$ = make_op(O_JOIN, 2,
@@ -550,13 +568,13 @@ term	:	'-' term %prec UMINUS
 			    Nullarg,1); }
 	|	STAT '(' WORD ')'
 			{ $$ = l(make_op(O_STAT, 1,
-			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+			    stab2arg(A_STAB,stabent($3,TRUE)),
 			    Nullarg, Nullarg,0)); }
 	|	STAT '(' expr ')'
 			{ $$ = make_op(O_STAT, 1, $3, Nullarg, Nullarg,0); }
 	|	CHOP
 			{ $$ = l(make_op(O_CHOP, 1,
-			    stab_to_arg(A_STAB,defstab),
+			    stab2arg(A_STAB,defstab),
 			    Nullarg, Nullarg,0)); }
 	|	CHOP '(' expr ')'
 			{ $$ = l(make_op(O_CHOP, 1, $3, Nullarg, Nullarg,0)); }
@@ -570,28 +588,28 @@ term	:	'-' term %prec UMINUS
 			{ $$ = make_op($1, 3, $3, $5, $7, 0); }
 	|	STABFUN '(' WORD ')'
 			{ $$ = make_op($1, 1,
-				stab_to_arg(A_STAB,hadd(stabent($3,TRUE))),
+				stab2arg(A_STAB,hadd(stabent($3,TRUE))),
 				Nullarg,
 				Nullarg, 0); }
 	;
 
 print	:	PRINT
 			{ $$ = make_op($1,2,
-				stab_to_arg(A_STAB,defstab),
-				stab_to_arg(A_STAB,Nullstab),
+				stab2arg(A_STAB,defstab),
+				stab2arg(A_STAB,Nullstab),
 				Nullarg,0); }
 	|	PRINT expr
 			{ $$ = make_op($1,2,make_list($2),
-				stab_to_arg(A_STAB,Nullstab),
+				stab2arg(A_STAB,Nullstab),
 				Nullarg,1); }
 	|	PRINT WORD
 			{ $$ = make_op($1,2,
-				stab_to_arg(A_STAB,defstab),
-				stab_to_arg(A_STAB,stabent($2,TRUE)),
+				stab2arg(A_STAB,defstab),
+				stab2arg(A_STAB,stabent($2,TRUE)),
 				Nullarg,1); }
 	|	PRINT WORD expr
 			{ $$ = make_op($1,2,make_list($3),
-				stab_to_arg(A_STAB,stabent($2,TRUE)),
+				stab2arg(A_STAB,stabent($2,TRUE)),
 				Nullarg,1); }
 	;
 

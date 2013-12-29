@@ -1,6 +1,9 @@
-/* $Header: str.c,v 1.0.1.3 88/02/25 11:53:48 root Exp $
+/* $Header: str.c,v 1.0.1.4 88/03/02 12:56:44 root Exp $
  *
  * $Log:	str.c,v $
+ * Revision 1.0.1.4  88/03/02  12:56:44  root
+ * patch24: some Xenix systems clobber errno on every sprintf()
+ * 
  * Revision 1.0.1.3  88/02/25  11:53:48  root
  * patch23: str_gets() can stomp malloc arena under certain circumstances.
  * 
@@ -62,18 +65,23 @@ double num;
     str->str_nok = 1;		/* validate number */
 }
 
+extern int errno;
+
 char *
 str_2ptr(str)
 register STR *str;
 {
     register char *s;
+    int olderrno;
 
     if (!str)
 	return "";
     GROWSTR(&(str->str_ptr), &(str->str_len), 24);
     s = str->str_ptr;
     if (str->str_nok) {
+	olderrno = errno;	/* some Xenix systems wipe out errno here */
 	sprintf(s,"%.20g",str->str_nval);
+	errno = olderrno;
 	while (*s) s++;
     }
     *s = '\0';

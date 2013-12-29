@@ -1,6 +1,17 @@
-char rcsid[] = "$Header: perly.c,v 1.0.1.7 88/02/25 11:48:55 root Exp $";
+char rcsid[] = "$Header: perly.c,v 1.0.1.8 88/03/02 12:45:28 root Exp $";
 /*
  * $Log:	perly.c,v $
+ * Revision 1.0.1.8  88/03/02  12:45:28  root
+ * patch24: added new filetest and symlink operations
+ * patch24: made assume_* unique in 7 chars
+ * patch24: added line numbers for improved runtime error messages
+ * patch24: some machines don't handle types right in return (a,b,c)
+ * patch24: "$1text" did not interpolate $1 correctly
+ * patch24: optimization of /foo/ .. /bar/ was incorrect
+ * patch24: grandfathering of \digit in substitutions wasn't working
+ * patch24: division by 0 is now complained about properly in evalstatic()
+ * patch24: ^L is now a valid space character
+ * 
  * Revision 1.0.1.7  88/02/25  11:48:55  root
  * patch23: changed CPP to CPPSTDIN.
  * patch23: extra argument to cmd_free()
@@ -32,8 +43,8 @@ char rcsid[] = "$Header: perly.c,v 1.0.1.7 88/02/25 11:48:55 root Exp $";
  */
 
 bool preprocess = FALSE;
-bool assume_n = FALSE;
-bool assume_p = FALSE;
+bool minus_n = FALSE;
+bool minus_p = FALSE;
 bool doswitches = FALSE;
 bool allstabs = FALSE;		/* init all customary symbols in symbol table?*/
 char *filename;
@@ -89,11 +100,11 @@ register char **env;
 	    }
 	    break;
 	case 'n':
-	    assume_n = TRUE;
+	    minus_n = TRUE;
 	    strcpy(argv[0], argv[0]+1);
 	    goto reswitch;
 	case 'p':
-	    assume_p = TRUE;
+	    minus_p = TRUE;
 	    strcpy(argv[0], argv[0]+1);
 	    goto reswitch;
 	case 'P':
@@ -113,7 +124,7 @@ register char **env;
 	case 0:
 	    break;
 	default:
-	    fatal("Unrecognized switch: %s\n",argv[0]);
+	    fatal("Unrecognized switch: %s",argv[0]);
 	}
     }
   switch_end:
@@ -153,7 +164,7 @@ register char **env;
     else
 	rsfp = fopen(argv[0],"r");
     if (rsfp == Nullfp)
-	fatal("Perl script \"%s\" doesn't seem to exist.\n",filename);
+	fatal("Perl script \"%s\" doesn't seem to exist",filename);
     str_free(str);		/* free -I directories */
 
     defstab = stabent("_",TRUE);
@@ -165,7 +176,7 @@ register char **env;
     /* now parse the report spec */
 
     if (yyparse())
-	fatal("Execution aborted due to compilation errors.\n");
+	fatal("Execution aborted due to compilation errors");
 
     if (e_fp) {
 	e_fp = Nullfp;
@@ -235,7 +246,7 @@ register char **env;
     (void) cmd_exec(main_root);
 
     if (goto_targ)
-	fatal("Can't find label \"%s\"--aborting.\n",goto_targ);
+	fatal("Can't find label \"%s\"--aborting",goto_targ);
     exit(0);
 }
 
@@ -254,16 +265,21 @@ register char *list;
     }
 }
 
-#define RETURN(retval) return (bufptr = s,retval)
-#define OPERATOR(retval) return (expectterm = TRUE,bufptr = s,retval)
-#define TERM(retval) return (expectterm = FALSE,bufptr = s,retval)
-#define LOOPX(f) return (yylval.ival = f,expectterm = FALSE,bufptr = s,LOOPEX)
-#define UNI(f) return (yylval.ival = f,expectterm = TRUE,bufptr = s,UNIOP)
-#define FUN0(f) return (yylval.ival = f,expectterm = FALSE,bufptr = s,FUNC0)
-#define FUN1(f) return (yylval.ival = f,expectterm = FALSE,bufptr = s,FUNC1)
-#define FUN2(f) return (yylval.ival = f,expectterm = FALSE,bufptr = s,FUNC2)
-#define FUN3(f) return (yylval.ival = f,expectterm = FALSE,bufptr = s,FUNC3)
-#define SFUN(f) return (yylval.ival = f,expectterm = FALSE,bufptr = s,STABFUN)
+unsigned int cmdline = 65535;
+
+#define CLINE (cmdline = (line < cmdline ? line : cmdline))
+
+#define RETURN(retval) return (bufptr = s,(int)retval)
+#define OPERATOR(retval) return (expectterm = TRUE,bufptr = s,(int)retval)
+#define TERM(retval) return (CLINE, expectterm = FALSE,bufptr = s,(int)retval)
+#define LOOPX(f) return(yylval.ival=f,expectterm = FALSE,bufptr = s,(int)LOOPEX)
+#define UNI(f) return(yylval.ival = f,expectterm = TRUE,bufptr = s,(int)UNIOP)
+#define FTST(f) return(yylval.ival=f,expectterm = TRUE,bufptr = s,(int)FILETEST)
+#define FUN0(f) return(yylval.ival = f,expectterm = FALSE,bufptr = s,(int)FUNC0)
+#define FUN1(f) return(yylval.ival = f,expectterm = FALSE,bufptr = s,(int)FUNC1)
+#define FUN2(f) return(yylval.ival = f,expectterm = FALSE,bufptr = s,(int)FUNC2)
+#define FUN3(f) return(yylval.ival = f,expectterm = FALSE,bufptr = s,(int)FUNC3)
+#define SFUN(f) return(yylval.ival=f,expectterm = FALSE,bufptr = s,(int)STABFUN)
 
 yylex()
 {
@@ -290,7 +306,7 @@ yylex()
     case 0:
 	s = str_get(linestr);
 	*s = '\0';
-	if (firstline && (assume_n || assume_p)) {
+	if (firstline && (minus_n || minus_p)) {
 	    firstline = FALSE;
 	    str_set(linestr,"while (<>) {");
 	    s = str_get(linestr);
@@ -311,8 +327,8 @@ yylex()
 	    else if (rsfp != stdin)
 		fclose(rsfp);
 	    rsfp = Nullfp;
-	    if (assume_n || assume_p) {
-		str_set(linestr,assume_p ? "}continue{print;" : "");
+	    if (minus_n || minus_p) {
+		str_set(linestr,minus_p ? "}continue{print;" : "");
 		str_cat(linestr,"}");
 		s = str_get(linestr);
 		goto retry;
@@ -328,7 +344,7 @@ yylex()
 #endif
 	firstline = FALSE;
 	goto retry;
-    case ' ': case '\t':
+    case ' ': case '\t': case '\f':
 	s++;
 	goto retry;
     case '\n':
@@ -356,8 +372,31 @@ yylex()
 	if (lex_newlines)
 	    RETURN('\n');
 	goto retry;
-    case '+':
     case '-':
+	if (s[1] && isalpha(s[1]) && !isalpha(s[2])) {
+	    s++;
+	    switch (*s++) {
+	    case 'r': FTST(O_FTEREAD); break;
+	    case 'w': FTST(O_FTEWRITE); break;
+	    case 'x': FTST(O_FTEEXEC); break;
+	    case 'o': FTST(O_FTEOWNED); break;
+	    case 'R': FTST(O_FTRREAD); break;
+	    case 'W': FTST(O_FTRWRITE); break;
+	    case 'X': FTST(O_FTREXEC); break;
+	    case 'O': FTST(O_FTROWNED); break;
+	    case 'e': FTST(O_FTIS); break;
+	    case 'z': FTST(O_FTZERO); break;
+	    case 's': FTST(O_FTSIZE); break;
+	    case 'f': FTST(O_FTFILE); break;
+	    case 'd': FTST(O_FTDIR); break;
+	    case 'l': FTST(O_FTLINK); break;
+	    default:
+		s -= 2;
+		break;
+	    }
+	}
+	/*FALL THROUGH*/
+    case '+':
 	if (s[1] == *s) {
 	    s++;
 	    if (*s++ == '+')
@@ -373,9 +412,17 @@ yylex()
     case '(':
     case ',':
     case ':':
-    case ';':
-    case '{':
     case '[':
+	tmp = *s++;
+	OPERATOR(tmp);
+    case '{':
+	tmp = *s++;
+	if (isspace(*s) || *s == '#')
+	    cmdline = 65535;	/* invalidate current command line number */
+	OPERATOR(tmp);
+    case ';':
+	if (line < cmdline)
+	    cmdline = line;
 	tmp = *s++;
 	OPERATOR(tmp);
     case ')':
@@ -538,8 +585,10 @@ yylex()
 	SNARFWORD;
 	if (strEQ(d,"else"))
 	    OPERATOR(ELSE);
-	if (strEQ(d,"elsif"))
+	if (strEQ(d,"elsif")) {
+	    yylval.ival = line;
 	    OPERATOR(ELSIF);
+	}
 	if (strEQ(d,"eq") || strEQ(d,"EQ"))
 	    OPERATOR(SEQ);
 	if (strEQ(d,"exit"))
@@ -592,8 +641,10 @@ yylex()
 	OPERATOR(WORD);
     case 'i': case 'I':
 	SNARFWORD;
-	if (strEQ(d,"if"))
+	if (strEQ(d,"if")) {
+	    yylval.ival = line;
 	    OPERATOR(IF);
+	}
 	if (strEQ(d,"index"))
 	    FUN2(O_INDEX);
 	if (strEQ(d,"int"))
@@ -722,6 +773,12 @@ yylex()
 	    yylval.ival = O_SYSTEM;
 	    OPERATOR(PRINT);
 	}
+	if (strEQ(d,"symlink"))
+#ifdef SYMLINK
+	    FUN2(O_SYMLINK);
+#else
+	    fatal("symlink() not supported on this machine");
+#endif
 	yylval.cval = savestr(d);
 	OPERATOR(WORD);
     case 't': case 'T':
@@ -742,10 +799,14 @@ yylex()
 	SNARFWORD;
 	if (strEQ(d,"using"))
 	    OPERATOR(USING);
-	if (strEQ(d,"until"))
+	if (strEQ(d,"until")) {
+	    yylval.ival = line;
 	    OPERATOR(UNTIL);
-	if (strEQ(d,"unless"))
+	}
+	if (strEQ(d,"unless")) {
+	    yylval.ival = line;
 	    OPERATOR(UNLESS);
+	}
 	if (strEQ(d,"umask"))
 	    FUN1(O_UMASK);
 	if (strEQ(d,"unshift")) {
@@ -768,8 +829,10 @@ yylex()
 	SNARFWORD;
 	if (strEQ(d,"write"))
 	    TERM(WRITE);
-	if (strEQ(d,"while"))
+	if (strEQ(d,"while")) {
+	    yylval.ival = line;
 	    OPERATOR(WHILE);
+	}
 	yylval.cval = savestr(d);
 	OPERATOR(WORD);
     case 'x': case 'X':
@@ -838,8 +901,14 @@ char *dest;
 
     s++;
     d = dest;
-    while (isalpha(*s) || isdigit(*s) || *s == '_')
-	*d++ = *s++;
+    if (isdigit(*s)) {
+	while (isdigit(*s) || *s == '_')
+	    *d++ = *s++;
+    }
+    else {
+	while (isalpha(*s) || isdigit(*s) || *s == '_')
+	    *d++ = *s++;
+    }
     *d = '\0';
     d = dest;
     if (!*d) {
@@ -938,11 +1007,11 @@ register char *s;
 	spat->spat_flags |= SPAT_USE_ONCE;
 	break;
     default:
-	fatal("Search pattern not found:\n%s",str_get(linestr));
+	fatal("panic: scanpat");
     }
     s = cpytill(tokenbuf,s,s[-1]);
     if (!*s)
-	fatal("Search pattern not terminated:\n%s",str_get(linestr));
+	fatal("Search pattern not terminated");
     s++;
     if (*s == 'i') {
 	s++;
@@ -980,7 +1049,7 @@ register char *s;
       spat->spat_flags & SPAT_FOLD ))
 	fatal(d);
   got_pat:
-    yylval.arg = make_match(O_MATCH,stab_to_arg(A_STAB,defstab),spat);
+    yylval.arg = make_match(O_MATCH,stab2arg(A_STAB,defstab),spat);
     return s;
 }
 
@@ -998,7 +1067,7 @@ register char *s;
 
     s = cpytill(tokenbuf,s+1,*s);
     if (!*s)
-	fatal("Substitution pattern not terminated:\n%s",str_get(linestr));
+	fatal("Substitution pattern not terminated");
     for (d=tokenbuf; *d; d++) {
 	if (*d == '$' && d[1] && d[-1] != '\\' && d[1] != '|') {
 	    register ARG *arg;
@@ -1026,7 +1095,7 @@ register char *s;
 get_repl:
     s = scanstr(s);
     if (!*s)
-	fatal("Substitution replacement not terminated:\n%s",str_get(linestr));
+	fatal("Substitution replacement not terminated");
     spat->spat_repl = yylval.arg;
     spat->spat_flags |= SPAT_USE_ONCE;
     while (*s == 'g' || *s == 'i') {
@@ -1040,7 +1109,7 @@ get_repl:
 	}
     }
     spat->spat_compex.do_folding = spat->spat_flags & SPAT_FOLD;
-    yylval.arg = make_match(O_SUBST,stab_to_arg(A_STAB,defstab),spat);
+    yylval.arg = make_match(O_SUBST,stab2arg(A_STAB,defstab),spat);
     return s;
 }
 
@@ -1059,10 +1128,10 @@ register ARG *arg;
 	init_compex(&spat->spat_compex);
 
 	spat->spat_runtime = arg;
-	arg = make_match(O_MATCH,stab_to_arg(A_STAB,defstab),spat);
+	arg = make_match(O_MATCH,stab2arg(A_STAB,defstab),spat);
     }
     arg->arg_type = O_SPLIT;
-    arg[2].arg_ptr.arg_spat->spat_repl = stab_to_arg(A_STAB,aadd(stab));
+    arg[2].arg_ptr.arg_spat->spat_repl = stab2arg(A_STAB,aadd(stab));
     return arg;
 }
 
@@ -1092,7 +1161,7 @@ scantrans(s)
 register char *s;
 {
     ARG *arg =
-	l(make_op(O_TRANS,2,stab_to_arg(A_STAB,defstab),Nullarg,Nullarg,0));
+	l(make_op(O_TRANS,2,stab2arg(A_STAB,defstab),Nullarg,Nullarg,0));
     register char *t;
     register char *r;
     register char *tbl = safemalloc(256);
@@ -1104,12 +1173,12 @@ register char *s;
 	tbl[i] = 0;
     s = scanstr(s);
     if (!*s)
-	fatal("Translation pattern not terminated:\n%s",str_get(linestr));
+	fatal("Translation pattern not terminated");
     t = expand_charset(str_get(yylval.arg[1].arg_ptr.arg_str));
     free_arg(yylval.arg);
     s = scanstr(s-1);
     if (!*s)
-	fatal("Translation replacement not terminated:\n%s",str_get(linestr));
+	fatal("Translation replacement not terminated");
     r = expand_charset(str_get(yylval.arg[1].arg_ptr.arg_str));
     free_arg(yylval.arg);
     yylval.arg = arg;
@@ -1183,6 +1252,10 @@ ARG *arg;
 	opt_arg(cmd,1);
 	cmd->c_flags |= CF_COND;
     }
+    if (cmdline < 65535) {
+	cmd->c_line = cmdline;
+	cmdline = 65535;
+    }
     return cmd;
 }
 
@@ -1202,6 +1275,10 @@ struct compcmd cblock;
     if (arg) {
 	opt_arg(cmd,1);
 	cmd->c_flags |= CF_COND;
+    }
+    if (cmdline < 65535) {
+	cmd->c_line = cmdline;
+	cmdline = 65535;
     }
     return cmd;
 }
@@ -1280,7 +1357,7 @@ int fliporflop;
 	}
     }
     else if (arg->arg_type == O_MATCH || arg->arg_type == O_SUBST ||
-             arg->arg_type == O_NMATCH || arg->arg_type == O_NSUBST) {
+	     arg->arg_type == O_NMATCH || arg->arg_type == O_NSUBST) {
 	if ((arg[1].arg_type == A_STAB || arg[1].arg_type == A_LVAL) &&
 		arg[2].arg_type == A_SPAT &&
 		arg[2].arg_ptr.arg_spat->spat_first ) {
@@ -1288,7 +1365,7 @@ int fliporflop;
 	    cmd->c_first = arg[2].arg_ptr.arg_spat->spat_first;
 	    cmd->c_flen  = arg[2].arg_ptr.arg_spat->spat_flen;
 	    if (arg[2].arg_ptr.arg_spat->spat_flags & SPAT_SCANALL &&
-	        !(arg[2].arg_ptr.arg_spat->spat_flags & SPAT_USE_ONCE) &&
+		!(arg[2].arg_ptr.arg_spat->spat_flags & SPAT_USE_ONCE) &&
 		(arg->arg_type == O_MATCH || arg->arg_type == O_NMATCH) )
 		sure |= CF_EQSURE;		/* (SUBST must be forced even */
 						/* if we know it will work.) */
@@ -1318,8 +1395,8 @@ int fliporflop;
 		    && arg->arg_type == O_MATCH
 		    && context & 4
 		    && fliporflop == 1) {
-		    arg[2].arg_type = A_SINGLE;		/* don't do twice */
-		    arg[2].arg_ptr.arg_str = &str_yes;
+		    spat_free(arg[2].arg_ptr.arg_spat);
+		    arg[2].arg_ptr.arg_spat = Nullspat;	/* don't do twice */
 		}
 		cmd->c_flags |= sure;
 	    }
@@ -1595,7 +1672,7 @@ register char *s;
 		    goto out;
 		case '8': case '9':
 		    if (shift != 4)
-			fatal("Illegal octal digit at line %d",line);
+			fatal("Illegal octal digit");
 		    /* FALL THROUGH */
 		case '0': case '1': case '2': case '3': case '4':
 		case '5': case '6': case '7':
@@ -1660,7 +1737,7 @@ register char *s;
 	if (*s)
 	    s++;
 	if (rsfp == stdin && strEQ(tokenbuf,"stdin"))
-	    fatal("Can't get both program and data from <stdin>\n");
+	    fatal("Can't get both program and data from <stdin>");
 	arg[1].arg_ptr.arg_stab = stabent(tokenbuf,TRUE);
 	arg[1].arg_ptr.arg_stab->stab_io = stio_new();
 	if (strEQ(tokenbuf,"ARGV")) {
@@ -1686,8 +1763,10 @@ register char *s;
 	    s = str_append_till(tmpstr,s+1,term,leave);
 	    while (!*s) {	/* multiple line string? */
 		s = str_gets(linestr, rsfp);
-		if (!s)
-		    fatal("EOF in string at line %d\n",sqstart);
+		if (!s) {
+		    line = sqstart;
+		    fatal("EOF in string");
+		}
 		line++;
 		s = str_append_till(tmpstr,s,term,leave);
 	    }
@@ -1699,6 +1778,9 @@ register char *s;
 	    tmps = s;
 	    s = d = tmpstr->str_ptr;	/* assuming shrinkage only */
 	    while (*s) {
+		if (*s == '\\' && s[1] && isdigit(s[1]) && !isdigit(s[2]) &&
+		  !index("`\"",term) )
+		    *s == '$';		/* grandfather \digit in subst */
 		if (*s == '$' && s[1]) {
 		    makesingle = FALSE;	/* force interpretation */
 		    if (!isalpha(s[1])) {	/* an internal register? */
@@ -1726,10 +1808,6 @@ register char *s;
 			if (index("01234567",*s)) {
 			    *d <<= 3;
 			    *d += *s++ - '0';
-			}
-			else if (!index("`\"",term)) {	/* oops, a subpattern */
-			    s--;
-			    goto defchar;
 			}
 			if (index("01234567",*s)) {
 			    *d <<= 3;
@@ -1949,12 +2027,16 @@ register ARG *arg;
 	    str_numset(str,value * str_gnum(s2));
 	    break;
 	case O_DIVIDE:
-	    value = str_gnum(s1);
-	    str_numset(str,value / str_gnum(s2));
+	    value = str_gnum(s2);
+	    if (value == 0.0)
+		fatal("Illegal division by constant zero");
+	    str_numset(str,str_gnum(s1) / value);
 	    break;
 	case O_MODULO:
-	    value = str_gnum(s1);
-	    str_numset(str,(double)(((long)value) % ((long)str_gnum(s2))));
+	    value = str_gnum(s2);
+	    if (value == 0.0)
+		fatal("Illegal modulus of constant zero");
+	    str_numset(str,(double)(((long)str_gnum(s1)) % ((long)value)));
 	    break;
 	case O_ADD:
 	    value = str_gnum(s1);
@@ -2275,7 +2357,7 @@ ARG *arg;
 }
 
 ARG *
-stab_to_arg(atype,stab)
+stab2arg(atype,stab)
 int atype;
 register STAB *stab;
 {
@@ -2377,7 +2459,7 @@ register CMD *cmd;
 	cmd->c_stab = arg[1].arg_ptr.arg_stab;
 	if (arg[1].arg_ptr.arg_stab->stab_io->flags & IOF_ARGV) {
 	    cmd->c_expr = l(make_op(O_ASSIGN, 2,	/* fake up "$_ =" */
-	       stab_to_arg(A_LVAL,defstab), arg, Nullarg,1 ));
+	       stab2arg(A_LVAL,defstab), arg, Nullarg,1 ));
 	}
 	else {
 	    free_arg(arg);
@@ -2521,7 +2603,7 @@ load_format()
 		    *bufptr = '\0';
 		    break;
 		case REG:
-		    yylval.arg = stab_to_arg(A_LVAL,yylval.stabval);
+		    yylval.arg = stab2arg(A_LVAL,yylval.stabval);
 		    /* FALL THROUGH */
 		case RSTRING:
 		    if (!flinebeg)
