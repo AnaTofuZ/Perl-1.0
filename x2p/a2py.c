@@ -1,6 +1,9 @@
-/* $Header: a2py.c,v 1.0.1.1 88/01/28 11:07:08 root Exp $
+/* $Header: a2py.c,v 1.0.1.2 88/02/04 00:19:38 root Exp $
  *
  * $Log:	a2py.c,v $
+ * Revision 1.0.1.2  88/02/04  00:19:38  root
+ * patch16: yylex() didn't recognize >> as GRGR token.
+ * 
  * Revision 1.0.1.1  88/01/28  11:07:08  root
  * patch8: added support for FOO=bar switches using eval.
  * 
@@ -284,6 +287,10 @@ yylex()
     case '>':
 	s++;
 	tmp = *s++;
+	if (tmp == '>') {
+	    yylval = string(">>",2);
+	    XTERM(GRGR);
+	}
 	if (tmp == '=') {
 	    yylval = string(">=",2);
 	    XTERM(RELOP);

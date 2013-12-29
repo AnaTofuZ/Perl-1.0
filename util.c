@@ -1,6 +1,9 @@
-/* $Header: util.c,v 1.0.1.1 88/01/28 11:06:35 root Exp $
+/* $Header: util.c,v 1.0.1.2 88/02/04 00:15:15 root Exp $
  *
  * $Log:	util.c,v $
+ * Revision 1.0.1.2  88/02/04  00:15:15  root
+ * patch16: safefree wasn't safe from null pointers.
+ * 
  * Revision 1.0.1.1  88/01/28  11:06:35  root
  * patch8: changed fatal() to support eval operator with exiting.
  * 
@@ -83,7 +86,9 @@ char *where;
     if (debug & 128)
 	fprintf(stderr,"0x%x: (%05d) free\n",where,an++);
 #endif
-    free(where);
+    if (where) {
+	free(where);
+    }
 }
 
 /* safe version of string copy */

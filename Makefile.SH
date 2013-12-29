@@ -20,9 +20,12 @@ esac
 
 echo "Extracting Makefile (with variable substitutions)"
 cat >Makefile <<!GROK!THIS!
-# $Header: Makefile.SH,v 1.0.1.5 88/02/02 11:20:49 root Exp $
+# $Header: Makefile.SH,v 1.0.1.6 88/02/04 00:11:48 root Exp $
 #
 # $Log:	Makefile.SH,v $
+# Revision 1.0.1.6  88/02/04  00:11:48  root
+# patch16: forgot one ln -s.
+# 
 # Revision 1.0.1.5  88/02/02  11:20:49  root
 # patch13: added d_symlink dependency, changed TEST to ./perl TEST.
 # 
@@ -126,7 +129,7 @@ for pub in $(public); do \
 chmod 755 `basename $$pub`; \
 done
 	- test $(bin) = /bin || rm -f /bin/perl
-	- test $(bin) = /bin || ln -s $(bin)/perl /bin || cp $(bin)/perl /bin
+	- test $(bin) = /bin || $(SLN) $(bin)/perl /bin || cp $(bin)/perl /bin
 #	chmod 755 makedir
 #	- makedir `filexp $(lib)`
 #	- \

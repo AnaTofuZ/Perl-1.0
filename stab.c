@@ -1,6 +1,9 @@
-/* $Header: stab.c,v 1.0.1.2 88/02/02 11:25:53 root Exp $
+/* $Header: stab.c,v 1.0.1.3 88/02/04 00:13:15 root Exp $
  *
  * $Log:	stab.c,v $
+ * Revision 1.0.1.3  88/02/04  00:13:15  root
+ * patch16: stabset didn't copy some strings it should have.
+ * 
  * Revision 1.0.1.2  88/02/02  11:25:53  root
  * patch13: moved extern int out of function for a poor Xenix machine.
  * 
@@ -175,13 +178,13 @@ STR *str;
 	switch (stab->stab_name[0]) {
 	case '^':
 	    safefree(curoutstab->stab_io->top_name);
-	    curoutstab->stab_io->top_name = str_get(str);
-	    curoutstab->stab_io->top_stab = stabent(str_get(str),TRUE);
+	    curoutstab->stab_io->top_name = s = savestr(str_get(str));
+	    curoutstab->stab_io->top_stab = stabent(s,TRUE);
 	    break;
 	case '~':
 	    safefree(curoutstab->stab_io->fmt_name);
-	    curoutstab->stab_io->fmt_name = str_get(str);
-	    curoutstab->stab_io->fmt_stab = stabent(str_get(str),TRUE);
+	    curoutstab->stab_io->fmt_name = s = savestr(str_get(str));
+	    curoutstab->stab_io->fmt_stab = stabent(s,TRUE);
 	    break;
 	case '=':
 	    curoutstab->stab_io->page_len = (long)str_gnum(str);

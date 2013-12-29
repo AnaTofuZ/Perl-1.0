@@ -1,8 +1,15 @@
 #!./perl
 
-# $Header: op.crypt,v 1.0 87/12/18 13:13:17 root Exp $
+# $Header: op.crypt,v 1.0.1.1 88/02/04 00:14:38 root Exp $
 
 print "1..2\n";
+
+eval 'crypt("uh","oh");';
+if ($@ =~ /paranoia/) {
+    print "ok 1\nok 2 \n";
+    print stderr "NOTE: crypt appears to be unimplemented on this system.\n";
+    exit 0;
+}
 
 # this evaluates entirely at compile time!
 if (crypt('uh','oh') eq 'ohPnjpYtoi1NU') {print "ok 1\n";} else {print "not ok 1\n";}

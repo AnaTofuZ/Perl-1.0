@@ -1,8 +1,14 @@
 #!/bin/perl
 
-# $Header: perldb,v 1.0.1.1 88/01/28 10:27:16 root Exp $
+# $Header: perldb,v 1.0.1.3 88/02/04 00:24:05 root Exp $
 #
 # $Log:	perldb,v $
+# Revision 1.0.1.3  88/02/04  00:24:05  root
+# dummy checkin to get around RCS bug.
+# 
+# Revision 1.0.1.2  88/02/04  00:12:23  root
+# patch16: no line in tokener to handle `cmd` construct.
+# 
 # Revision 1.0.1.1  88/01/28  10:27:16  root
 # patch8: created this file.
 # 
@@ -243,6 +249,7 @@ sub parse {
 	    do quote(ord($1),2), next	if s/^s\b(.)//;
 	    do quote(ord($1),2), next	if s/^y\b(.)//;
 	    do quote(ord($1),2), next	if s/^tr\b(.)//;
+	    do quote($ord,1), next	if s/^`//;
 	    next			if s/^[A-Za-z_][A-Za-z_0-9]*://;
 	    $state = 'term', next	if s/^eof\b//;
 	    $state = 'term', next	if s/^shift\b//;
