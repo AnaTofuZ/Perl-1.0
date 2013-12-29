@@ -44,9 +44,16 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
+#include <math.h>
 #include <setjmp.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/param.h>
 #include <sys/stat.h>
+
+#ifdef HAS_BCOPY
+#include <strings.h>
+#endif
 
 #ifdef TM_IN_SYS
 #include <sys/time.h>
@@ -55,6 +62,10 @@
 #endif
 
 #include <sys/times.h>
+
+#ifdef I_UNISTD
+#include <unistd.h>
+#endif
 
 typedef struct arg ARG;
 typedef struct cmd CMD;
