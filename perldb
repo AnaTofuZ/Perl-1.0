@@ -1,8 +1,11 @@
 #!/bin/perl
 
-# $Header: perldb,v 1.0.1.3 88/02/04 00:24:05 root Exp $
+# $Header: perldb,v 1.0.1.4 88/02/25 11:46:57 root Exp $
 #
 # $Log:	perldb,v $
+# Revision 1.0.1.4  88/02/25  11:46:57  root
+# patch23: perldb doesn't correctly handle "else" and "continue".
+# 
 # Revision 1.0.1.3  88/02/04  00:24:05  root
 # dummy checkin to get around RCS bug.
 # 
@@ -67,7 +70,7 @@ while (<script>) {
 	$inform++;
 	next;
     }
-    if ($state eq 'statement' && !/^[ \t]*}/) {
+    if ($state eq 'statement' && !/^[ \t]*}|^[ \t]*else|^[ \t]*continue/) {
 	if (s/^([ \t]*[A-Za-z_0-9]+:)//) {
 	    $label = $1;
 	}

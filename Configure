@@ -8,7 +8,7 @@
 # and edit it to reflect your system.  Some packages may include samples
 # of config.h for certain machines, so you might look for one of those.)
 #
-# $Header: Configure,v 1.0.1.7 88/02/12 10:14:22 root Exp $
+# $Header: Configure,v 1.0.1.8 88/02/25 11:29:46 root Exp $
 #
 # Yes, you may rip this off to use in other distribution packages.
 # (Note: this Configure script was generated automatically.  Rather than
@@ -61,17 +61,19 @@ Mcc=''
 vi=''
 mailx=''
 mail=''
+cpp=''
 Log=''
 Header=''
 bin=''
 cc=''
 contains=''
-cpp=''
+cppstdin=''
 cppminus=''
 d_bcopy=''
 d_charsprf=''
 d_crypt=''
 d_index=''
+d_rename=''
 d_statblks=''
 d_stdstdio=''
 d_strctcpy=''
@@ -123,7 +125,7 @@ trap 'echo " "; rm -f $rmlist; exit 1' 1 2 3
 attrlist="mc68000 sun gcos unix ibm gimpel interdata tss os mert pyr"
 attrlist="$attrlist vax pdp11 i8086 z8000 u3b2 u3b5 u3b20 u3b200"
 attrlist="$attrlist ns32000 ns16000 iAPX286 mc300 mc500 mc700 sparc"
-pth="/usr/ucb /bin /usr/bin /usr/local /usr/local/bin /usr/lbin /etc /usr/lib"
+pth="/usr/ucb /bin /usr/bin /usr/local /usr/local/bin /usr/lbin /etc /usr/lib /lib" : find out where common programs are
 defvoidused=7
 
 : some greps do not return status, grrr.
@@ -249,7 +251,6 @@ if test -f ../config.sh; then
     esac
 fi
 
-: find out where common programs are
 echo " "
 echo "Locating common programs..."
 cat <<EOSC >loc
@@ -300,6 +301,7 @@ trylist="
 test
 egrep
 Mcc
+cpp
 "
 for file in $loclist; do
     xxx=`loc $file $file $pth`
@@ -569,61 +571,61 @@ cat <<'EOT' >testcpp.c
 #define XYZ xyz
 ABC.XYZ
 EOT
-echo 'Maybe "/lib/cpp" will work...'
-/lib/cpp <testcpp.c >testcpp.out 2>&1
+echo 'Maybe "'$cpp'" will work...'
+$cpp <testcpp.c >testcpp.out 2>&1
 if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
     echo "Yup, it does."
-    cpp='/lib/cpp'
+    cppstdin="$cpp"
     cppminus='';
 else
-    echo 'Nope, maybe "/lib/cpp -" will work...'
-    /lib/cpp - <testcpp.c >testcpp.out 2>&1
+    echo 'Nope, maybe "'$cpp' -" will work...'
+    $cpp - <testcpp.c >testcpp.out 2>&1
     if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
 	echo "Yup, it does."
-	cpp='/lib/cpp'
+	cppstdin="$cpp"
 	cppminus='-';
     else
 	echo 'No such luck...maybe "cc -E" will work...'
 	cc -E <testcpp.c >testcpp.out 2>&1
 	if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
 	    echo "It works!"
-	    cpp='cc -E'
+	    cppstdin='cc -E'
 	    cppminus='';
 	else
 	    echo 'Nixed again...maybe "cc -E -" will work...'
 	    cc -E - <testcpp.c >testcpp.out 2>&1
 	    if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
 		echo "Hooray, it works!  I was beginning to wonder."
-		cpp='cc -E'
+		cppstdin='cc -E'
 		cppminus='-';
 	    else
 		echo 'Nope...maybe "cc -P" will work...'
 		cc -P <testcpp.c >testcpp.out 2>&1
 		if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
 		    echo "Yup, that does."
-		    cpp='cc -P'
+		    cppstdin='cc -P'
 		    cppminus='';
 		else
 		    echo 'Nope...maybe "cc -P -" will work...'
 		    cc -P - <testcpp.c >testcpp.out 2>&1
 		    if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
 			echo "Yup, that does."
-			cpp='cc -P'
+			cppstdin='cc -P'
 			cppminus='-';
 		    else
 			echo 'Hmm...perhaps you already told me...'
-			case "$cpp" in
+			case "$cppstdin" in
 			'') ;;
-			*) $cpp $cppminus <testcpp.c >testcpp.out 2>&1;;
+			*) $cppstdin $cppminus <testcpp.c >testcpp.out 2>&1;;
 			esac
 			if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
 			    echo "Hooray, you did!  I was beginning to wonder."
 			else
 			    echo 'Uh-uh.  Time to get fancy...'
 			    echo 'Trying (cat >/tmp/$$.c; cc -E /tmp/$$.c; rm /tmp/$$.c)'
-			    cpp='(cat >/tmp/$$.c; cc -E /tmp/$$.c; rm /tmp/$$.c)'
+			    cppstdin='(cat >/tmp/$$.c; cc -E /tmp/$$.c; rm /tmp/$$.c)'
 			    cppminus='';
-			    $cpp <testcpp.c >testcpp.out 2>&1
+			    $cppstdin <testcpp.c >testcpp.out 2>&1
 			    if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
 				echo "Eureka!."
 			    else
@@ -631,8 +633,8 @@ else
 				$echo $n "No dice.  I can't find a C preprocessor.  Name one: $c"
 				rp='Name a C preprocessor:'
 				. myread
-				cpp="$ans"
-				$cpp <testcpp.c >testcpp.out 2>&1
+				cppstdin="$ans"
+				$cppstdin <testcpp.c >testcpp.out 2>&1
 				if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
 				    echo "OK, that will do."
 				else
@@ -704,6 +706,16 @@ else
 	echo "No index() or strchr() found!"
 	d_index="$undef"
     fi
+fi
+
+: see if rename exists
+echo " "
+if $contains rename libc.list >/dev/null 2>&1; then
+    echo 'rename() found.'
+    d_rename="$define"
+else
+    echo 'rename() not found.'
+    d_rename="$undef"
 fi
 
 : see if stat knows about block sizes
@@ -1015,7 +1027,7 @@ exit 0; _ _ _ _\1\\	 \1\\
 #endif\\
 /' >/tmp/Cppsym\$\$
 echo exit 1 >>/tmp/Cppsym\$\$
-$cpp $cppminus </tmp/Cppsym\$\$ >/tmp/Cppsym2\$\$
+$cppstdin $cppminus </tmp/Cppsym\$\$ >/tmp/Cppsym2\$\$
 case "\$list" in
 true) awk 'NF > 5 {print substr(\$6,2,100)}' </tmp/Cppsym2\$\$ ;;
 *)
@@ -1348,17 +1360,19 @@ Mcc='$Mcc'
 vi='$vi'
 mailx='$mailx'
 mail='$mail'
+cpp='$cpp'
 Log='$Log'
 Header='$Header'
 bin='$bin'
 cc='$cc'
 contains='$contains'
-cpp='$cpp'
+cppstdin='$cppstdin'
 cppminus='$cppminus'
 d_bcopy='$d_bcopy'
 d_charsprf='$d_charsprf'
 d_crypt='$d_crypt'
 d_index='$d_index'
+d_rename='$d_rename'
 d_statblks='$d_statblks'
 d_stdstdio='$d_stdstdio'
 d_strctcpy='$d_strctcpy'

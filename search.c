@@ -1,6 +1,9 @@
-/* $Header: search.c,v 1.0.1.3 88/02/04 11:16:48 root Exp $
+/* $Header: search.c,v 1.0.1.4 88/02/25 11:52:17 root Exp $
  *
  * $Log:	search.c,v $
+ * Revision 1.0.1.4  88/02/25  11:52:17  root
+ * patch23: (.*) in pattern wouldn't match null string.
+ * 
  * Revision 1.0.1.3  88/02/04  11:16:48  root
  * patch18: regularized includes.
  * 
@@ -574,7 +577,7 @@ register char *sp;
     register int backlen;
     register int code;
  
-    while (*sp || (*cp & MAXINF) || *cp == BEG || *cp == RPAR ||
+    while (*sp || (*cp & MAXINF) || *cp == BEG || *cp == RPAR || *cp == LPAR ||
 	*cp == WBOUND || *cp == NWBOUND) {
 	switch ((code = *cp++) & CODEMASK) {
  

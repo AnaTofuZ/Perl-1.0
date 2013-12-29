@@ -15,9 +15,12 @@ esac
 echo "Extracting makedepend (with variable substitutions)"
 $spitshell >makedepend <<!GROK!THIS!
 $startsh
-# $Header: makedepend.SH,v 1.0.1.3 88/02/12 10:25:22 root Exp $
+# $Header: makedepend.SH,v 1.0.1.4 88/02/25 11:41:46 root Exp $
 #
 # $Log:	makedepend.SH,v $
+# Revision 1.0.1.4  88/02/25  11:41:46  root
+# patch23: changed cpp to cppstdin
+# 
 # Revision 1.0.1.3  88/02/12  10:25:22  root
 # patch22: fix for systems without . in path
 # 
@@ -36,7 +39,7 @@ export PATH || (echo "OOPS, this isn't sh.  Desperation time.  I will feed mysel
 
 cat='$cat'
 cp='$cp'
-cpp='$cpp'
+cpp='$cppstdin'
 echo='$echo'
 egrep='$egrep'
 expr='$expr'

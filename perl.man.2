@@ -1,7 +1,10 @@
 ''' Beginning of part 2
-''' $Header: perl.man.2,v 1.0.1.5 88/02/06 00:22:26 root Exp $
+''' $Header: perl.man.2,v 1.0.1.6 88/02/25 11:44:09 root Exp $
 '''
 ''' $Log:	perl.man.2,v $
+''' Revision 1.0.1.6  88/02/25  11:44:09  root
+''' patch23: two typos and a clarification.
+''' 
 ''' Revision 1.0.1.5  88/02/06  00:22:26  root
 ''' patch21: documented s/foo/bar/i.
 ''' 
@@ -62,7 +65,7 @@ Here is yet another way to print your environment:
 	@keys = keys(ENV);
 	@values = values(ENV);
 	while ($#keys >= 0) {
-		print pop(keys),'=',pop(values),"\n";
+		print pop(keys),'=',pop(values),"\en";
 	}
 
 .fi
@@ -270,7 +273,6 @@ The \*(L"g\*(R" is optional, and if present, indicates that all occurences
 of the pattern are to be replaced.
 The \*(L"i\*(R" is also optional, and if present, indicates that matching
 is to be done in a case-insensitive manner.
-of the pattern are to be replaced.
 Any delimiter may replace the slashes; if single quotes are used, no
 interpretation is done on the replacement string.
 If no string is specified via the =~ or !~ operator,
@@ -324,8 +326,8 @@ but this has no effect on its operation.
 .Ip "shift(ARRAY)" 8 6
 .Ip "shift ARRAY" 8
 .Ip "shift" 8
-Shifts the first value of the array off, shortening the array by 1 and
-moving everything down.
+Shifts the first value of the array off and returns it,
+shortening the array by 1 and moving everything down.
 If ARRAY is omitted, shifts the ARGV array.
 See also unshift(), push() and pop().
 Shift() and unshift() do the same thing to the left end of an array that push()

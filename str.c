@@ -1,6 +1,9 @@
-/* $Header: str.c,v 1.0.1.2 88/02/04 11:17:02 root Exp $
+/* $Header: str.c,v 1.0.1.3 88/02/25 11:53:48 root Exp $
  *
  * $Log:	str.c,v $
+ * Revision 1.0.1.3  88/02/25  11:53:48  root
+ * patch23: str_gets() can stomp malloc arena under certain circumstances.
+ * 
  * Revision 1.0.1.2  88/02/04  11:17:02  root
  * patch18: regularized includes.
  * 
@@ -356,7 +359,7 @@ register FILE *fp;
 	bpx = bp - str->str_ptr;	/* prepare for possible relocation */
 	if (get_paragraph && oldbp)
 	    obpx = oldbp - str->str_ptr;
-	GROWSTR(&(str->str_ptr), &(str->str_len), str->str_cur + cnt + 1);
+	GROWSTR(&(str->str_ptr), &(str->str_len), bpx + cnt + 2);
 	bp = str->str_ptr + bpx;	/* reconstitute our pointer */
 	if (get_paragraph && oldbp)
 	    oldbp = str->str_ptr + obpx;

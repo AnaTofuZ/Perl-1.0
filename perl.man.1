@@ -1,7 +1,10 @@
 .rn '' }`
-''' $Header: perl.man.1,v 1.0.1.5 88/02/12 10:26:35 root Exp $
+''' $Header: perl.man.1,v 1.0.1.6 88/02/25 11:42:26 root Exp $
 ''' 
 ''' $Log:	perl.man.1,v $
+''' Revision 1.0.1.6  88/02/25  11:42:26  root
+''' patch23: two typos and an omission.
+''' 
 ''' Revision 1.0.1.5  88/02/12  10:26:35  root
 ''' patch22: some systems don't have \(bs
 ''' 
@@ -439,7 +442,7 @@ filename at the beginning of the array.
 Line numbers ($.) continue as if the input was one big happy file.
 .PP
 .ne 5
-If you want to set @ARGV to you own list of files, go right ahead.
+If you want to set @ARGV to your own list of files, go right ahead.
 If you want to pass switches into your script, you can
 put a loop on the front like this:
 .nf
@@ -826,7 +829,7 @@ operator.
 This is a useful optimization when you only want to see the first occurence of
 something in each of a set of files, for instance.
 .Ip "chdir EXPR" 8 2
-Changes the working director to EXPR, if possible.
+Changes the working directory to EXPR, if possible.
 Returns 1 upon success, 0 otherwise.
 See example under die().
 .Ip "chmod LIST" 8 2
@@ -996,6 +999,7 @@ as with subroutines.
 If there is a syntax error or runtime error, a null string is returned by
 eval, and $@ is set to the error message.
 If there was no error, $@ is null.
+If EXPR is omitted, evaluates $_.
 .Ip "exec LIST" 8 6
 If there is more than one argument in LIST,
 calls execvp() with the arguments in LIST.

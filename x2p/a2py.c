@@ -1,6 +1,9 @@
-/* $Header: a2py.c,v 1.0.1.3 88/02/12 10:53:13 root Exp $
+/* $Header: a2py.c,v 1.0.1.4 88/02/25 11:56:30 root Exp $
  *
  * $Log:	a2py.c,v $
+ * Revision 1.0.1.4  88/02/25  11:56:30  root
+ * patch23: added eval kludge for systems that don't grok #!.
+ * 
  * Revision 1.0.1.3  88/02/12  10:53:13  root
  * patch22: tokener wasn't creating proper value for "~" or lexing numbers right
  * 
@@ -122,7 +125,10 @@ register char **env;
     /* second pass to produce new program */
 
     tmpstr = walk(0,0,root,&i);
-    str = str_make("#!/bin/perl\n\n");
+    str = str_make("#!/bin/perl\neval \"exec /bin/perl $0 $*\"\n\
+    if $running_under_some_shell;\n\
+			# this emulates #! processing on NIH machines.\n\
+			# (remove #! line above if indigestible)\n\n");
     str_cat(str,
       "eval '$'.$1.'$2;' while $ARGV[0] =~ /^([A-Za-z_]+=)(.*)/ && shift;\n");
     str_cat(str,

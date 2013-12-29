@@ -1,6 +1,9 @@
-/* $Header: perl.y,v 1.0.1.2 88/02/04 11:17:12 root Exp $
+/* $Header: perl.y,v 1.0.1.3 88/02/25 11:45:20 root Exp $
  *
  * $Log:	perl.y,v $
+ * Revision 1.0.1.3  88/02/25  11:45:20  root
+ * patch23: label on null statement can cause core dump.
+ * 
  * Revision 1.0.1.2  88/02/04  11:17:12  root
  * patch18: regularized includes.
  * 
@@ -137,7 +140,7 @@ line	:	decl
 	|	loop	/* loops add their own labels */
 	|	label ';'
 			{ if ($1 != Nullch) {
-			      $$ = add_label(make_acmd(C_EXPR, Nullstab,
+			      $$ = add_label($1, make_acmd(C_EXPR, Nullstab,
 				  Nullarg, Nullarg) );
 			    } else
 			      $$ = Nullcmd; }

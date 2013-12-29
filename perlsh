@@ -7,6 +7,9 @@
 #  carriage return in the middle of a loop.
 
 $/ = '';	# set paragraph mode
-while (<>) {
-    eval; print $@ || "\n";
+$SHlinesep = "\n";
+while ($SHcmd = <>) {
+    $/ = $SHlinesep;
+    eval $SHcmd; print $@ || "\n";
+    $SHlinesep = $/; $/ = '';
 }

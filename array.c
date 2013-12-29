@@ -1,6 +1,9 @@
-/* $Header: array.c,v 1.0.1.1 88/02/04 11:15:54 root Exp $
+/* $Header: array.c,v 1.0.1.2 88/02/25 11:38:33 root Exp $
  *
  * $Log:	array.c,v $
+ * Revision 1.0.1.2  88/02/25  11:38:33  root
+ * patch23: unshift can wipe out malloc arena on some machines
+ * 
  * Revision 1.0.1.1  88/02/04  11:15:54  root
  * patch18: regularized includes.
  * 
@@ -122,8 +125,8 @@ register int num;
     if (num <= 0)
 	return;
     astore(ar,ar->ary_fill+num,(STR*)0);	/* maybe extend array */
-    sstr = ar->ary_array + ar->ary_fill;
-    dstr = sstr + num;
+    dstr = ar->ary_array + ar->ary_fill;
+    sstr = dstr - num;
     for (i = ar->ary_fill; i >= 0; i--) {
 	*dstr-- = *sstr--;
     }

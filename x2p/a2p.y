@@ -1,7 +1,10 @@
 %{
-/* $Header: a2p.y,v 1.0 87/12/18 13:07:05 root Exp $
+/* $Header: a2p.y,v 1.0.1.1 88/02/25 11:54:49 root Exp $
  *
  * $Log:	a2p.y,v $
+ * Revision 1.0.1.1  88/02/25  11:54:49  root
+ * patch23: some patterns ended up not enclosed in slashes.
+ * 
  * Revision 1.0  87/12/18  13:07:05  root
  * Initial revision
  * 
@@ -118,7 +121,7 @@ rel	: expr RELOP expr
 	;
 
 match	: expr MATCHOP REGEX
-		{ $$ = oper3(OMATCHOP,$2,$1,$3); }
+		{ $$ = oper3(OMATCHOP,$2,$1,oper1(OREGEX,$3)); }
 	| '(' match ')'
 		{ $$ = oper1(OMPAREN,$2); }
 	;

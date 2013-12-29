@@ -1,6 +1,11 @@
-char rcsid[] = "$Header: perly.c,v 1.0.1.6 88/02/12 10:27:36 root Exp $";
+char rcsid[] = "$Header: perly.c,v 1.0.1.7 88/02/25 11:48:55 root Exp $";
 /*
  * $Log:	perly.c,v $
+ * Revision 1.0.1.7  88/02/25  11:48:55  root
+ * patch23: changed CPP to CPPSTDIN.
+ * patch23: extra argument to cmd_free()
+ * patch23: optimization allowed ?pat? to match more than once
+ * 
  * Revision 1.0.1.6  88/02/12  10:27:36  root
  * patch22: fixed a null pointer problem on strings that run to EOF
  * 	fixed some expressions that blew up some SysV compilers
@@ -140,7 +145,7 @@ register char **env;
  -e '/^#[ 	]*endif/b' \
  -e 's/^#.*//' \
  %s | %s -C %s%s",
-	  argv[0], CPP, str_get(str), CPPMINUS);
+	  argv[0], CPPSTDIN, str_get(str), CPPMINUS);
 	rsfp = popen(buf,"r");
     }
     else if (!*argv[0])
@@ -1283,6 +1288,7 @@ int fliporflop;
 	    cmd->c_first = arg[2].arg_ptr.arg_spat->spat_first;
 	    cmd->c_flen  = arg[2].arg_ptr.arg_spat->spat_flen;
 	    if (arg[2].arg_ptr.arg_spat->spat_flags & SPAT_SCANALL &&
+	        !(arg[2].arg_ptr.arg_spat->spat_flags & SPAT_USE_ONCE) &&
 		(arg->arg_type == O_MATCH || arg->arg_type == O_NMATCH) )
 		sure |= CF_EQSURE;		/* (SUBST must be forced even */
 						/* if we know it will work.) */
@@ -2590,7 +2596,7 @@ register CMD *cmd;
 	    if (cmd->ucmd.ccmd.cc_true)
 		cmd_free(cmd->ucmd.ccmd.cc_true);
 	    if (cmd->c_type == C_IF && cmd->ucmd.ccmd.cc_alt)
-		cmd_free(cmd->ucmd.ccmd.cc_alt,Nullcmd);
+		cmd_free(cmd->ucmd.ccmd.cc_alt);
 	    break;
 	case C_EXPR:
 	    if (cmd->ucmd.acmd.ac_stab)

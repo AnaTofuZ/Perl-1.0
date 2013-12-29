@@ -37,7 +37,7 @@ cat <<!GROK!THIS! >config.h
 #$d_eunice	EUNICE		/**/
 #$d_eunice	VMS		/**/
 
-/* CPP:
+/* CPPSTDIN:
  *	This symbol contains the first part of the string which will invoke
  *	the C preprocessor on the standard input and produce to standard
  *	output.	 Typical value of "cc -E" or "/lib/cpp".
@@ -45,10 +45,10 @@ cat <<!GROK!THIS! >config.h
 /* CPPMINUS:
  *	This symbol contains the second part of the string which will invoke
  *	the C preprocessor on the standard input and produce to standard
- *	output.  This symbol will have the value "-" if CPP needs a minus
+ *	output.  This symbol will have the value "-" if CPPSTDIN needs a minus
  *	to specify standard input, otherwise the value is "".
  */
-#define CPP "$cpp"
+#define CPPSTDIN "$cppstdin"
 #define CPPMINUS "$cppminus"
 
 /* BCOPY:
@@ -81,6 +81,13 @@ cat <<!GROK!THIS! >config.h
  */
 #$d_index	index strchr	/* cultural */
 #$d_index	rindex strrchr	/*  differences? */
+
+/* RENAME:
+ *	This symbol, if defined, indicates that the rename routine is available
+ *	to rename files.  Otherwise you should do the unlink(), link(), unlink()
+ *	trick.
+ */
+#$d_rename	RENAME		/**/
 
 /* STATBLOCKS:
  *	This symbol is defined if this system has a stat structure declaring

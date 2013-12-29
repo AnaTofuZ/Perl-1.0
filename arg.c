@@ -1,6 +1,10 @@
-/* $Header: arg.c,v 1.0.1.11 88/02/12 10:46:30 root Exp $
+/* $Header: arg.c,v 1.0.1.12 88/02/25 11:34:59 root Exp $
  *
  * $Log:	arg.c,v $
+ * Revision 1.0.1.12  88/02/25  11:34:59  root
+ * patch23: perl inappropriately modifies filename passed to open()
+ * patch23: the -i switch with no backup extension truncates the file
+ * 
  * Revision 1.0.1.11  88/02/12  10:46:30  root
  * patch22: fixed double free() problem, null ptr dereference, unwanted
  * 	sign extension on return status from wait().
@@ -340,7 +344,9 @@ register char *name;
     FILE *fp;
     int len = strlen(name);
     register STIO *stio = stab->stab_io;
+    char *myname = savestr(name);
 
+    name = myname;
     while (len && isspace(name[len-1]))
 	name[--len] = '\0';
     if (!stio)
@@ -399,6 +405,7 @@ register char *name;
 		fp = fopen(name,"r");
 	}
     }
+    safefree(myname);
     if (!fp)
 	return FALSE;
     if (stio->type != '|' && stio->type != '-') {
@@ -439,6 +446,9 @@ register STAB *stab;
 		    link(oldname,str->str_ptr);
 		    UNLINK(oldname);
 #endif
+		}
+		else {
+		    UNLINK(oldname);
 		}
 		sprintf(tokenbuf,">%s",oldname);
 		do_open(argvoutstab,tokenbuf);
