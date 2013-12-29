@@ -1,13 +1,13 @@
 #!./perl
 
-# $Header: io.fs,v 1.0.1.2 88/03/03 19:37:33 root Exp $
+# $Header: io.fs,v 1.0.1.3 88/03/04 19:39:52 root Exp $
 
 print "1..20\n";
 
 $wd = `pwd`;
 chop($wd);
 
-`mkdir tmp`;
+`rm -f tmp; mkdir tmp 2>/dev/null`;
 chdir './tmp';
 `/bin/rm -rf a b c x`;
 

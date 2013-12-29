@@ -1,6 +1,9 @@
-/* $Header: arg.c,v 1.0.1.15 88/03/03 19:52:14 root Exp $
+/* $Header: arg.c,v 1.0.1.16 88/03/04 19:10:31 root Exp $
  *
  * $Log:	arg.c,v $
+ * Revision 1.0.1.16  88/03/04  19:10:31  root
+ * patch28: support for killpg() or equivalent
+ * 
  * Revision 1.0.1.15  88/03/03  19:52:14  root
  * patch27: hacked around printf bug that chokes on fields >128 chars
  * patch27: some close() calls weren't checking return status
@@ -988,11 +991,21 @@ STR **sarg;
     case O_KILL:
 	if (--i > 0) {
 	    val = (int)str_gnum(tmpary[1]);
-	    if (val < 0)
+	    if (val < 0) {
 		val = -val;
-	    for (elem = tmpary+2; *elem; elem++)
-		if (kill(atoi(str_get(*elem)),val))
-		    i--;
+		for (elem = tmpary+2; *elem; elem++)
+#ifdef KILLPG
+		    if (killpg((int)(str_gnum(*elem)),val))	/* BSD */
+#else
+		    if (kill(-(int)(str_gnum(*elem)),val))	/* SYSV */
+#endif
+			i--;
+	    }
+	    else {
+		for (elem = tmpary+2; *elem; elem++)
+		    if (kill((int)(str_gnum(*elem)),val))
+			i--;
+	    }
 	}
 	break;
     case O_UNLINK:

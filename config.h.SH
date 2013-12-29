@@ -82,6 +82,13 @@ cat <<!GROK!THIS! >config.h
 #$d_index	index strchr	/* cultural */
 #$d_index	rindex strrchr	/*  differences? */
 
+/* KILLPG:
+ *	This symbol, if defined, indicates that the killpg routine is available
+ *	to kill process groups.  If unavailable, you probably should use kill
+ *	with a negative process number.
+ */
+#$d_killpg	KILLPG		/**/
+
 /* RENAME:
  *	This symbol, if defined, indicates that the rename routine is available
  *	to rename files.  Otherwise you should do the unlink(), link(), unlink()

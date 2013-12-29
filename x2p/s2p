@@ -399,7 +399,6 @@ ${space}next line;";
 		    $len++;
 		}
 	    }
-	    print "repl $repl end $end $_\n";
 	    do Die("Malformed substitution at line $.") unless $end;
 	    $pat = substr($_, 0, $repl + 1);
 	    $repl = substr($_, $repl + 1, $end - $repl - 1);

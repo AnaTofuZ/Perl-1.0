@@ -8,7 +8,7 @@
 # and edit it to reflect your system.  Some packages may include samples
 # of config.h for certain machines, so you might look for one of those.)
 #
-# $Header: Configure,v 1.0.1.10 88/03/03 19:32:23 root Exp $
+# $Header: Configure,v 1.0.1.11 88/03/04 19:09:59 root Exp $
 #
 # Yes, you may rip this off to use in other distribution packages.
 # (Note: this Configure script was generated automatically.  Rather than
@@ -73,6 +73,7 @@ d_bcopy=''
 d_charsprf=''
 d_crypt=''
 d_index=''
+d_killpg=''
 d_rename=''
 d_statblks=''
 d_stdstdio=''
@@ -127,7 +128,6 @@ attrlist="mc68000 sun gcos unix ibm gimpel interdata tss os mert pyr"
 attrlist="$attrlist vax pdp11 i8086 z8000 u3b2 u3b5 u3b20 u3b200"
 attrlist="$attrlist ns32000 ns16000 iAPX286 mc300 mc500 mc700 sparc"
 pth="/usr/ucb /bin /usr/bin /usr/local /usr/local/bin /usr/lbin /etc /usr/lib /lib"
-: find out where common programs are
 defvoidused=7
 
 : some greps do not return status, grrr.
@@ -253,6 +253,7 @@ if test -f ../config.sh; then
     esac
 fi
 
+: find out where common programs are
 echo " "
 echo "Locating common programs..."
 cat <<EOSC >loc
@@ -708,6 +709,16 @@ else
 	echo "No index() or strchr() found!"
 	d_index="$undef"
     fi
+fi
+
+: see if killpg exists
+echo " "
+if $contains killpg libc.list >/dev/null 2>&1; then
+    echo 'killpg() found.'
+    d_killpg="$define"
+else
+    echo 'killpg() not found.'
+    d_killpg="$undef"
 fi
 
 : see if rename exists
@@ -1397,6 +1408,7 @@ d_bcopy='$d_bcopy'
 d_charsprf='$d_charsprf'
 d_crypt='$d_crypt'
 d_index='$d_index'
+d_killpg='$d_killpg'
 d_rename='$d_rename'
 d_statblks='$d_statblks'
 d_stdstdio='$d_stdstdio'

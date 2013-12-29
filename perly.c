@@ -1,6 +1,9 @@
-char rcsid[] = "$Header: perly.c,v 1.0.1.9 88/03/03 19:36:31 root Exp $";
+char rcsid[] = "$Header: perly.c,v 1.0.1.10 88/03/04 19:30:56 root Exp $";
 /*
  * $Log:	perly.c,v $
+ * Revision 1.0.1.10  88/03/04  19:30:56  root
+ * patch28: grandfathering of \digit STILL didn't work!
+ * 
  * Revision 1.0.1.9  88/03/03  19:36:31  root
  * patch27: the crypt() routine needed ifdeffing in this file as well as arg.c
  * 
@@ -1783,7 +1786,7 @@ register char *s;
 	    while (*s) {
 		if (*s == '\\' && s[1] && isdigit(s[1]) && !isdigit(s[2]) &&
 		  !index("`\"",term) )
-		    *s == '$';		/* grandfather \digit in subst */
+		    *s = '$';		/* grandfather \digit in subst */
 		if (*s == '$' && s[1]) {
 		    makesingle = FALSE;	/* force interpretation */
 		    if (!isalpha(s[1])) {	/* an internal register? */

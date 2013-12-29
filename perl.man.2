@@ -1,7 +1,10 @@
 ''' Beginning of part 2
-''' $Header: perl.man.2,v 1.0.1.7 88/03/02 12:36:57 root Exp $
+''' $Header: perl.man.2,v 1.0.1.8 88/03/04 19:11:44 root Exp $
 '''
 ''' $Log:	perl.man.2,v $
+''' Revision 1.0.1.8  88/03/04  19:11:44  root
+''' patch28: documented killing of process groups
+''' 
 ''' Revision 1.0.1.7  88/03/02  12:36:57  root
 ''' patch24: documented symlink()
 ''' 
@@ -84,6 +87,9 @@ Note: in order to use the value you must put the whole thing in parentheses:
 	$cnt = (kill 9,$child1,$child2);
 
 .fi
+If the signal is negative, kills process groups instead of processes.
+(On System V, a negative \fIprocess\fR number will also kill process groups,
+but that's not portable.)
 .Ip "last LABEL" 8 8
 .Ip "last" 8
 The
