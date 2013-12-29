@@ -261,18 +261,41 @@ STR *str;
 	    errno = (int)str_gnum(str);		/* will anyone ever use this? */
 	    break;
 	case '<':
+	{
+	    int r;
 	    uid = (int)str_gnum(str);
-	    if (setruid(uid) < 0)
+#ifdef HAS_SETRUID
+            r = setruid(uid);
+#else
+#ifdef HAS_SETREUID
+            r = setreuid(uid, (Uid_t)-1);
+#else
+	    fatal("setruid() not implemented");
+#endif
+#endif
+	    if (r < 0)
 		uid = (int)getuid();
 	    break;
+	}
 	case '>':
 	    euid = (int)str_gnum(str);
 	    if (seteuid(euid) < 0)
 		euid = (int)geteuid();
 	    break;
 	case '(':
-	    setrgid((int)str_gnum(str));
+	{
+	   int a = (int)str_gnum(str);
+#ifdef HAS_SETRGID
+            setrgid(uid);
+#else
+#ifdef HAS_SETREGID
+            setregid(uid, (Uid_t)-1);
+#else
+            fatal("setrgid() not implemented");
+#endif
+#endif
 	    break;
+	} 
 	case ')':
 	    setegid((int)str_gnum(str));
 	    break;
