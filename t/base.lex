@@ -1,6 +1,6 @@
 #!./perl
 
-# $Header: base.lex,v 1.0.1.2 88/02/03 16:27:16 root Exp $
+# $Header: base.lex,v 1.0.1.3 88/02/04 14:33:39 root Exp $
 
 print "1..7\n";
 
@@ -33,4 +33,5 @@ if (!$@) {print "ok 6\n";} else {print "not ok 6\n";}
 
 eval '$foo = 123+123.4+123e4+123.4E5+123.4e+5+.12;';
 
-if ($foo eq 25910246.52) {print "ok 7\n";} else {print "not ok 7\n";}
+$foo = int($foo * 100 + .5);
+if ($foo eq 2591024652) {print "ok 7\n";} else {print "not ok 7\n";}
