@@ -1,6 +1,11 @@
-/* $Header: arg.c,v 1.0.1.14 88/03/03 16:02:57 root Exp $
+/* $Header: arg.c,v 1.0.1.15 88/03/03 19:52:14 root Exp $
  *
  * $Log:	arg.c,v $
+ * Revision 1.0.1.15  88/03/03  19:52:14  root
+ * patch27: hacked around printf bug that chokes on fields >128 chars
+ * patch27: some close() calls weren't checking return status
+ * patch27: $* = 1; "ab\ncd\n" =~ /^cd/ failed from overzealous optimization
+ * 
  * Revision 1.0.1.14  88/03/03  16:02:57  root
  * patch26: use GIDTYPE for getgroups() call
  * 
@@ -121,7 +126,7 @@ register ARG *arg;
 #endif
 	if (!*spat->spat_compex.precomp && lastspat)
 	    spat = lastspat;
-	if (spat->spat_first) {
+	if (!multiline && spat->spat_first) {
 	    if (spat->spat_flags & SPAT_SCANFIRST) {
 		str_free(spat->spat_first);
 		spat->spat_first = Nullstr;	/* disable optimization */
@@ -175,7 +180,7 @@ register ARG *arg;
 #endif
     if (!*spat->spat_compex.precomp && lastspat)
 	spat = lastspat;
-    if (spat->spat_first) {
+    if (!multiline && spat->spat_first) {
 	if (spat->spat_flags & SPAT_SCANFIRST) {
 	    str_free(spat->spat_first);
 	    spat->spat_first = Nullstr;	/* disable optimization */
@@ -353,6 +358,7 @@ register char *name;
     int len = strlen(name);
     register STIO *stio = stab->stab_io;
     char *myname = savestr(name);
+    int result;
 
     name = myname;
     while (len && isspace(name[len-1]))
@@ -361,9 +367,14 @@ register char *name;
 	stio = stab->stab_io = stio_new();
     if (stio->fp) {
 	if (stio->type == '|')
-	    pclose(stio->fp);
+	    result = pclose(stio->fp);
 	else if (stio->type != '-')
-	    fclose(stio->fp);
+	    result = fclose(stio->fp);
+	else
+	    result = 0;
+	if (result == EOF)
+	    fprintf(stderr,"Warning: unable to close filehandle %s properly.\n",
+	      stab->stab_name);
 	stio->fp = Nullfp;
     }
     stio->type = *name;
@@ -764,7 +775,12 @@ register STR **sarg;
 	    case 's':
 		ch = *(++t);
 		*t = '\0';
-		sprintf(buf,s,str_get(*(sarg++)));
+		if (strEQ(s,"%s")) {	/* some printfs fail on >128 chars */
+		    *buf = '\0';
+		    str_scat(str,*(sarg++));  /* so handle simple case */
+		}
+		else
+		    sprintf(buf,s,str_get(*(sarg++)));
 		s = t;
 		*(t--) = ch;
 		break;

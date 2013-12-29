@@ -1,6 +1,9 @@
-char rcsid[] = "$Header: perly.c,v 1.0.1.8 88/03/02 12:45:28 root Exp $";
+char rcsid[] = "$Header: perly.c,v 1.0.1.9 88/03/03 19:36:31 root Exp $";
 /*
  * $Log:	perly.c,v $
+ * Revision 1.0.1.9  88/03/03  19:36:31  root
+ * patch27: the crypt() routine needed ifdeffing in this file as well as arg.c
+ * 
  * Revision 1.0.1.8  88/03/02  12:45:28  root
  * patch24: added new filetest and symlink operations
  * patch24: made assume_* unique in 7 chars
@@ -2169,8 +2172,13 @@ register ARG *arg;
 	    str_numset(str,(double)(strNE(tmps,str_get(s2))));
 	    break;
 	case O_CRYPT:
+#ifdef CRYPT
 	    tmps = str_get(s1);
 	    str_set(str,crypt(tmps,str_get(s2)));
+#else
+	    fatal(
+	    "The crypt() function is unimplemented due to excessive paranoia.");
+#endif
 	    break;
 	case O_EXP:
 	    str_numset(str,exp(str_gnum(s1)));
