@@ -107,6 +107,8 @@ EXT STR *Str;
 
 #define GROWSTR(pp,lp,len) if (*(lp) < (len)) growstr(pp,lp,len)
 
+EXT unsigned int cmdline;
+
 CMD *add_label();
 CMD *block_head();
 CMD *append_line();
@@ -121,6 +123,14 @@ SPAT *stab2spat();
 
 STAB *stabent();
 
+ARG *l();
+ARG *mod_match();
+ARG *addflags();
+ARG *hide_ary();
+ARG *make_list();
+ARG *listish();
+ARG *cval_to_arg();
+ARG *cmd_to_arg();
 ARG *stab2arg();
 ARG *op_new();
 ARG *make_op();
