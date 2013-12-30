@@ -7,7 +7,7 @@ print "1..20\n";
 $wd = `pwd`;
 chop($wd);
 
-`rm -f tmp; mkdir tmp 2>/dev/null`;
+`rm -rf tmp; mkdir tmp 2>/dev/null`;
 chdir './tmp';
 `/bin/rm -rf a b c x`;
 
