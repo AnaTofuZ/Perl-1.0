@@ -168,8 +168,8 @@ register char **env;
     if (strEQ(filename,"-"))
 	argv[0] = "";
     if (preprocess) {
-	sprintf(buf, "\
-/bin/sed -e '/^[^#]/b' \
+	sprintf(buf, \
+LOC_SED " -e '/^[^#]/b' \
  -e '/^#[ 	]*include[ 	]/b' \
  -e '/^#[ 	]*define[ 	]/b' \
  -e '/^#[ 	]*if[ 	]/b' \
