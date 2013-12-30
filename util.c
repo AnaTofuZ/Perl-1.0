@@ -220,7 +220,7 @@ int newlen;
 
 /*VARARGS1*/
 fatal(pat,a1,a2,a3,a4)
-char *pat;
+char *pat,*a1,*a2,*a3,*a4;
 {
     extern FILE *e_fp;
     extern char *e_tmpname;
