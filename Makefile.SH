@@ -69,7 +69,7 @@ mallocsrc = $mallocsrc
 mallocobj = $mallocobj
 SLN = $sln
 
-libs = $libnm -lm
+libs = $libs
 !GROK!THIS!
 
 cat >>Makefile <<'!NO!SUBS!'
