@@ -42,6 +42,9 @@
 #endif
 
 #include <stdio.h>
+#ifdef I_CRYPT
+#include <crypt.h>
+#endif
 #include <ctype.h>
 #include <errno.h>
 #include <math.h>
