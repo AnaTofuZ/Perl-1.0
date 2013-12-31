@@ -87,7 +87,7 @@ register char **env;
 #ifdef DEBUGGING
 	case 'D':
 	    debug = atoi(argv[0]+2);
-#ifdef YYDEBUG
+#if YYDEBUG
 	    yydebug = (debug & 1);
 #endif
 	    break;
@@ -316,7 +316,7 @@ yylex()
     static bool firstline = TRUE;
 
   retry:
-#ifdef YYDEBUG
+#if YYDEBUG
     if (yydebug)
 	if (index(s,'\n'))
 	    fprintf(stderr,"Tokener at %s",s);
