@@ -1,0 +1,14 @@
+all
+.config
+.package
+Makefile*
+Obsolete
+Wanted
+*.o
+config.h
+config.sh
+makedepend
+makedir
+perl
+perl.c
+t/c
