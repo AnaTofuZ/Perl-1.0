@@ -35,11 +35,7 @@
 
 #define VOIDUSED 1
 #include "config.h"
-
-#ifndef HAS_BCOPY
-#   define bcopy(s1,s2,l) memcpy(s2,s1,l);
-#   define bzero(s,l) memset(s,0,l);
-#endif
+#include "confmagic.h"
 
 #include <stdio.h>
 #ifdef I_CRYPT
