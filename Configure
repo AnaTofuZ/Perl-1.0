@@ -18,7 +18,7 @@
 
 # $Id: Head.U 167 2013-05-08 17:58:00Z rmanfredi $
 #
-# Generated on Sun Dec 29 16:39:42 CET 2013 [metaconfig 3.5-172]
+# Generated on Fri Jan  3 11:56:57 CET 2014 [metaconfig 3.5-172]
 
 cat >c1$$ <<EOF
 ARGGGHHHH!!!!!
@@ -254,6 +254,7 @@ wc=''
 xgettext=''
 zcat=''
 zip=''
+full_sed=''
 incpath=''
 mips_type=''
 hint=''
@@ -307,6 +308,12 @@ d_killpg=''
 d_portable=''
 d_rename=''
 d_setgrps=''
+d_setregid=''
+d_setresgid=''
+d_setresuid=''
+d_setreuid=''
+d_setrgid=''
+d_setruid=''
 d_stat=''
 d_statblks=''
 d_stdio_cnt_lval=''
@@ -336,6 +343,7 @@ gccosandvers=''
 gccversion=''
 gidtype=''
 groupstype=''
+i_crypt=''
 i_malloc=''
 i_stdlib=''
 i_sysstat=''
@@ -476,6 +484,7 @@ usesocks=''
 : full support for void wanted by default
 defvoidused=15
 
+libswanted='nm m crypt'
 : Find the basic shell for Bourne shell scripts
 case "$sh" in
 '')
@@ -2263,6 +2272,123 @@ case "$targetarch" in
 	osvers=''
 	;;
 esac
+
+: Offer them some hints based on their OS
+cd ..
+if $test ! -f config.sh; then
+	$cat <<EOM
+
+First time through, eh?  I have some defaults handy for some systems
+that need some extra help getting the Configure answers right:
+
+EOM
+	(cd $src/hints; ls -C *.sh) | $sed 's/\.sh/   /g' >&4
+	dflt=''
+
+	: Now look for a hint file osname_osvers, unless one has been
+	: specified already.
+	case "$hintfile" in
+	''|' ')
+		file=`echo "${osname}_${osvers}" | $sed -e 's%\.%_%g' -e 's%_$%%'`
+		: Also try without trailing minor version numbers.
+		xfile=`echo $file | $sed -e 's%_[^_]*$%%'`
+		xxfile=`echo $xfile | $sed -e 's%_[^_]*$%%'`
+		xxxfile=`echo $xxfile | $sed -e 's%_[^_]*$%%'`
+		xxxxfile=`echo $xxxfile | $sed -e 's%_[^_]*$%%'`
+		case "$file" in
+		'') dflt=none ;;
+		*)  case "$osvers" in
+			'') dflt=$file
+				;;
+			*)  if $test -f $src/hints/$file.sh ; then
+					dflt=$file
+				elif $test -f $src/hints/$xfile.sh ; then
+					dflt=$xfile
+				elif $test -f $src/hints/$xxfile.sh ; then
+					dflt=$xxfile
+				elif $test -f $src/hints/$xxxfile.sh ; then
+					dflt=$xxxfile
+				elif $test -f $src/hints/$xxxxfile.sh ; then
+					dflt=$xxxxfile
+				elif $test -f "$src/hints/${osname}.sh" ; then
+					dflt="${osname}"
+				else
+					dflt=none
+				fi
+				;;
+			esac
+			;;
+		esac
+		if $test -f Policy.sh ; then
+			case "$dflt" in
+			*Policy*) ;;
+			none) dflt="Policy" ;;
+			*) dflt="Policy $dflt" ;;
+			esac
+		fi
+		;;
+	*)
+		dflt=`echo $hintfile | $sed 's/\.sh$//'`
+		;;
+	esac
+
+	if $test -f Policy.sh ; then
+		$cat <<EOM
+
+There's also a Policy hint file available, which should make the
+site-specific (policy) questions easier to answer.
+EOM
+
+	fi
+
+	$cat <<EOM
+
+You may give one or more space-separated answers, or "none" if appropriate.
+A well-behaved OS will have no hints, so answering "none" or just "Policy"
+is a good thing.  DO NOT give a wrong version or a wrong OS.
+
+EOM
+
+	rp="Which of these apply, if any?"
+	. UU/myread
+	tans=$ans
+	for file in $tans; do
+		if $test X$file = XPolicy -a -f Policy.sh; then
+			. Policy.sh
+			$cat Policy.sh >> UU/config.sh
+		elif $test -f $src/hints/$file.sh; then
+			. $src/hints/$file.sh
+			$cat $src/hints/$file.sh >> UU/config.sh
+		elif $test X"$tans" = X -o X"$tans" = Xnone ; then
+			: nothing
+		else
+			: Give one chance to correct a possible typo.
+			echo "$file.sh does not exist"
+			dflt=$file
+			rp="hint to use instead?"
+			. UU/myread
+			for file in $ans; do
+				if $test -f "$src/hints/$file.sh"; then
+					. $src/hints/$file.sh
+					$cat $src/hints/$file.sh >> UU/config.sh
+				elif $test X$ans = X -o X$ans = Xnone ; then
+					: nothing
+				else
+					echo "$file.sh does not exist -- ignored."
+				fi
+			done
+		fi
+	done
+
+	hint=recommended
+	: Remember our hint file for later.
+	if $test -f "$src/hints/$file.sh" ; then
+		hintfile="$file"
+	else
+		hintfile=''
+	fi
+fi
+cd UU
 
 : Process their -A options
 . ./posthint.sh
@@ -4121,11 +4247,19 @@ $rm -f ucbsprf*
 set unistd.h i_unistd
 eval $inhdr
 
+: see if this is a crypt.h system
+set crypt.h i_crypt
+eval $inhdr
+
 : see if crypt exists
 $cat >try.c <<EOC
 #$i_unistd I_UNISTD
 #ifdef I_UNISTD
 #include <unistd.h>
+#endif
+#$i_crypt I_CRYPT
+#ifdef I_CRYPT
+#include <crypt.h>
 #endif
 int main(void)
 {
@@ -4263,6 +4397,120 @@ int main(void)
 EOC
 cyn=rename
 set d_rename
+eval $trylink
+
+: see if setregid exists
+$cat >try.c <<EOC
+#include <sys/types.h>
+#$i_unistd I_UNISTD
+#ifdef I_UNISTD
+#include <unistd.h>
+#endif
+int main(void)
+{
+	static int ret;
+	static gid_t rgid, egid;
+	ret |= setregid(rgid, egid);
+	if (ret)
+		return 1;
+	return 0;
+}
+EOC
+cyn=setregid
+set d_setregid
+eval $trylink
+
+$cat >try.c <<EOC
+#$i_unistd I_UNISTD
+#ifdef I_UNISTD
+#include <unistd.h>
+#endif
+int main(void)
+{
+	static int ret;
+	static gid_t rgid, egid, sgid;
+	ret |= setresgid(rgid, egid, sgid);
+	return ret ? 0 : 1;
+}
+EOC
+cyn=setresgid
+set d_setresgid
+eval $trylink
+
+: see if setreuid exists
+$cat >try.c <<EOC
+#include <sys/types.h>
+#$i_unistd I_UNISTD
+#ifdef I_UNISTD
+#include <unistd.h>
+#endif
+int
+main(void)
+{
+	static uid_t ruid, euid;
+	static int ret;
+	ret |= setreuid(ruid, euid);
+	return ret ? 0 : 1;
+}
+EOC
+cyn=setreuid
+set d_setreuid
+eval $trylink
+
+: see if setresuid exists
+$cat >try.c <<EOC
+#$i_unistd I_UNISTD
+#ifdef I_UNISTD
+#include <unistd.h>
+#endif
+int main(void)
+{
+	static uid_t ruid, euid, suid;
+	static int ret;
+	ret |= setresuid(ruid, euid, suid);
+	return ret ? 0 : 1;
+}
+EOC
+cyn=setresuid
+set d_setresuid
+eval $trylink
+
+: see if setrgid exists
+$cat >try.c <<EOC
+#include <sys/types.h>
+#$i_unistd I_UNISTD
+#ifdef I_UNISTD
+#include <unistd.h>
+#endif
+int main(void)
+{
+	static int ret;
+	static gid_t gid;
+	ret |= setrgid(gid);
+	return ret ? 0 : 1;
+}
+EOC
+cyn=setrgid
+set d_setrgid
+eval $trylink
+
+: see if setruid exists
+$cat >try.c <<EOC
+#include <sys/types.h>
+#$i_unistd I_UNISTD
+#ifdef I_UNISTD
+#include <unistd.h>
+#endif
+int main(void)
+{
+	static int ret;
+	static uid_t uid;
+	ret |= setruid(uid);
+	return ret ? 0 : 1;
+}
+EOC
+cyn=setruid
+set d_setruid
 eval $trylink
 
 : see if sys/stat.h is available
@@ -5168,6 +5416,9 @@ case "$voidflags" in
 esac
 $rm -f try.* .out flags
 
+: Store the full pathname to the sed program for use in the C program
+full_sed=$sed
+
 : see what type gids are declared as in the kernel
 set gid_t gidtype xxx stdio.h sys/types.h
 eval $typedef
@@ -5575,6 +5826,12 @@ d_os2='$d_os2'
 d_portable='$d_portable'
 d_rename='$d_rename'
 d_setgrps='$d_setgrps'
+d_setregid='$d_setregid'
+d_setresgid='$d_setresgid'
+d_setresuid='$d_setresuid'
+d_setreuid='$d_setreuid'
+d_setrgid='$d_setrgid'
+d_setruid='$d_setruid'
 d_stat='$d_stat'
 d_statblks='$d_statblks'
 d_stdio_cnt_lval='$d_stdio_cnt_lval'
@@ -5604,6 +5861,7 @@ firstmakefile='$firstmakefile'
 flex='$flex'
 freetype='$freetype'
 from='$from'
+full_sed='$full_sed'
 gcc='$gcc'
 gccosandvers='$gccosandvers'
 gccversion='$gccversion'
@@ -5617,6 +5875,7 @@ groupstype='$groupstype'
 gzip='$gzip'
 hint='$hint'
 huge='$huge'
+i_crypt='$i_crypt'
 i_malloc='$i_malloc'
 i_stdlib='$i_stdlib'
 i_sysstat='$i_sysstat'
