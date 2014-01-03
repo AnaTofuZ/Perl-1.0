@@ -1,0 +1,1814 @@
+PERL(1)                                                                PERL(1)
+
+
+
+NAME
+       perl - Practical Extraction and Report Language
+
+SYNOPSIS
+       perl [options] filename args
+
+DESCRIPTION
+       Perl  is  a  interpreted language optimized for scanning arbitrary text
+       files, extracting information  from  those  text  files,  and  printing
+       reports  based on that information.  It's also a good language for many
+       system management tasks.  The language  is  intended  to  be  practical
+       (easy  to  use,  efficient, complete) rather than beautiful (tiny, ele‐
+       gant, minimal).  It combines (in the author's opinion, anyway) some  of
+       the best features of C, sed, awk, and sh, so people familiar with those
+       languages should have little difficulty with it.  (Language  historians
+       will  also  note  some  vestiges  of csh, Pascal, and even BASIC-PLUS.)
+       Expression syntax corresponds quite closely to C expression syntax.  If
+       you  have  a problem that would ordinarily use sed or awk or sh, but it
+       exceeds their capabilities or must run a little faster, and  you  don't
+       want  to  write  the silly thing in C, then perl may be for you.  There
+       are also translators to  turn  your  sed  and  awk  scripts  into  perl
+       scripts.  OK, enough hype.
+
+       Upon  startup,  perl  looks  for  your  script  in one of the following
+       places:
+
+       1.  Specified line by line via -e switches on the command line.
+
+       2.  Contained in the file specified by the first filename on  the  com‐
+           mand  line.   (Note  that systems supporting the #! notation invoke
+           interpreters this way.)
+
+       3.  Passed in via standard input.
+
+       After locating your script, perl compiles it to an internal  form.   If
+       the script is syntactically correct, it is executed.
+
+       Options
+
+       Note:  on  first  reading  this section may not make much sense to you.
+       It's here at the front for easy reference.
+
+       A single-character option may be combined with the following option, if
+       any.   This  is particularly useful when invoking a script using the #!
+       construct which only allows one argument.  Example:
+
+            #!/usr/bin/perl -spi.bak # same as -s -p -i.bak
+            ...
+
+       Options include:
+
+       -D<number>
+            sets debugging flags.  To watch how it executes your  script,  use
+            -D14.  (This only works if debugging is compiled into your perl.)
+
+       -e commandline
+            may be used to enter one line of script.  Multiple -e commands may
+            be given to build up a multi-line script.  If -e  is  given,  perl
+            will not look for a script filename in the argument list.
+
+       -i<extension>
+            specifies  that  files  processed  by  the  <> construct are to be
+            edited in-place.  It does this by renaming the input file, opening
+            the  output  file by the same name, and selecting that output file
+            as the default for print statements.  The extension, if  supplied,
+            is added to the name of the old file to make a backup copy.  If no
+            extension is supplied, no backup is made.  Saying "perl -p  -i.bak
+            -e "s/foo/bar/;" ... " is the same as using the script:
+
+                 #!/usr/bin/perl -pi.bak
+                 s/foo/bar/;
+
+            which is equivalent to
+
+                 #!/usr/bin/perl
+                 while (<>) {
+                      if ($ARGV ne $oldargv) {
+                           rename($ARGV,$ARGV . '.bak');
+                           open(ARGVOUT,">$ARGV");
+                           select(ARGVOUT);
+                           $oldargv = $ARGV;
+                      }
+                      s/foo/bar/;
+                 }
+                 continue {
+                     print;     # this prints to original filename
+                 }
+                 select(stdout);
+
+            except  that the -i form doesn't need to compare $ARGV to $oldargv
+            to know when the filename has  changed.   It  does,  however,  use
+            ARGVOUT for the selected filehandle.  Note that stdout is restored
+            as the default output filehandle after the loop.
+
+       -I<directory>
+            may be used in conjunction with -P  to  tell  the  C  preprocessor
+            where  to  look  for  include  files.  By default /usr/include and
+            /usr/lib/perl are searched.
+
+       -n   causes perl to assume the following loop around your script, which
+            makes it iterate over filename arguments somewhat like "sed -n" or
+            awk:
+
+                 while (<>) {
+                      ...       # your script goes here
+                 }
+
+            Note that the lines are not printed by default.  See  -p  to  have
+            lines printed.
+
+       -p   causes perl to assume the following loop around your script, which
+            makes it iterate over filename arguments somewhat like sed:
+
+                 while (<>) {
+                      ...       # your script goes here
+                 } continue {
+                      print;
+                 }
+
+            Note that the lines are printed automatically.  To suppress print‐
+            ing use the -n switch.  A -p overrides a -n switch.
+
+       -P   causes  your  script  to  be run through the C preprocessor before
+            compilation by perl.  (Since  both  comments  and  cpp  directives
+            begin  with  the  #  character, you should avoid starting comments
+            with any words recognized by the  C  preprocessor  such  as  "if",
+            "else" or "define".)
+
+       -s   enables  some  rudimentary switch parsing for switches on the com‐
+            mand line after the script name but before any filename  arguments
+            (or  before  a  --).  Any switch found there is removed from @ARGV
+            and sets the corresponding variable in the perl script.  The  fol‐
+            lowing  script  prints "true" if and only if the script is invoked
+            with a -xyz switch.
+
+                 #!/usr/bin/perl -s
+                 if ($xyz) { print "true\n"; }
+
+
+       -U   allows perl to do unsafe operations.  Currently the only  "unsafe"
+            operation  is  the unlinking of directories while running as supe‐
+            ruser.
+
+       -v   prints the version and patchlevel of your perl executable.
+
+       Data Types and Objects
+
+       Perl has about two and a half data types: strings, arrays  of  strings,
+       and  associative arrays.  Strings and arrays of strings are first class
+       objects, for the most part, in the sense that they can  be  used  as  a
+       whole  as  values  in  an  expression.   Associative arrays can only be
+       accessed on an association by association  basis;  they  don't  have  a
+       value as a whole (at least not yet).
+
+       Strings are interpreted numerically as appropriate.  A string is inter‐
+       preted as TRUE in the boolean sense if it is not the null string or  0.
+       Booleans  returned  by operators are 1 for true and '0' or '' (the null
+       string) for false.
+
+       References to string variables always begin with '$', even when  refer‐
+       ring to a string that is part of an array.  Thus:
+
+           $days           # a simple string variable
+           $days[28]       # 29th element of array @days
+           $days{'Feb'}    # one value from an associative array
+
+       but entire arrays are denoted by '@':
+
+           @days           # ($days[0], $days[1],... $days[n])
+
+
+       Any of these four constructs may be assigned to (in compiler lingo, may
+       serve as an lvalue).  (Additionally, you may find the length  of  array
+       @days  by  evaluating  "$#days",  as  in  csh.  [Actually, it's not the
+       length of the array, it's the subscript  of  the  last  element,  since
+       there is (ordinarily) a 0th element.])
+
+       Every  data  type has its own namespace.  You can, without fear of con‐
+       flict, use the same name for a string variable, an array,  an  associa‐
+       tive  array,  a  filehandle,  a subroutine name, and/or a label.  Since
+       variable and array  references  always  start  with  '$'  or  '@',  the
+       "reserved"  words  aren't  in  fact  reserved  with respect to variable
+       names.  (They ARE reserved with respect to labels and filehandles, how‐
+       ever, which don't have an initial special character.)  Case IS signifi‐
+       cant--"FOO", "Foo" and "foo" are  all  different  names.   Names  which
+       start  with  a  letter  may also contain digits and underscores.  Names
+       which do not start with a letter are limited  to  one  character,  e.g.
+       "$%" or "$$".  (Many one character names have a predefined significance
+       to perl.  More later.)
+
+       String literals are delimited by either single or double quotes.   They
+       work  much like shell quotes: double-quoted string literals are subject
+       to backslash and variable substitution; single-quoted strings are  not.
+       The  usual backslash rules apply for making characters such as newline,
+       tab, etc.  You can also embed newlines directly in your  strings,  i.e.
+       they can end on a different line than they begin.  This is nice, but if
+       you forget your trailing quote, the error will not  be  reported  until
+       perl  finds  another  line containing the quote character, which may be
+       much further on in the script.  Variable substitution inside strings is
+       limited  (currently)  to  simple  string variables.  The following code
+       segment prints out "The price is $100."
+
+           $Price = '$100';               # not interpreted
+           print "The price is $Price.\n";# interpreted
+
+       Note that you can put curly brackets around the identifier  to  delimit
+       it from following alphanumerics.
+
+       Array  literals  are denoted by separating individual values by commas,
+       and enclosing the list in parentheses.  In a context not  requiring  an
+       array  value,  the value of the array literal is the value of the final
+       element, as in the C comma operator.  For example,
+
+           @foo = ('cc', '-E', $bar);
+
+       assigns the entire array value to array foo, but
+
+           $foo = ('cc', '-E', $bar);
+
+       assigns the value of variable bar to variable foo.  Array lists may  be
+       assigned to if and only if each element of the list is an lvalue:
+
+           ($a, $b, $c) = (1, 2, 3);
+
+           ($map{'red'}, $map{'blue'}, $map{'green'}) = (0x00f, 0x0f0, 0xf00);
+
+
+       Numeric  literals  are  specified in any of the usual floating point or
+       integer formats.
+
+       There are several other pseudo-literals that you should know about.  If
+       a string is enclosed by backticks (grave accents), it is interpreted as
+       a command, and the output of that command is the value of  the  pseudo-
+       literal,  just like in any of the standard shells.  The command is exe‐
+       cuted each time the pseudo-literal is evaluated.   Unlike  in  csh,  no
+       interpretation is done on the data--newlines remain newlines.  The sta‐
+       tus value of the command is returned in $?.
+
+       Evaluating a filehandle in angle brackets yields  the  next  line  from
+       that  file (newline included, so it's never false until EOF).  Ordinar‐
+       ily you must assign that value to a variable, but there is  one  situa‐
+       tion  where in which an automatic assignment happens.  If (and only if)
+       the input symbol is the only thing inside the conditional  of  a  while
+       loop,  the value is automatically assigned to the variable "$_".  (This
+       may seem like an odd thing to you, but  you'll  use  the  construct  in
+       almost  every  perl script you write.)  Anyway, the following lines are
+       equivalent to each other:
+
+           while ($_ = <stdin>) {
+           while (<stdin>) {
+           for (;<stdin>;) {
+
+       The filehandles stdin, stdout and stderr  are  predefined.   Additional
+       filehandles may be created with the open function.
+
+       The null filehandle <> is special and can be used to emulate the behav‐
+       ior of sed and awk.  Input from <> comes either from standard input, or
+       from  each  file  listed on the command line.  Here's how it works: the
+       first time <> is evaluated, the ARGV array is checked,  and  if  it  is
+       null,  $ARGV[0]  is  set  to  '-', which when opened gives you standard
+       input.  The ARGV array is then processed as a list of  filenames.   The
+       loop
+
+            while (<>) {
+                 ...            # code for each line
+            }
+
+       is equivalent to
+
+            unshift(@ARGV, '-') if $#ARGV < $[;
+            while ($ARGV = shift) {
+                 open(ARGV, $ARGV);
+                 while (<ARGV>) {
+                      ...       # code for each line
+                 }
+            }
+
+       except  that it isn't as cumbersome to say.  It really does shift array
+       ARGV and put the current filename into variable  ARGV.   It  also  uses
+       filehandle  ARGV  internally.  You can modify @ARGV before the first <>
+       as long as you leave the first filename at the beginning of the  array.
+       Line numbers ($.) continue as if the input was one big happy file.
+
+       If you want to set @ARGV to your own list of files, go right ahead.  If
+       you want to pass switches into your script, you can put a loop  on  the
+       front like this:
+
+            while ($_ = $ARGV[0], /^-/) {
+                 shift;
+                last if /^--$/;
+                 /^-D(.*)/ && ($debug = $1);
+                 /^-v/ && $verbose++;
+                 ...       # other switches
+            }
+            while (<>) {
+                 ...       # code for each line
+            }
+
+       The  <> symbol will return FALSE only once.  If you call it again after
+       this it will assume you are processing another @ARGV list, and  if  you
+       haven't set @ARGV, will input from stdin.
+
+       Syntax
+
+       A perl script consists of a sequence of declarations and commands.  The
+       only things that need to be declared in perl  are  report  formats  and
+       subroutines.  See the sections below for more information on those dec‐
+       larations.  All objects are assumed to start with a null  or  0  value.
+       The  sequence  of commands is executed just once, unlike in sed and awk
+       scripts, where the sequence of commands  is  executed  for  each  input
+       line.  While this means that you must explicitly loop over the lines of
+       your input file (or files), it also means you have  much  more  control
+       over which files and which lines you look at.  (Actually, I'm lying--it
+       is possible to do an implicit loop with either the -n or -p switch.)
+
+       A declaration can be put anywhere a command can, but has no  effect  on
+       the  execution  of the primary sequence of commands.  Typically all the
+       declarations are put at the beginning or the end of the script.
+
+       Perl is, for the most part, a free-form language.  (The only  exception
+       to  this is format declarations, for fairly obvious reasons.)  Comments
+       are indicated by the # character, and extend to the end  of  the  line.
+       If  you  attempt to use /* */ C comments, it will be interpreted either
+       as division or pattern matching, depending on the context.  So don't do
+       that.
+
+       Compound statements
+
+       In  perl,  a  sequence  of  commands  may  be treated as one command by
+       enclosing it in curly brackets.  We will call this a BLOCK.
+
+       The following compound commands may be used to control flow:
+
+            if (EXPR) BLOCK
+            if (EXPR) BLOCK else BLOCK
+            if (EXPR) BLOCK elsif (EXPR) BLOCK ... else BLOCK
+            LABEL while (EXPR) BLOCK
+            LABEL while (EXPR) BLOCK continue BLOCK
+            LABEL for (EXPR; EXPR; EXPR) BLOCK
+            LABEL BLOCK continue BLOCK
+
+       Note that, unlike C and Pascal, these are defined in terms  of  BLOCKs,
+       not  statements.   This  means that the curly brackets are required--no
+       dangling statements allowed.  If you want to write conditionals without
+       curly  brackets  there  are several other ways to do it.  The following
+       all do the same thing:
+
+           if (!open(foo)) { die "Can't open $foo"; }
+           die "Can't open $foo" unless open(foo);
+           open(foo) ⎪⎪ die "Can't open $foo"; # foo or bust!
+           open(foo) ? die "Can't open $foo" : 'hi mom';
+                          # a bit exotic, that last one
+
+
+       The if statement is straightforward.  Since BLOCKs are  always  bounded
+       by  curly brackets, there is never any ambiguity about which if an else
+       goes with.  If you use unless in place of if, the sense of the test  is
+       reversed.
+
+       The  while  statement  executes  the block as long as the expression is
+       true (does not evaluate to  the  null  string  or  0).   The  LABEL  is
+       optional,  and  if  present,  consists  of  an identifier followed by a
+       colon.  The LABEL identifies the loop for the loop  control  statements
+       next,  last  and redo (see below).  If there is a continue BLOCK, it is
+       always executed just before the conditional is about  to  be  evaluated
+       again,  similarly to the third part of a for loop in C.  Thus it can be
+       used to increment a loop variable, even when the loop has been  contin‐
+       ued via the next statement (similar to the C "continue" statement).
+
+       If  the word while is replaced by the word until, the sense of the test
+       is reversed, but the conditional is still tested before the first iter‐
+       ation.
+
+       In  either the if or the while statement, you may replace "(EXPR)" with
+       a BLOCK, and the conditional is true if the value of the  last  command
+       in that block is true.
+
+       The for loop works exactly like the corresponding while loop:
+
+            for ($i = 1; $i < 10; $i++) {
+                 ...
+            }
+
+       is the same as
+
+            $i = 1;
+            while ($i < 10) {
+                 ...
+            } continue {
+                 $i++;
+            }
+
+       The  BLOCK by itself (labeled or not) is equivalent to a loop that exe‐
+       cutes once.  Thus you can use any of the loop control statements in  it
+       to  leave  or restart the block.  The continue block is optional.  This
+       construct is particularly nice for doing case structures.
+
+            foo: {
+                 if (/abc/) { $abc = 1; last foo; }
+                 if (/def/) { $def = 1; last foo; }
+                 if (/xyz/) { $xyz = 1; last foo; }
+                 $nothing = 1;
+            }
+
+
+       Simple statements
+
+       The only kind of simple statement is an expression  evaluated  for  its
+       side  effects.   Every expression (simple statement) must be terminated
+       with a semicolon.  Note that this is like C,  but  unlike  Pascal  (and
+       awk).
+
+       Any  simple  statement may optionally be followed by a single modifier,
+       just before the terminating semicolon.  The possible modifiers are:
+
+            if EXPR
+            unless EXPR
+            while EXPR
+            until EXPR
+
+       The if and unless modifiers have the expected semantics.  The while and
+       until modifiers also have the expected semantics (conditional evaluated
+       first), except when applied to a do-BLOCK command, in  which  case  the
+       block  executes  once  before the conditional is evaluated.  This is so
+       that you can write loops like:
+
+            do {
+                 $_ = <stdin>;
+                 ...
+            } until $_ eq ".\n";
+
+       (See the do operator below.  Note also that the loop  control  commands
+       described  later will NOT work in this construct, since modifiers don't
+       take loop labels.  Sorry.)
+
+       Expressions
+
+       Since perl expressions work almost exactly like C expressions, only the
+       differences will be mentioned here.
+
+       Here's what perl has that C doesn't:
+
+       ()      The null list, used to initialize an array to null.
+
+       .       Concatenation of two strings.
+
+       .=      The corresponding assignment operator.
+
+       eq      String  equality (== is numeric equality).  For a mnemonic just
+               think of "eq" as a string.  (If you are used to the awk  behav‐
+               ior  of using == for either string or numeric equality based on
+               the current form  of  the  comparands,  beware!   You  must  be
+               explicit here.)
+
+       ne      String inequality (!= is numeric inequality).
+
+       lt      String less than.
+
+       gt      String greater than.
+
+       le      String less than or equal.
+
+       ge      String greater than or equal.
+
+       =~      Certain operations search or modify the string "$_" by default.
+               This operator makes that kind of operation work on  some  other
+               string.   The right argument is a search pattern, substitution,
+               or translation.  The left argument is what is  supposed  to  be
+               searched,  substituted,  or  translated  instead of the default
+               "$_".  The return value indicates the success of the operation.
+               (If  the  right  argument  is an expression other than a search
+               pattern, substitution, or translation, it is interpreted  as  a
+               search  pattern  at  run  time.  This is less efficient than an
+               explicit search, since the pattern must be compiled every  time
+               the  expression is evaluated.)  The precedence of this operator
+               is lower than  unary  minus  and  autoincrement/decrement,  but
+               higher than everything else.
+
+       !~      Just like =~ except the return value is negated.
+
+       x       The  repetition  operator.   Returns a string consisting of the
+               left operand repeated the number  of  times  specified  by  the
+               right operand.
+
+                    print '-' x 80;          # print row of dashes
+                    print '-' x80;      # illegal, x80 is identifier
+
+                    print "\t" x ($tab/8), ' ' x ($tab%8);  # tab over
+
+
+       x=      The corresponding assignment operator.
+
+       ..      The  range operator, which is bistable.  It is false as long as
+               its left argument is false.  Once the left argument is true, it
+               stays  true  until  the  right argument is true, AFTER which it
+               becomes false again.  (It doesn't become false  till  the  next
+               time  it's  evaluated.  It can become false on the same evalua‐
+               tion it became true, but it still returns true once.)   The  ..
+               operator  is  primarily  intended  for doing line number ranges
+               after the fashion of sed or awk.  The precedence  is  a  little
+               lower  than  ⎪⎪  and &&.  The value returned is either the null
+               string for false, or a sequence number (beginning with  1)  for
+               true.  The sequence number is reset for each range encountered.
+               The final sequence number  in  a  range  has  the  string  'E0'
+               appended  to  it,  which  doesn't affect its numeric value, but
+               gives you something to search for if you want  to  exclude  the
+               endpoint.   You  can exclude the beginning point by waiting for
+               the sequence number to be greater than 1.  If  either  argument
+               to .. is static, that argument is implicitly compared to the $.
+               variable, the current line number.  Examples:
+
+                   if (101 .. 200) { print; }     # print 2nd hundred lines
+
+                   next line if (1 .. /^$/); # skip header lines
+
+                   s/^/> / if (/^$/ .. eof());    # quote body
+
+
+       -x      A file test.  This unary operator takes one argument,  a  file‐
+               name,  and tests the file to see if something is true about it.
+               It returns 1 for true and '' for false.  Precedence  is  higher
+               than  logical  and  relational operators, but lower than arith‐
+               metic operators.  The operator may be any of:
+                    -r   File is readable by effective uid.
+                    -w   File is writeable by effective uid.
+                    -x   File is executable by effective uid.
+                    -o   File is owned by effective uid.
+                    -R   File is readable by real uid.
+                    -W   File is writeable by real uid.
+                    -X   File is executable by real uid.
+                    -O   File is owned by real uid.
+                    -e   File exists.
+                    -z   File has zero size.
+                    -s   File has non-zero size.
+                    -f   File is a plain file.
+                    -d   File is a directory.
+                    -l   File is a symbolic link.
+
+               Example:
+
+                    while (<>) {
+                         chop;
+                         next unless -f $_;  # ignore specials
+                         ...
+                    }
+
+               Note that -s/a/b/ does not do a negated substitution.
+
+       Here is what C has that perl doesn't:
+
+       unary &     Address-of operator.
+
+       unary *     Dereference-address operator.
+
+       Like C, perl does a certain amount of expression evaluation at  compile
+       time,  whenever  it determines that all of the arguments to an operator
+       are static and have no side effects.  In particular, string  concatena‐
+       tion  happens  at  compile time between literals that don't do variable
+       substitution.  Backslash interpretation also happens at  compile  time.
+       You can say
+
+            'Now is the time for all' . "\n" .
+            'good men to come to.'
+
+       and this all reduces to one string internally.
+
+       Along  with the literals and variables mentioned earlier, the following
+       operations can serve as terms in an expression:
+
+       /PATTERN/i
+               Searches a string for a pattern, and returns true (1) or  false
+               ('').  If no string is specified via the =~ or !~ operator, the
+               $_ string is searched.  (The string specified with =~ need  not
+               be an lvalue--it may be the result of an expression evaluation,
+               but remember the =~ binds rather tightly.)  See also  the  sec‐
+               tion on regular expressions.
+
+               If  you  prepend  an  `m' you can use any pair of characters as
+               delimiters.  This is particularly useful for matching Unix path
+               names  that contain `/'.  If the final delimiter is followed by
+               the optional letter `i', the matching is done in a  case-insen‐
+               sitive manner.
+
+               Examples:
+
+                   open(tty, '/dev/tty');
+                   <tty> =~ /^y/i && do foo();    # do foo if desired
+
+                   if (/Version: *([0-9.]*)/) { $version = $1; }
+
+                   next if m#^/usr/spool/uucp#;
+
+
+       ?PATTERN?
+               This  is just like the /pattern/ search, except that it matches
+               only once between calls to the reset operator.  This is a  use‐
+               ful  optimization when you only want to see the first occurence
+               of something in each of a set of files, for instance.
+
+       chdir EXPR
+               Changes the working directory to EXPR, if possible.  Returns  1
+               upon success, 0 otherwise.  See example under die().
+
+       chmod LIST
+               Changes  the permissions of a list of files.  The first element
+               of the list must be the numerical mode.  LIST may be an  array,
+               in  which case you may wish to use the unshift() command to put
+               the mode on the front of the  array.   Returns  the  number  of
+               files  successfully  changed.   Note: in order to use the value
+               you must put the whole thing in parentheses.
+
+                    $cnt = (chmod 0755,'foo','bar');
+
+
+       chop(VARIABLE)
+
+       chop    Chops off the last character of a string and returns it.   It's
+               used  primarily  to remove the newline from the end of an input
+               record, but is much more efficient than s/\n// because it  nei‐
+               ther  scans  nor  copies  the  string.  If VARIABLE is omitted,
+               chops $_.  Example:
+
+                    while (<>) {
+                         chop;     # avoid \n on last field
+                         @array = split(/:/);
+                         ...
+                    }
+
+
+       chown LIST
+               Changes the owner (and group) of a list of files.  LIST may  be
+               an  array.   The  first  two  elements  of the list must be the
+               NUMERICAL uid and gid, in that order.  Returns  the  number  of
+               files  successfully  changed.   Note: in order to use the value
+               you must put the whole thing in parentheses.
+
+                    $cnt = (chown $uid,$gid,'foo');
+
+               Here's an example of looking up non-numeric uids:
+
+                    print "User: ";
+                    $user = <stdin>;
+                    chop($user);
+                    open(pass,'/etc/passwd') ⎪⎪ die "Can't open passwd";
+                    while (<pass>) {
+                         ($login,$pass,$uid,$gid) = split(/:/);
+                         $uid{$login} = $uid;
+                         $gid{$login} = $gid;
+                    }
+                    @ary = ('foo','bar','bie','doll');
+                    if ($uid{$user} eq '') {
+                         die "$user not in passwd file";
+                    }
+                    else {
+                         unshift(@ary,$uid{$user},$gid{$user});
+                         chown @ary;
+                    }
+
+
+       close(FILEHANDLE)
+
+       close FILEHANDLE
+               Closes the file or pipe associated with the file  handle.   You
+               don't  have to close FILEHANDLE if you are immediately going to
+               do another open on it, since open will close it for you.   (See
+               open.)   However, an explicit close on an input file resets the
+               line counter ($.), while the implicit close done by  open  does
+               not.   Also, closing a pipe will wait for the process executing
+               on the pipe to complete, in case you want to look at the output
+               of the pipe afterwards.  Example:
+
+                    open(output,'⎪sort >foo');    # pipe to sort
+                    ...  # print stuff to output
+                    close(output);      # wait for sort to finish
+                    open(input,'foo');  # get sort's results
+
+
+       crypt(PLAINTEXT,SALT)
+               Encrypts  a  string  exactly like the crypt() function in the C
+               library.  Useful for checking the password file for lousy pass‐
+               words.  Only the guys wearing white hats should do this.
+
+       die EXPR
+               Prints  the  value of EXPR to stderr and exits with the current
+               value of $!  (errno).  If $! is 0, exits with the value of  ($?
+               >>  8)  (`command` status).  If ($? >> 8) is 0, exits with 255.
+               Equivalent examples:
+
+                    die "Can't cd to spool.\n" unless chdir '/usr/spool/news';
+
+                    (chdir '/usr/spool/news') ⎪⎪ die "Can't cd to spool.\n"
+
+               Note that the parens are necessary above due to precedence.
+
+               If the value of EXPR does not end in  a  newline,  the  current
+               script  line  number  and  input  line number (if any) are also
+               printed, and a newline is supplied.  Hint: sometimes  appending
+               ",  stopped" to your message will cause it to make better sense
+               when the string "at foo line 123" is appended.  Suppose you are
+               running script "canasta".
+
+                    die "/etc/games is no good";
+                    die "/etc/games is no good, stopped";
+
+               produce, respectively
+
+                    /etc/games is no good at canasta line 123.
+                    /etc/games is no good, stopped at canasta line 123.
+
+               See also exit.
+
+       do BLOCK
+               Returns  the  value of the last command in the sequence of com‐
+               mands indicated by BLOCK.  When modified by  a  loop  modifier,
+               executes the BLOCK once before testing the loop condition.  (On
+               other  statements  the  loop  modifiers  test  the  conditional
+               first.)
+
+       do SUBROUTINE (LIST)
+               Executes  a  SUBROUTINE  declared  by  a  sub  declaration, and
+               returns the value of the last expression evaluated  in  SUBROU‐
+               TINE.  (See the section on subroutines later on.)
+
+       each(ASSOC_ARRAY)
+               Returns  a  2 element array consisting of the key and value for
+               the next value of an associative array, so that you can iterate
+               over  it.   Entries are returned in an apparently random order.
+               When the array is entirely  read,  a  null  array  is  returned
+               (which  when  assigned  produces  a FALSE (0) value).  The next
+               call to each() after that  will  start  iterating  again.   The
+               iterator can be reset only by reading all the elements from the
+               array.  You should not modify the array  while  iterating  over
+               it.   The following prints out your environment like the print‐
+               env program, only in a different order:
+
+                    while (($key,$value) = each(ENV)) {
+                         print "$key=$value\n";
+                    }
+
+               See also keys() and values().
+
+       eof(FILEHANDLE)
+
+       eof     Returns 1 if the next read on FILEHANDLE  will  return  end  of
+               file,  or  if FILEHANDLE is not open.  If (FILEHANDLE) is omit‐
+               ted, the eof status is returned for the last  file  read.   The
+               null  filehandle may be used to indicate the pseudo file formed
+               of the files listed on the command line, i.e. eof() is  reason‐
+               able to use inside a while (<>) loop.  Example:
+
+                    # insert dashes just before last line
+                    while (<>) {
+                         if (eof()) {
+                              print "--------------\n";
+                         }
+                         print;
+                    }
+
+
+       eval EXPR
+               EXPR  is  parsed  and executed as if it were a little perl pro‐
+               gram.  It is executed in the context of the current  perl  pro‐
+               gram, so that any variable settings, subroutine or format defi‐
+               nitions remain afterwards.  The value returned is the value  of
+               the  last  expression  evaluated, just as with subroutines.  If
+               there is a syntax error or runtime  error,  a  null  string  is
+               returned by eval, and $@ is set to the error message.  If there
+               was no error, $@ is null.  If EXPR is omitted, evaluates $_.
+
+       exec LIST
+               If there is more than one argument in LIST, calls execvp() with
+               the  arguments  in  LIST.   If  there is only one argument, the
+               argument is checked for shell  metacharacters.   If  there  are
+               any,  the  entire argument is passed to /bin/sh -c for parsing.
+               If there are none, the argument is split into words and  passed
+               directly to execvp(), which is more efficient.  Note: exec (and
+               system) do not flush your output buffer, so you may need to set
+               $⎪ to avoid lost output.
+
+       exit EXPR
+               Evaluates EXPR and exits immediately with that value.  Example:
+
+                    $ans = <stdin>;
+                    exit 0 if $ans =~ /^[Xx]/;
+
+               See also die.
+
+       exp(EXPR)
+               Returns e to the power of EXPR.
+
+       fork    Does  a  fork()  call.   Returns  the  child  pid to the parent
+               process and 0 to the child process.   Note:  unflushed  buffers
+               remain unflushed in both processes, which means you may need to
+               set $⎪ to avoid duplicate output.
+
+       gmtime(EXPR)
+               Converts a time as returned by the time function to a 9-element
+               array with the time analyzed for the Greenwich timezone.  Typi‐
+               cally used as follows:
+
+                   ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)
+                      = gmtime(time);
+
+               All array elements are numeric.
+
+       goto LABEL
+               Finds the statement labeled with LABEL  and  resumes  execution
+               there.   Currently  you  may  only go to statements in the main
+               body of the program that are not nested inside  a  do  {}  con‐
+               struct.   This  statement  is not implemented very efficiently,
+               and is here only to make  the  sed-to-perl  translator  easier.
+               Use at your own risk.
+
+       hex(EXPR)
+               Returns the decimal value of EXPR interpreted as an hex string.
+               (To interpret strings that might start with 0 or 0x see oct().)
+
+       index(STR,SUBSTR)
+               Returns the position of SUBSTR in STR, based at 0, or  whatever
+               you've  set the $[ variable to.  If the substring is not found,
+               returns one less than the base, ordinarily -1.
+
+       int(EXPR)
+               Returns the integer portion of EXPR.
+
+       join(EXPR,LIST)
+
+       join(EXPR,ARRAY)
+               Joins the separate strings of  LIST  or  ARRAY  into  a  single
+               string  with fields separated by the value of EXPR, and returns
+               the string.  Example:
+
+                   $_ = join(':', $login,$passwd,$uid,$gid,$gcos,$home,$shell);
+
+               See split.
+
+       keys(ASSOC_ARRAY)
+               Returns a normal array consisting of all the keys of the  named
+               associative array.  The keys are returned in an apparently ran‐
+               dom order, but it is the same order as either the  values()  or
+               each()  function produces (given that the associative array has
+               not been modified).  Here is yet  another  way  to  print  your
+               environment:
+
+                    @keys = keys(ENV);
+                    @values = values(ENV);
+                    while ($#keys >= 0) {
+                         print pop(keys),'=',pop(values),"\n";
+                    }
+
+
+       kill LIST
+               Sends  a  signal  to a list of processes.  The first element of
+               the list must be the (numerical) signal to send.  LIST  may  be
+               an array, in which case you may wish to use the unshift command
+               to put the signal on the front of the array.  Returns the  num‐
+               ber  of processes successfully signaled.  Note: in order to use
+               the value you must put the whole thing in parentheses:
+
+                    $cnt = (kill 9,$child1,$child2);
+
+               If the signal is negative, kills process groups instead of pro‐
+               cesses.  (On System V, a negative process number will also kill
+               process groups, but that's not portable.)
+
+       last LABEL
+
+       last    The last command is like the break statement in C (as  used  in
+               loops);  it  immediately  exits  the  loop in question.  If the
+               LABEL is omitted, the command refers to the innermost enclosing
+               loop.  The continue block, if any, is not executed:
+
+                    line: while (<stdin>) {
+                         last line if /^$/;  # exit when done with header
+                         ...
+                    }
+
+
+       localtime(EXPR)
+               Converts a time as returned by the time function to a 9-element
+               array with the time analyzed for the local timezone.  Typically
+               used as follows:
+
+                   ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)
+                      = localtime(time);
+
+               All array elements are numeric.
+
+       log(EXPR)
+               Returns logarithm (base e) of EXPR.
+
+       next LABEL
+
+       next    The next command is like the continue statement in C; it starts
+               the next iteration of the loop:
+
+                    line: while (<stdin>) {
+                         next line if /^#/;  # discard comments
+                         ...
+                    }
+
+               Note that if there were a continue block on the above, it would
+               get executed even on discarded lines.  If the LABEL is omitted,
+               the command refers to the innermost enclosing loop.
+
+       length(EXPR)
+               Returns the length in characters of the value of EXPR.
+
+       link(OLDFILE,NEWFILE)
+               Creates a new filename linked to the old filename.   Returns  1
+               for success, 0 otherwise.
+
+       oct(EXPR)
+               Returns  the  decimal  value  of  EXPR  interpreted as an octal
+               string.  (If EXPR happens to start off with 0x,  interprets  it
+               as  a  hex string instead.)  The following will handle decimal,
+               octal and hex in the standard notation:
+
+                    $val = oct($val) if $val =~ /^0/;
+
+
+       open(FILEHANDLE,EXPR)
+
+       open(FILEHANDLE)
+
+       open FILEHANDLE
+               Opens the file whose filename is given by EXPR, and  associates
+               it with FILEHANDLE.  If EXPR is omitted, the string variable of
+               the same name as the FILEHANDLE contains the filename.  If  the
+               filename  begins  with  ">", the file is opened for output.  If
+               the filename begins with ">>", the file is opened  for  append‐
+               ing.   If  the filename begins with "⎪", the filename is inter‐
+               preted as a command to which output is to be piped, and if  the
+               filename  ends  with a "⎪", the filename is interpreted as com‐
+               mand which pipes input to us.  (You may not have a command that
+               pipes  both  in  and out.)  Opening '-' opens stdin and opening
+               '>-' opens stdout.  Open returns 1 upon success, ''  otherwise.
+               Examples:
+
+                   $article = 100;
+                   open article ⎪⎪ die "Can't find article $article";
+                   while (<article>) {...
+
+                   open(log, '>>/usr/spool/news/twitlog');
+
+                   open(article, "caeser <$article ⎪");          # decrypt article
+
+                   open(extract, "⎪sort >/tmp/Tmp$$");      # $$ is our process#
+
+               You  may  also,  in the Bourne shell tradition, specify an EXPR
+               beginning with ">&", in which case the rest of  the  string  is
+               interpreted as the name of a filehandle (or file descriptor, if
+               numeric) which is to be duped and opened.   Here  is  a  script
+               that saves, redirects, and restores stdout and stdin:
+
+                    #!/usr/bin/perl
+                    open(saveout,">&stdout");
+                    open(saveerr,">&stderr");
+
+                    open(stdout,">foo.out") ⎪⎪ die "Can't redirect stdout";
+                    open(stderr,">&stdout") ⎪⎪ die "Can't dup stdout";
+
+                    select(stderr); $⎪ = 1;       # make unbuffered
+                    select(stdout); $⎪ = 1;       # make unbuffered
+
+                    print stdout "stdout 1\n";    # this works for
+                    print stderr "stderr 1\n";    # subprocesses too
+
+                    close(stdout);
+                    close(stderr);
+
+                    open(stdout,">&saveout");
+                    open(stderr,">&saveerr");
+
+                    print stdout "stdout 2\n";
+                    print stderr "stderr 2\n";
+
+
+       ord(EXPR)
+               Returns the ascii value of the first character of EXPR.
+
+       pop ARRAY
+
+       pop(ARRAY)
+               Pops  and  returns  the last value of the array, shortening the
+               array by 1.
+
+       print FILEHANDLE LIST
+
+       print LIST
+
+       print   Prints a string or comma-separated list of strings.   If  FILE‐
+               HANDLE  is omitted, prints by default to standard output (or to
+               the last selected output channel--see select()).   If  LIST  is
+               also  omitted,  prints $_ to stdout.  LIST may also be an array
+               value.  To set the default output channel  to  something  other
+               than stdout use the select operation.
+
+       printf FILEHANDLE LIST
+
+       printf LIST
+               Equivalent to a "print FILEHANDLE sprintf(LIST)".
+
+       push(ARRAY,EXPR)
+               Treats  ARRAY  (@ is optional) as a stack, and pushes the value
+               of EXPR onto the end of ARRAY.  The length of  ARRAY  increases
+               by 1.  Has the same effect as
+
+                   $ARRAY[$#ARRAY+1] = EXPR;
+
+               but is more efficient.
+
+       redo LABEL
+
+       redo    The redo command restarts the loop block without evaluating the
+               conditional again.  The continue block, if  any,  is  not  exe‐
+               cuted.   If  the  LABEL  is  omitted, the command refers to the
+               innermost enclosing loop.  This command  is  normally  used  by
+               programs  that  want  to  lie to themselves about what was just
+               input:
+
+                    # a simpleminded Pascal comment stripper
+                    # (warning: assumes no { or } in strings)
+                    line: while (<stdin>) {
+                         while (s⎪({.*}.*){.*}⎪$1 ⎪) {}
+                         s⎪{.*}⎪ ⎪;
+                         if (s⎪{.*⎪ ⎪) {
+                              $front = $_;
+                              while (<stdin>) {
+                                   if (/}/) {     # end of comment?
+                                        s⎪^⎪$front{⎪;
+                                        redo line;
+                                   }
+                              }
+                         }
+                         print;
+                    }
+
+
+       rename(OLDNAME,NEWNAME)
+               Changes the name of a file.  Returns 1 for  success,  0  other‐
+               wise.
+
+       reset EXPR
+               Generally  used  in  a  continue  block at the end of a loop to
+               clear variables and reset ?? searches so that they work  again.
+               The  expression  is  interpreted as a list of single characters
+               (hyphens allowed for ranges).  All variables and arrays  begin‐
+               ning  with  one  of  those  letters are reset to their pristine
+               state.  If the expression is omitted, one-match searches (?pat‐
+               tern?) are reset to match again.  Always returns 1.  Examples:
+
+                   reset 'X';      # reset all X variables
+                   reset 'a-z';    # reset lower case variables
+                   reset;          # just reset ?? searches
+
+               Note: reset "A-Z" is not recommended since you'll wipe out your
+               ARGV and ENV arrays.
+
+       s/PATTERN/REPLACEMENT/gi
+               Searches a string for a pattern, and if  found,  replaces  that
+               pattern  with  the  replacement  text and returns the number of
+               substitutions made.  Otherwise it returns false (0).   The  "g"
+               is  optional,  and if present, indicates that all occurences of
+               the pattern are to be replaced.  The "i" is also optional,  and
+               if  present,  indicates  that matching is to be done in a case-
+               insensitive manner.  Any delimiter may replace the slashes;  if
+               single  quotes  are  used,  no  interpretation  is  done on the
+               replacement string.  If no string is specified via the =~ or !~
+               operator,  the $_ string is searched and modified.  (The string
+               specified with =~ must be a string variable or  array  element,
+               i.e. an lvalue.)  If the pattern contains a $ that looks like a
+               variable rather than an end-of-string test, the  variable  will
+               be  interpolated  into  the  pattern at run-time.  See also the
+               section on regular expressions.  Examples:
+
+                   s/\bgreen\b/mauve/g;      # don't change wintergreen
+
+                   $path =~ s⎪/usr/bin⎪/usr/local/bin⎪;
+
+                   s/Login: $foo/Login: $bar/; # run-time pattern
+
+                   s/([^ ]*) *([^ ]*)/$2 $1/;     # reverse 1st two fields
+
+               (Note the use of $ instead of \ in the last example.  See  sec‐
+               tion on regular expressions.)
+
+       seek(FILEHANDLE,POSITION,WHENCE)
+               Randomly  positions  the file pointer for FILEHANDLE, just like
+               the fseek() call of stdio.  Returns 1 upon  success,  0  other‐
+               wise.
+
+       select(FILEHANDLE)
+               Sets  the  current default filehandle for output.  This has two
+               effects: first, a write or a print without  a  filehandle  will
+               default  to  this  FILEHANDLE.  Second, references to variables
+               related to output will refer to this output channel.  For exam‐
+               ple,  if  you  have to set the top of form format for more than
+               one output channel, you might do the following:
+
+                   select(report1);
+                   $^ = 'report1_top';
+                   select(report2);
+                   $^ = 'report2_top';
+
+               Select happens to return TRUE if the file is currently open and
+               FALSE otherwise, but this has no effect on its operation.
+
+       shift(ARRAY)
+
+       shift ARRAY
+
+       shift   Shifts  the first value of the array off and returns it, short‐
+               ening the array by 1 and moving everything down.  If  ARRAY  is
+               omitted, shifts the ARGV array.  See also unshift(), push() and
+               pop().  Shift() and unshift() do the same thing to the left end
+               of an array that push() and pop() do to the right end.
+
+       sleep EXPR
+
+       sleep   Causes  the  script to sleep for EXPR seconds, or forever if no
+               EXPR.  May be interrupted by sending the  process  a  SIGALARM.
+               Returns the number of seconds actually slept.
+
+       split(/PATTERN/,EXPR)
+
+       split(/PATTERN/)
+
+       split   Splits  a  string into an array of strings, and returns it.  If
+               EXPR is omitted, splits the $_  string.   If  PATTERN  is  also
+               omitted,  splits on whitespace (/[ \t\n]+/).  Anything matching
+               PATTERN is taken to  be  a  delimiter  separating  the  fields.
+               (Note  that  the  delimiter  may be longer than one character.)
+               Trailing null fields are stripped,  which  potential  users  of
+               pop()  would  do well to remember.  A pattern matching the null
+               string (not to be confused with a null pattern) will split  the
+               value of EXPR into separate characters at each point it matches
+               that way.  For example:
+
+                    print join(':',split(/ */,'hi there'));
+
+               produces the output 'h:i:t:h:e:r:e'.
+
+               The pattern /PATTERN/ may be replaced  with  an  expression  to
+               specify  patterns  that  vary  at  runtime.  As a special case,
+               specifying a space (' ') will split  on  white  space  just  as
+               split  with no arguments does, but leading white space does NOT
+               produce a null first field.  Thus, split(' ') can  be  used  to
+               emulate  awk's  default  behavior, whereas split(/ /) will give
+               you as many null initial fields as there are leading spaces.
+
+               Example:
+
+                    open(passwd, '/etc/passwd');
+                    while (<passwd>) {
+                         ($login, $passwd, $uid, $gid, $gcos, $home, $shell)
+                              = split(/:/);
+                         ...
+                    }
+
+               (Note that $shell above will still have a newline on  it.   See
+               chop().)  See also join.
+
+       sprintf(FORMAT,LIST)
+               Returns  a  string  formatted  by the usual printf conventions.
+               The * character is not supported.
+
+       sqrt(EXPR)
+               Return the square root of EXPR.
+
+       stat(FILEHANDLE)
+
+       stat(EXPR)
+               Returns a 13-element array giving the statistics  for  a  file,
+               either the file opened via FILEHANDLE, or named by EXPR.  Typi‐
+               cally used as follows:
+
+                   ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
+                      $atime,$mtime,$ctime,$blksize,$blocks)
+                          = stat($filename);
+
+
+       substr(EXPR,OFFSET,LEN)
+               Extracts a substring out of EXPR and returns it.  First charac‐
+               ter is at offset 0, or whatever you've set $[ to.
+
+       system LIST
+               Does  exactly  the same thing as "exec LIST" except that a fork
+               is done first, and the  parent  process  waits  for  the  child
+               process  to  complete.   Note  that  argument processing varies
+               depending on the number of arguments.  The return value is  the
+               exit  status of the program as returned by the wait() call.  To
+               get the actual exit value divide by 256.  See also exec.
+
+       symlink(OLDFILE,NEWFILE)
+               Creates a new filename symbolically linked to the old filename.
+               Returns 1 for success, 0 otherwise.  On systems that don't sup‐
+               port symbolic links, produces a fatal error.
+
+       tell(FILEHANDLE)
+
+       tell    Returns the current file position for FILEHANDLE.  If  FILEHAN‐
+               DLE is omitted, assumes the file last read.
+
+       time    Returns  the number of seconds since January 1, 1970.  Suitable
+               for feeding to gmtime() and localtime().
+
+       times   Returns a four-element array giving the user and system  times,
+               in seconds, for this process and the children of this process.
+
+                   ($user,$system,$cuser,$csystem) = times;
+
+
+       tr/SEARCHLIST/REPLACEMENTLIST/
+
+       y/SEARCHLIST/REPLACEMENTLIST/
+               Translates all occurences of the characters found in the search
+               list with the corresponding character in the replacement  list.
+               It  returns the number of characters replaced.  If no string is
+               specified via the =~ or !~ operator, the $_  string  is  trans‐
+               lated.  (The string specified with =~ must be a string variable
+               or array element, i.e. an lvalue.)  For sed devotees, y is pro‐
+               vided as a synonym for tr.  Examples:
+
+                   $ARGV[1] =~ y/A-Z/a-z/;   # canonicalize to lower case
+
+                   $cnt = tr/*/*/;           # count the stars in $_
+
+
+       umask(EXPR)
+               Sets the umask for the process and returns the old one.
+
+       unlink LIST
+               Deletes  a  list  of files.  LIST may be an array.  Returns the
+               number of files successfully deleted.  Note: in  order  to  use
+               the value you must put the whole thing in parentheses:
+
+                    $cnt = (unlink 'a','b','c');
+
+               Note:  unlink  will not delete directories unless you are supe‐
+               ruser and the -U flag is supplied to perl.
+
+       unshift(ARRAY,LIST)
+               Does the opposite of a shift.  Prepends list to  the  front  of
+               the array, and returns the number of elements in the new array.
+
+                    unshift(ARGV,'-e') unless $ARGV[0] =~ /^-/;
+
+
+       values(ASSOC_ARRAY)
+               Returns  a  normal  array  consisting  of all the values of the
+               named associative array.  The values are returned in an  appar‐
+               ently  random  order,  but  it  is the same order as either the
+               keys() or each() function produces (given that the  associative
+               array has not been modified).  See also keys() and each().
+
+       write(FILEHANDLE)
+
+       write(EXPR)
+
+       write() Writes  a  formatted record (possibly multi-line) to the speci‐
+               fied file, using the format  associated  with  that  file.   By
+               default  the  format for a file is the one having the same name
+               is the filehandle, but the format for the current output  chan‐
+               nel (see select) may be set explicitly by assigning the name of
+               the format to the $~ variable.
+
+               Top of form processing is handled automatically:  if  there  is
+               insufficient room on the current page for the formatted record,
+               the page is advanced, a special top-of-page format is  used  to
+               format the new page header, and then the record is written.  By
+               default the top-of-page format is "top", but it may be  set  to
+               the format of your choice by assigning the name to the $^ vari‐
+               able.
+
+               If FILEHANDLE  is  unspecified,  output  goes  to  the  current
+               default  output  channel, which starts out as stdout but may be
+               changed by the select operator.  If the FILEHANDLE is an  EXPR,
+               then  the  expression  is evaluated and the resulting string is
+               used to look up the name of the FILEHANDLE at  run  time.   For
+               more on formats, see the section on formats later on.
+
+       Subroutines
+
+       A subroutine may be declared as follows:
+
+           sub NAME BLOCK
+
+
+       Any  arguments  passed  to  the  routine  come  in as array @_, that is
+       ($_[0], $_[1], ...).  The return value of the subroutine is  the  value
+       of the last expression evaluated.  There are no local variables--every‐
+       thing is a global variable.
+
+       A subroutine is called using the do operator.  (CAVEAT: For  efficiency
+       reasons  recursive  subroutine calls are not currently supported.  This
+       restriction may go away in the future.  Then again, it may not.)
+
+       Example:
+
+            sub MAX {
+                 $max = pop(@_);
+                 while ($foo = pop(@_)) {
+                      $max = $foo if $max < $foo;
+                 }
+                 $max;
+            }
+
+            ...
+            $bestday = do MAX($mon,$tue,$wed,$thu,$fri);
+
+       Example:
+
+            # get a line, combining continuation lines
+            #  that start with whitespace
+            sub get_line {
+                 $thisline = $lookahead;
+                 line: while ($lookahead = <stdin>) {
+                      if ($lookahead =~ /^[ \t]/) {
+                           $thisline .= $lookahead;
+                      }
+                      else {
+                           last line;
+                      }
+                 }
+                 $thisline;
+            }
+
+            $lookahead = <stdin>;    # get first line
+            while ($_ = get_line()) {
+                 ...
+            }
+
+       Use array assignment to name your formal arguments:
+
+            sub maybeset {
+                 ($key,$value) = @_;
+                 $foo{$key} = $value unless $foo{$key};
+            }
+
+
+       Regular Expressions
+
+       The patterns used in pattern matching are regular expressions  such  as
+       those  used by egrep(1).  In addition, \w matches an alphanumeric char‐
+       acter and \W a nonalphanumeric.  Word boundaries may be matched by  \b,
+       and non-boundaries by \B.  The bracketing construct ( ... ) may also be
+       used, $<digit> matches the digit'th substring, where  digit  can  range
+       from 1 to 9.  (You can also use the old standby \<digit> in search pat‐
+       terns, but $<digit> also works in replacement patterns and in the block
+       controlled  by  the current conditional.)  $+ returns whatever the last
+       bracket match matched.  $& returns the entire matched string.  Up to 10
+       alternatives  may  given  in a pattern, separated by ⎪, with the caveat
+       that ( ... ⎪ ... ) is illegal.  Examples:
+
+            s/^([^ ]*) *([^ ]*)/$2 $1/;   # swap first two words
+
+            if (/Time: (..):(..):(..)/) {
+                 $hours = $1;
+                 $minutes = $2;
+                 $seconds = $3;
+            }
+
+       By default, the ^ character matches only the beginning of  the  string,
+       and perl does certain optimizations with the assumption that the string
+       contains only one line.  You may, however, wish to treat a string as  a
+       multi-line  buffer, such that the ^ will match after any newline within
+       the string.  At the cost of a little more overhead, you can do this  by
+       setting  the  variable $* to 1.  Setting it back to 0 makes perl revert
+       to its old behavior.
+
+       Formats
+
+       Output record formats for use with the write operator may  declared  as
+       follows:
+
+           format NAME =
+           FORMLIST
+           .
+
+       If name is omitted, format "stdout" is defined.  FORMLIST consists of a
+       sequence of lines, each of which may be of one of three types:
+
+       1.  A comment.
+
+       2.  A "picture" line giving the format for one output line.
+
+       3.  An argument line supplying values to plug into a picture line.
+
+       Picture lines are printed exactly as  they  look,  except  for  certain
+       fields that substitute values into the line.  Each picture field starts
+       with either @ or ^.  The @ field (not to be  confused  with  the  array
+       marker  @)  is  the  normal  case;  ^ fields are used to do rudimentary
+       multi-line text block filling.  The length of the field is supplied  by
+       padding  out  the field with multiple <, >, or ⎪ characters to specify,
+       respectively, left justfication, right justification, or centering.  If
+       any  of  the  values supplied for these fields contains a newline, only
+       the text up to the newline is printed.  The special  field  @*  can  be
+       used  for  printing multi-line values.  It should appear by itself on a
+       line.
+
+       The values are specified on the following line, in the  same  order  as
+       the  picture  fields.   They  must  currently be either string variable
+       names or string literals (or pseudo-literals).  Currently you can sepa‐
+       rate  values  with  spaces,  but commas may be placed between values to
+       prepare for possible future versions  in  which  full  expressions  are
+       allowed as values.
+
+       Picture  fields  that begin with ^ rather than @ are treated specially.
+       The value supplied must be a string variable name which contains a text
+       string.   Perl  puts  as  much  text as it can into the field, and then
+       chops off the front of the string so that  the  next  time  the  string
+       variable  is referenced, more of the text can be printed.  Normally you
+       would use a sequence of fields in a vertical stack to print out a block
+       of text.  If you like, you can end the final field with ..., which will
+       appear in the output if  the  text  was  too  long  to  appear  in  its
+       entirety.
+
+       Since  use  of ^ fields can produce variable length records if the text
+       to be formatted is short, you can suppress blank lines by  putting  the
+       tilde  (~) character anywhere in the line.  (Normally you should put it
+       in the front if possible.)  The tilde will be  translated  to  a  space
+       upon output.
+
+       Examples:
+
+       # a report on the /etc/passwd file
+       format top =
+                               Passwd File
+       Name                Login    Office   Uid   Gid Home
+       ------------------------------------------------------------------
+       .
+       format stdout =
+       @<<<<<<<<<<<<<<<<<< @⎪⎪⎪⎪⎪⎪⎪ @<<<<<<@>>>> @>>>> @<<<<<<<<<<<<<<<<<
+       $name               $login   $office $uid $gid  $home
+       .
+
+       # a report from a bug report form
+       format top =
+                               Bug Reports
+       @<<<<<<<<<<<<<<<<<<<<<<<     @⎪⎪⎪         @>>>>>>>>>>>>>>>>>>>>>>>
+       $system;                      $%;         $date
+       ------------------------------------------------------------------
+       .
+       format stdout =
+       Subject: @<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                $subject
+       Index: @<<<<<<<<<<<<<<<<<<<<<<<<<<<< ^<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+              $index                        $description
+       Priority: @<<<<<<<<<< Date: @<<<<<<< ^<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                 $priority         $date    $description
+       From: @<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ^<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+             $from                          $description
+       Assigned to: @<<<<<<<<<<<<<<<<<<<<<< ^<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                    $programmer             $description
+       ~                                    ^<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                                            $description
+       ~                                    ^<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                                            $description
+       ~                                    ^<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                                            $description
+       ~                                    ^<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                                            $description
+       ~                                    ^<<<<<<<<<<<<<<<<<<<<<<<...
+                                            $description
+       .
+
+       It is possible to intermix prints with writes on the same output channel,
+       but you'll have to handle $- (lines left on the page) yourself.
+
+       If  you  are printing lots of fields that are usually blank, you should
+       consider using the reset operator between records.  Not only is it more
+       efficient,  but it can prevent the bug of adding another field and for‐
+       getting to zero it.
+
+       Predefined Names
+
+       The following names have special meaning to perl.  I  could  have  used
+       alphabetic  symbols  for  some  of these, but I didn't want to take the
+       chance that someone would say reset "a-zA-Z" and  wipe  them  all  out.
+       You'll  just  have  to  suffer along with these silly symbols.  Most of
+       them have reasonable mnemonics, or analogues in one of the shells.
+
+       $_      The default input and pattern-searching space.   The  following
+               pairs are equivalent:
+
+                    while (<>) {...     # only equivalent in while!
+                    while ($_ = <>) {...
+
+                    /^Subject:/
+                    $_ =~ /^Subject:/
+
+                    y/a-z/A-Z/
+                    $_ =~ y/a-z/A-Z/
+
+                    chop
+                    chop($_)
+
+               (Mnemonic: underline is understood in certain operations.)
+
+       $.      The  current  input line number of the last filehandle that was
+               read.  Readonly.  Remember that only an explicit close  on  the
+               filehandle  resets  the  line  number.   Since <> never does an
+               explicit  close  line  numbers  increase  across  ARGV   files.
+               (Mnemonic:  many  programs  use . to mean the current line num‐
+               ber.)
+
+       $/      The input record separator, newline  by  default.   Works  like
+               awk's RS variable, including treating blank lines as delimiters
+               if set to the null string.  If set to a value longer  than  one
+               character,  only  the first character is used.  (Mnemonic: / is
+               used to delimit line boundaries when quoting poetry.)
+
+       $,      The output field separator for the print operator.   Ordinarily
+               the print operator simply prints out the comma separated fields
+               you specify.  In order to get behavior more like awk, set  this
+               variable as you would set awk's OFS variable to specify what is
+               printed between fields.  (Mnemonic: what is printed when  there
+               is a , in your print statement.)
+
+       $\      The output record separator for the print operator.  Ordinarily
+               the print operator simply prints out the comma separated fields
+               you  specify,  with  no  trailing  newline  or record separator
+               assumed.  In order to get behavior  more  like  awk,  set  this
+               variable as you would set awk's ORS variable to specify what is
+               printed at the end of the print.  (Mnemonic: you set $\ instead
+               of  adding \n at the end of the print.  Also, it's just like /,
+               but it's what you get "back" from perl.)
+
+       $#      The output format for printed  numbers.   This  variable  is  a
+               half-hearted attempt to emulate awk's OFMT variable.  There are
+               times, however, when awk and perl  have  differing  notions  of
+               what  is  in  fact  numeric.   Also, the initial value is %.20g
+               rather than %.6g, so you need to set $# explicitly to get awk's
+               value.  (Mnemonic: # is the number sign.)
+
+       $%      The  current page number of the currently selected output chan‐
+               nel.  (Mnemonic: % is page number in nroff.)
+
+       $=      The current page length  (printable  lines)  of  the  currently
+               selected output channel.  Default is 60.  (Mnemonic: = has hor‐
+               izontal lines.)
+
+       $-      The number of lines left on the page of the currently  selected
+               output channel.  (Mnemonic: lines_on_page - lines_printed.)
+
+       $~      The  name  of  the  current  report  format  for  the currently
+               selected output channel.  (Mnemonic: brother to $^.)
+
+       $^      The name of the current top-of-page format  for  the  currently
+               selected output channel.  (Mnemonic: points to top of page.)
+
+       $⎪      If set to nonzero, forces a flush after every write or print on
+               the currently selected output channel.   Default  is  0.   Note
+               that stdout will typically be line buffered if output is to the
+               terminal and block buffered otherwise.  Setting  this  variable
+               is  useful primarily when you are outputting to a pipe, such as
+               when you are running a perl script under rsh and  want  to  see
+               the  output  as  it's happening.  (Mnemonic: when you want your
+               pipes to be piping hot.)
+
+       $$      The process number of the perl running this script.  (Mnemonic:
+               same as shells.)
+
+       $?      The status returned by the last backtick (``) command or system
+               operator.  Note that this is the status word  returned  by  the
+               wait()  system  call,  so  the  exit value of the subprocess is
+               actually ($? >> 8).  $? & 255 gives which signal, if  any,  the
+               process   died  from,  and  whether  there  was  a  core  dump.
+               (Mnemonic: similar to sh and ksh.)
+
+       $+      The last bracket matched by the last search pattern.   This  is
+               useful if you don't know which of a set of alternative patterns
+               matched.  For example:
+
+                   /Version: (.*)⎪Revision: (.*)/ && ($rev = $+);
+
+               (Mnemonic: be positive and forward looking.)
+
+       $*      Set to 1 to do multiline matching within a string, 0 to  assume
+               strings  contain  a  single  line.  Default is 0.  (Mnemonic: *
+               matches multiple things.)
+
+       $0      Contains the name of the file containing the perl script  being
+               executed.  The value should be copied elsewhere before any pat‐
+               tern matching happens, which clobbers $0.  (Mnemonic:  same  as
+               sh and ksh.)
+
+       $<digit>
+               Contains the subpattern from the corresponding set of parenthe‐
+               ses in the last pattern matched, not counting patterns  matched
+               in  nested  blocks  that  have been exited already.  (Mnemonic:
+               like \digit.)
+
+       $[      The index of the first element in an array, and  of  the  first
+               character  in  a substring.  Default is 0, but you could set it
+               to 1 to make perl behave more like awk (or Fortran)  when  sub‐
+               scripting  and  when  evaluating the index() and substr() func‐
+               tions.  (Mnemonic: [ begins subscripts.)
+
+       $!      If used in a numeric  context,  yields  the  current  value  of
+               errno,  with  all  the usual caveats.  If used in a string con‐
+               text, yields the corresponding system error  string.   You  can
+               assign  to  $! in order to set errno if, for instance, you want
+               $! to return the string for error n, or you  want  to  set  the
+               exit  value  for  the  die operator.  (Mnemonic: What just went
+               bang?)
+
+       $@      The error message from the last eval  command.   If  null,  the
+               last  eval parsed and executed correctly.  (Mnemonic: Where was
+               the syntax error "at"?)
+
+       $<      The real uid of this process.  (Mnemonic: it's the uid you came
+               FROM, if you're running setuid.)
+
+       $>      The effective uid of this process.  Example:
+
+                    $< = $>;  # set real uid to the effective uid
+
+               (Mnemonic: it's the uid you went TO, if you're running setuid.)
+
+       $(      The  real  gid  of  this process.  If you are on a machine that
+               supports membership in multiple groups simultaneously, gives  a
+               space separated list of groups you are in.  The first number is
+               the one returned by getgid(), and the subsequent ones  by  get‐
+               groups(),  one  of  which  may be the same as the first number.
+               (Mnemonic: parens are used to GROUP things.  The  real  gid  is
+               the group you LEFT, if you're running setgid.)
+
+       $)      The  effective  gid  of  this process.  If you are on a machine
+               that supports membership  in  multiple  groups  simultaneously,
+               gives  a  space separated list of groups you are in.  The first
+               number is the one returned by  getegid(),  and  the  subsequent
+               ones  by getgroups(), one of which may be the same as the first
+               number.  (Mnemonic: parens  are  used  to  GROUP  things.   The
+               effective gid is the group that's RIGHT for you, if you're run‐
+               ning setgid.)
+
+       @ARGV   The array ARGV contains the command line arguments intended for
+               the  script.  Note that $#ARGV is the generally number of argu‐
+               ments minus one, since $ARGV[0] is the first argument, NOT  the
+               command name.  See $0 for the command name.
+
+       $ENV{expr}
+               The  associative  array  ENV contains your current environment.
+               Setting a value in ENV changes the environment for  child  pro‐
+               cesses.
+
+       $SIG{expr}
+               The  associative  array  SIG is used to set signal handlers for
+               various signals.  Example:
+
+                    sub handler {  # 1st argument is signal name
+                         ($sig) = @_;
+                         print "Caught a SIG$sig--shutting down\n";
+                         close(log);
+                         exit(0);
+                    }
+
+                    $SIG{'INT'} = 'handler';
+                    $SIG{'QUIT'} = 'handler';
+                    ...
+                    $SIG{'INT'} = 'DEFAULT'; # restore default action
+                    $SIG{'QUIT'} = 'IGNORE'; # ignore SIGQUIT
+
+
+ENVIRONMENT
+       Perl currently uses no  environment  variables,  except  to  make  them
+       available  to  the script being executed, and to child processes.  How‐
+       ever, scripts running setuid would do well  to  execute  the  following
+       lines before doing anything else, just to keep people honest:
+
+           $ENV{'PATH'} = '/bin:/usr/bin';    # or whatever you need
+           $ENV{'SHELL'} = '/bin/sh' if $ENV{'SHELL'};
+           $ENV{'IFS'} = '' if $ENV{'IFS'};
+
+
+AUTHOR
+       Larry Wall <lwall@jpl-devvax.Jpl.Nasa.Gov>
+
+FILES
+       /tmp/perl-eXXXXXX   temporary file for -e commands.
+
+SEE ALSO
+       a2p  awk to perl translator
+       s2p  sed to perl translator
+       perldb    interactive perl debugger
+
+DIAGNOSTICS
+       Compilation  errors will tell you the line number of the error, with an
+       indication of the next token or token type that  was  to  be  examined.
+       (In  the  case  of  a script passed to perl via -e switches, each -e is
+       counted as one line.)
+
+TRAPS
+       Accustomed awk users should take special note of the following:
+
+       *   Semicolons are required after all simple statements in perl.   New‐
+           line is not a statement delimiter.
+
+       *   Curly brackets are required on ifs and whiles.
+
+       *   Variables begin with $ or @ in perl.
+
+       *   Arrays  index  from 0 unless you set $[.  Likewise string positions
+           in substr() and index().
+
+       *   You have to  decide  whether  your  array  has  numeric  or  string
+           indices.
+
+       *   You  have  to decide whether you want to use string or numeric com‐
+           parisons.
+
+       *   Reading an input line does not split it for you.  You get to  split
+           it yourself to an array.  And split has different arguments.
+
+       *   The  current  input  line  is normally in $_, not $0.  It generally
+           does not have the newline stripped.  ($0 is initially the  name  of
+           the program executed, then the last matched string.)
+
+       *   The  current  filename  is $ARGV, not $FILENAME.  NR, RS, ORS, OFS,
+           and OFMT have equivalents with other symbols.  FS doesn't  have  an
+           equivalent, since you have to be explicit about split statements.
+
+       *   $<digit>  does not refer to fields--it refers to substrings matched
+           by the last match pattern.
+
+       *   The print statement does not add field and record separators unless
+           you set $, and $\.
+
+       *   You must open your files before you print to them.
+
+       *   The  range  operator is "..", not comma.  (The comma operator works
+           as in C.)
+
+       *   The match operator is "=~", not "~".  ("~" is the one's  complement
+           operator.)
+
+       *   The concatenation operator is ".", not the null string.  (Using the
+           null string would render "/pat/ /pat/" unparseable, since the third
+           slash  would  be interpreted as a division operator--the tokener is
+           in fact slightly context sensitive for operators like /, ?, and  <.
+           And in fact, . itself can be the beginning of a number.)
+
+       *   The  \nnn  construct  in  patterns must be given as [\nnn] to avoid
+           interpretation as a backreference.
+
+       *   Next, exit, and continue work differently.
+
+       *   When in doubt, run the awk construct through a2p and  see  what  it
+           gives you.
+
+       Cerebral C programmers should take note of the following:
+
+       *   Curly brackets are required on ifs and whiles.
+
+       *   You should use "elsif" rather than "else if"
+
+       *   Break and continue become last and next, respectively.
+
+       *   There's no switch statement.
+
+       *   Variables begin with $ or @ in perl.
+
+       *   Printf does not implement *.
+
+       *   Comments begin with #, not /*.
+
+       *   You can't take the address of anything.
+
+       *   Subroutines are not reentrant.
+
+       *   ARGV must be capitalized.
+
+       *   The "system" calls link, unlink, rename, etc. return 1 for success,
+           not 0.
+
+       *   Signal handlers deal with signal names, not numbers.
+
+       Seasoned sed programmers should take note of the following:
+
+       *   Backreferences in substitutions use $ rather than \.
+
+       *   The pattern matching metacharacters (, ), and ⎪ do not  have  back‐
+           slashes in front.
+
+BUGS
+       You  can't  currently dereference array elements inside a double-quoted
+       string.  You must assign them to a temporary and interpolate that.
+
+       Associative arrays really ought to be first class objects.
+
+       Recursive subroutines are not currently supported, due to the way  tem‐
+       porary values are stored in the syntax tree.
+
+       Arrays ought to be passable to subroutines just as strings are.
+
+       The  array  literal  consisting  of  one element is currently misinter‐
+       preted, i.e.
+
+            @array = (123);
+
+       doesn't work right.
+
+       Perl actually stands for Pathologically Eclectic  Rubbish  Lister,  but
+       don't tell anyone I said that.
+
+
+
+                                     LOCAL                             PERL(1)
