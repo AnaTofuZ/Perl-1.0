@@ -1,0 +1,208 @@
+Path: bbn.com!bbn!husc6!hao!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #9
+Summary: This is an official patch for perl 1.0.  Please apply it.
+Message-ID: <1187@devvax.JPL.NASA.GOV>
+Date: 30 Jan 88 17:16:02 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 198
+
+System: perl version 1.0
+Patch #: 9
+Priority: HIGH for SysV sites
+Subject: 3 portability problems
+From: pttesac!Marnix!vanam (Marnix (ain't unix!) A.  van\ Ammers)
+
+Description:
+	There's a #define YYDEBUG; in perl.h that ought to be
+	#define YYDEBUG 1.  Interesting that it works the former way on
+	any systems at all.
+
+	Patch 2 was defective and introduced a couple of lines with missing
+	right parens.  Learn something old every day...
+
+	Some awks can't handle
+	    awk '$6 != "" {print substr($6,2,100)}' </tmp/Cppsym2$$ ;;
+	if field 6 doesn't exist.  Changed conditional to NF > 5.
+
+	There was also a problem that I fixed in metaconfig that involved
+	Configure grepping .SH files out of MANIFEST when the .SH was only
+	in the commentary.  This doesn't affect perl's Configure because
+	there aren't any comments containing .SH in the MANIFEST file.
+	But that's the nice thing about metaconfig--you generate a new
+	Configure script and also get the changes you don't need (yet).
+
+Fix:	From rn, say "| patch -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch.
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 8
+1c1
+< #define PATCHLEVEL 8
+---
+> #define PATCHLEVEL 9
+ 
+Index: Configure
+Prereq: 1.0.1.3
+*** Configure.old	Sat Jan 30 08:57:50 1988
+--- Configure	Sat Jan 30 08:57:54 1988
+***************
+*** 8,14 ****
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.3 88/01/26 14:14:14 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+--- 8,14 ----
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.4 88/01/30 08:51:49 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+***************
+*** 998,1004 ****
+  echo exit 1 >>/tmp/Cppsym\$\$
+  $cpp $cppminus </tmp/Cppsym\$\$ >/tmp/Cppsym2\$\$
+  case "\$list" in
+! true) awk '\$6 != "" {print substr(\$6,2,100)}' </tmp/Cppsym2\$\$ ;;
+  *)
+      sh /tmp/Cppsym2\$\$
+      status=\$?
+--- 998,1004 ----
+  echo exit 1 >>/tmp/Cppsym\$\$
+  $cpp $cppminus </tmp/Cppsym\$\$ >/tmp/Cppsym2\$\$
+  case "\$list" in
+! true) awk 'NF > 5 {print substr(\$6,2,100)}' </tmp/Cppsym2\$\$ ;;
+  *)
+      sh /tmp/Cppsym2\$\$
+      status=\$?
+***************
+*** 1379,1385 ****
+  
+  echo " "
+  echo "Doing variable substitutions on .SH files..."
+! set x `$grep '\.SH' <MANIFEST | awk '{print $1}'`
+  shift
+  case $# in
+  0) set x *.SH; shift;;
+--- 1379,1385 ----
+  
+  echo " "
+  echo "Doing variable substitutions on .SH files..."
+! set x `awk '{print $1}' <MANIFEST | $grep '\.SH'`
+  shift
+  case $# in
+  0) set x *.SH; shift;;
+ 
+Index: arg.c
+Prereq: 1.0.1.4
+*** arg.c.old	Sat Jan 30 08:58:14 1988
+--- arg.c	Sat Jan 30 08:58:19 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.c,v 1.0.1.4 88/01/28 10:22:06 root Exp $
+   *
+   * $Log:	arg.c,v $
+   * Revision 1.0.1.4  88/01/28  10:22:06  root
+   * patch8: added eval operator.
+   * 
+--- 1,9 ----
+! /* $Header: arg.c,v 1.0.1.5 88/01/30 08:53:16 root Exp $
+   *
+   * $Log:	arg.c,v $
++  * Revision 1.0.1.5  88/01/30  08:53:16  root
++  * patch9: fixed some missing right parens introduced (?) by patch 2
++  * 
+   * Revision 1.0.1.4  88/01/28  10:22:06  root
+   * patch8: added eval operator.
+   * 
+***************
+*** 552,559 ****
+  	    apush(ary,str_nmake((double)statbuf.st_blksize));
+  	    apush(ary,str_nmake((double)statbuf.st_blocks));
+  #else
+! 	    apush(ary,str_make("");
+! 	    apush(ary,str_make("");
+  #endif
+  	}
+  	sarg = (STR**)safemalloc((max+2)*sizeof(STR*));
+--- 555,562 ----
+  	    apush(ary,str_nmake((double)statbuf.st_blksize));
+  	    apush(ary,str_nmake((double)statbuf.st_blocks));
+  #else
+! 	    apush(ary,str_make(""));
+! 	    apush(ary,str_make(""));
+  #endif
+  	}
+  	sarg = (STR**)safemalloc((max+2)*sizeof(STR*));
+ 
+Index: perl.h
+Prereq: 1.0.1.3
+*** perl.h.old	Sat Jan 30 08:58:36 1988
+--- perl.h	Sat Jan 30 08:58:36 1988
+***************
+*** 1,6 ****
+! /* $Header: perl.h,v 1.0.1.3 88/01/28 10:24:17 root Exp $
+   *
+   * $Log:	perl.h,v $
+   * Revision 1.0.1.3  88/01/28  10:24:17  root
+   * patch8: added eval operator.
+   * 
+--- 1,9 ----
+! /* $Header: perl.h,v 1.0.1.4 88/01/30 08:54:00 root Exp $
+   *
+   * $Log:	perl.h,v $
++  * Revision 1.0.1.4  88/01/30  08:54:00  root
++  * patch9: changed #define YYDEBUG; to #define YYDEBUG 1
++  * 
+   * Revision 1.0.1.3  88/01/28  10:24:17  root
+   * patch8: added eval operator.
+   * 
+***************
+*** 184,190 ****
+  EXT int dlevel INIT(0);
+  EXT char debname[40];
+  EXT char debdelim[40];
+! #define YYDEBUG;
+  extern int yydebug;
+  #endif
+  
+--- 187,193 ----
+  EXT int dlevel INIT(0);
+  EXT char debname[40];
+  EXT char debdelim[40];
+! #define YYDEBUG 1
+  extern int yydebug;
+  #endif
+  

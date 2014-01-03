@@ -1,0 +1,387 @@
+Path: utzoo!mnetor!uunet!lll-winken!lll-lcc!lll-tis!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #16
+Message-ID: <1232@devvax.JPL.NASA.GOV>
+Date: 5 Feb 88 00:38:27 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 376
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 16
+Priority: MEDIUM
+Subject: 8 in one blow
+From: lotsa people
+
+Description:
+	Forgot to portablize an "ln -s" in Makefile.SH.
+
+	x2p/a2p.h had some useless includes that Pyramids objected to.
+
+	The tokener for a2p didn't recognize >> for file redirection.
+
+	perldb didn't properly parse the `cmd` construct.
+
+	stabset had a couple of places that just copied a string pointer
+	when it should have copied the string.
+
+	The safefree() routine wasn't safe from null pointers.
+
+	The TEST script needed to ignore *.orig files.
+
+	The op.crypt test needed to allow for systems on which crypt()
+	is unimplemented.
+
+Repeat-By:
+
+Fix:	From rn, say "| patch -p0 -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch -p0 <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch.
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 15
+1c1
+< #define PATCHLEVEL 15
+---
+> #define PATCHLEVEL 16
+ 
+Index: Makefile.SH
+Prereq: 1.0.1.5
+*** Makefile.SH.old	Thu Feb  4 00:17:45 1988
+--- Makefile.SH	Thu Feb  4 00:17:47 1988
+***************
+*** 20,28 ****
+  
+  echo "Extracting Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.5 88/02/02 11:20:49 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
+  # Revision 1.0.1.5  88/02/02  11:20:49  root
+  # patch13: added d_symlink dependency, changed TEST to ./perl TEST.
+  # 
+--- 20,31 ----
+  
+  echo "Extracting Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.6 88/02/04 00:11:48 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
++ # Revision 1.0.1.6  88/02/04  00:11:48  root
++ # patch16: forgot one ln -s.
++ # 
+  # Revision 1.0.1.5  88/02/02  11:20:49  root
+  # patch13: added d_symlink dependency, changed TEST to ./perl TEST.
+  # 
+***************
+*** 126,132 ****
+  chmod 755 `basename $$pub`; \
+  done
+  	- test $(bin) = /bin || rm -f /bin/perl
+! 	- test $(bin) = /bin || ln -s $(bin)/perl /bin || cp $(bin)/perl /bin
+  #	chmod 755 makedir
+  #	- makedir `filexp $(lib)`
+  #	- \
+--- 129,135 ----
+  chmod 755 `basename $$pub`; \
+  done
+  	- test $(bin) = /bin || rm -f /bin/perl
+! 	- test $(bin) = /bin || $(SLN) $(bin)/perl /bin || cp $(bin)/perl /bin
+  #	chmod 755 makedir
+  #	- makedir `filexp $(lib)`
+  #	- \
+ 
+Index: t/TEST
+*** t/TEST.old	Thu Feb  4 00:27:02 1988
+--- t/TEST	Thu Feb  4 00:27:03 1988
+***************
+*** 1,6 ****
+  #!./perl
+  
+! # $Header: TEST,v 1.0.1.1 88/01/24 03:55:39 root Exp $
+  
+  # This is written in a peculiar style, since we're trying to avoid
+  # most of the constructs we'll be testing for.
+--- 1,6 ----
+  #!./perl
+  
+! # $Header: TEST,v 1.0.1.2 88/02/04 00:14:07 root Exp $
+  
+  # This is written in a peculiar style, since we're trying to avoid
+  # most of the constructs we'll be testing for.
+***************
+*** 23,28 ****
+--- 23,31 ----
+  }
+  $bad = 0;
+  while ($test = shift) {
++     if ($test =~ /.*\.orig$/) {
++ 	next;
++     }
+      print "$test...";
+      if ($sharpbang) {
+  	open(results,"$test|") || (print "can't run.\n");
+ 
+Index: x2p/a2p.h
+Prereq: 1.0.1.2
+*** x2p/a2p.h.old	Thu Feb  4 00:27:33 1988
+--- x2p/a2p.h	Thu Feb  4 00:27:35 1988
+***************
+*** 1,6 ****
+! /* $Header: a2p.h,v 1.0.1.2 88/02/01 17:33:40 root Exp $
+   *
+   * $Log:	a2p.h,v $
+   * Revision 1.0.1.2  88/02/01  17:33:40  root
+   * patch12: forgot to fix #define YYDEBUG; bug in a2p.
+   * 
+--- 1,9 ----
+! /* $Header: a2p.h,v 1.0.1.3 88/02/04 00:15:54 root Exp $
+   *
+   * $Log:	a2p.h,v $
++  * Revision 1.0.1.3  88/02/04  00:15:54  root
++  * patch16: deleted some unnecessary includes.
++  * 
+   * Revision 1.0.1.2  88/02/01  17:33:40  root
+   * patch12: forgot to fix #define YYDEBUG; bug in a2p.
+   * 
+***************
+*** 182,192 ****
+  
+  #include <stdio.h>
+  #include <ctype.h>
+- #include <setjmp.h>
+- #include <sys/types.h>
+- #include <sys/stat.h>
+- #include <time.h>
+- #include <sys/times.h>
+  
+  typedef struct string STR;
+  typedef struct htbl HASH;
+--- 185,190 ----
+ 
+Index: x2p/a2py.c
+Prereq: 1.0.1.1
+*** x2p/a2py.c.old	Thu Feb  4 00:27:44 1988
+--- x2p/a2py.c	Thu Feb  4 00:27:45 1988
+***************
+*** 1,6 ****
+! /* $Header: a2py.c,v 1.0.1.1 88/01/28 11:07:08 root Exp $
+   *
+   * $Log:	a2py.c,v $
+   * Revision 1.0.1.1  88/01/28  11:07:08  root
+   * patch8: added support for FOO=bar switches using eval.
+   * 
+--- 1,9 ----
+! /* $Header: a2py.c,v 1.0.1.2 88/02/04 00:19:38 root Exp $
+   *
+   * $Log:	a2py.c,v $
++  * Revision 1.0.1.2  88/02/04  00:19:38  root
++  * patch16: yylex() didn't recognize >> as GRGR token.
++  * 
+   * Revision 1.0.1.1  88/01/28  11:07:08  root
+   * patch8: added support for FOO=bar switches using eval.
+   * 
+***************
+*** 284,289 ****
+--- 287,296 ----
+      case '>':
+  	s++;
+  	tmp = *s++;
++ 	if (tmp == '>') {
++ 	    yylval = string(">>",2);
++ 	    XTERM(GRGR);
++ 	}
+  	if (tmp == '=') {
+  	    yylval = string(">=",2);
+  	    XTERM(RELOP);
+ 
+Index: t/op.crypt
+Prereq: 1.0
+*** t/op.crypt.old	Thu Feb  4 00:27:13 1988
+--- t/op.crypt	Thu Feb  4 00:27:14 1988
+***************
+*** 1,8 ****
+  #!./perl
+  
+! # $Header: op.crypt,v 1.0 87/12/18 13:13:17 root Exp $
+  
+  print "1..2\n";
+  
+  # this evaluates entirely at compile time!
+  if (crypt('uh','oh') eq 'ohPnjpYtoi1NU') {print "ok 1\n";} else {print "not ok 1\n";}
+--- 1,15 ----
+  #!./perl
+  
+! # $Header: op.crypt,v 1.0.1.1 88/02/04 00:14:38 root Exp $
+  
+  print "1..2\n";
++ 
++ eval 'crypt("uh","oh");';
++ if ($@ =~ /paranoia/) {
++     print "ok 1\nok 2 \n";
++     print stderr "NOTE: crypt appears to be unimplemented on this system.\n";
++     exit 0;
++ }
+  
+  # this evaluates entirely at compile time!
+  if (crypt('uh','oh') eq 'ohPnjpYtoi1NU') {print "ok 1\n";} else {print "not ok 1\n";}
+ 
+Index: perldb
+Prereq: 1.0.1.1
+*** perldb.old	Thu Feb  4 00:26:49 1988
+--- perldb	Thu Feb  4 00:26:50 1988
+***************
+*** 1,8 ****
+  #!/bin/perl
+  
+! # $Header: perldb,v 1.0.1.1 88/01/28 10:27:16 root Exp $
+  #
+  # $Log:	perldb,v $
+  # Revision 1.0.1.1  88/01/28  10:27:16  root
+  # patch8: created this file.
+  # 
+--- 1,14 ----
+  #!/bin/perl
+  
+! # $Header: perldb,v 1.0.1.3 88/02/04 00:24:05 root Exp $
+  #
+  # $Log:	perldb,v $
++ # Revision 1.0.1.3  88/02/04  00:24:05  root
++ # dummy checkin to get around RCS bug.
++ # 
++ # Revision 1.0.1.2  88/02/04  00:12:23  root
++ # patch16: no line in tokener to handle `cmd` construct.
++ # 
+  # Revision 1.0.1.1  88/01/28  10:27:16  root
+  # patch8: created this file.
+  # 
+***************
+*** 243,248 ****
+--- 249,255 ----
+  	    do quote(ord($1),2), next	if s/^s\b(.)//;
+  	    do quote(ord($1),2), next	if s/^y\b(.)//;
+  	    do quote(ord($1),2), next	if s/^tr\b(.)//;
++ 	    do quote($ord,1), next	if s/^`//;
+  	    next			if s/^[A-Za-z_][A-Za-z_0-9]*://;
+  	    $state = 'term', next	if s/^eof\b//;
+  	    $state = 'term', next	if s/^shift\b//;
+ 
+Index: stab.c
+Prereq: 1.0.1.2
+*** stab.c.old	Thu Feb  4 00:22:41 1988
+--- stab.c	Thu Feb  4 00:22:43 1988
+***************
+*** 1,6 ****
+! /* $Header: stab.c,v 1.0.1.2 88/02/02 11:25:53 root Exp $
+   *
+   * $Log:	stab.c,v $
+   * Revision 1.0.1.2  88/02/02  11:25:53  root
+   * patch13: moved extern int out of function for a poor Xenix machine.
+   * 
+--- 1,9 ----
+! /* $Header: stab.c,v 1.0.1.3 88/02/04 00:13:15 root Exp $
+   *
+   * $Log:	stab.c,v $
++  * Revision 1.0.1.3  88/02/04  00:13:15  root
++  * patch16: stabset didn't copy some strings it should have.
++  * 
+   * Revision 1.0.1.2  88/02/02  11:25:53  root
+   * patch13: moved extern int out of function for a poor Xenix machine.
+   * 
+***************
+*** 175,187 ****
+  	switch (stab->stab_name[0]) {
+  	case '^':
+  	    safefree(curoutstab->stab_io->top_name);
+! 	    curoutstab->stab_io->top_name = str_get(str);
+! 	    curoutstab->stab_io->top_stab = stabent(str_get(str),TRUE);
+  	    break;
+  	case '~':
+  	    safefree(curoutstab->stab_io->fmt_name);
+! 	    curoutstab->stab_io->fmt_name = str_get(str);
+! 	    curoutstab->stab_io->fmt_stab = stabent(str_get(str),TRUE);
+  	    break;
+  	case '=':
+  	    curoutstab->stab_io->page_len = (long)str_gnum(str);
+--- 178,190 ----
+  	switch (stab->stab_name[0]) {
+  	case '^':
+  	    safefree(curoutstab->stab_io->top_name);
+! 	    curoutstab->stab_io->top_name = s = savestr(str_get(str));
+! 	    curoutstab->stab_io->top_stab = stabent(s,TRUE);
+  	    break;
+  	case '~':
+  	    safefree(curoutstab->stab_io->fmt_name);
+! 	    curoutstab->stab_io->fmt_name = s = savestr(str_get(str));
+! 	    curoutstab->stab_io->fmt_stab = stabent(s,TRUE);
+  	    break;
+  	case '=':
+  	    curoutstab->stab_io->page_len = (long)str_gnum(str);
+ 
+Index: util.c
+Prereq: 1.0.1.1
+*** util.c.old	Thu Feb  4 00:27:24 1988
+--- util.c	Thu Feb  4 00:27:25 1988
+***************
+*** 1,6 ****
+! /* $Header: util.c,v 1.0.1.1 88/01/28 11:06:35 root Exp $
+   *
+   * $Log:	util.c,v $
+   * Revision 1.0.1.1  88/01/28  11:06:35  root
+   * patch8: changed fatal() to support eval operator with exiting.
+   * 
+--- 1,9 ----
+! /* $Header: util.c,v 1.0.1.2 88/02/04 00:15:15 root Exp $
+   *
+   * $Log:	util.c,v $
++  * Revision 1.0.1.2  88/02/04  00:15:15  root
++  * patch16: safefree wasn't safe from null pointers.
++  * 
+   * Revision 1.0.1.1  88/01/28  11:06:35  root
+   * patch8: changed fatal() to support eval operator with exiting.
+   * 
+***************
+*** 83,89 ****
+      if (debug & 128)
+  	fprintf(stderr,"0x%x: (%05d) free\n",where,an++);
+  #endif
+!     free(where);
+  }
+  
+  /* safe version of string copy */
+--- 86,94 ----
+      if (debug & 128)
+  	fprintf(stderr,"0x%x: (%05d) free\n",where,an++);
+  #endif
+!     if (where) {
+! 	free(where);
+!     }
+  }
+  
+  /* safe version of string copy */

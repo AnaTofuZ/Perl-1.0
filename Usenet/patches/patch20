@@ -1,0 +1,228 @@
+Path: utzoo!mnetor!uunet!lll-winken!lll-lcc!lll-tis!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #20
+Message-ID: <1233@devvax.JPL.NASA.GOV>
+Date: 5 Feb 88 01:55:52 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 217
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 20
+Priority: MEDIUM
+Subject: missing chop from example; system fails ungracefully.
+From: David L. Edwards <DLE@csl.sri.com>
+From: bdr@neti2.uucp (Brian Renaud)
+
+Description:
+	The example of finding user names from the password file in the
+	section on chown is missing a chop($user) to remove the newline;
+
+	If system doesn't find the program to execute, the vforked child
+	process thinks it's supposed to continue processing.
+
+Fix:	From rn, say "| patch -p0 -N -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch -p0 -N <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch (version 2.0, latest patchlevel).
+
+	After patching:
+		make
+		make test
+		make install
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 19
+1c1
+< #define PATCHLEVEL 19
+---
+> #define PATCHLEVEL 20
+ 
+Index: arg.c
+Prereq: 1.0.1.8
+*** arg.c.old	Thu Feb  4 17:49:41 1988
+--- arg.c	Thu Feb  4 17:49:47 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.c,v 1.0.1.8 88/02/04 11:14:58 root Exp $
+   *
+   * $Log:	arg.c,v $
+   * Revision 1.0.1.8  88/02/04  11:14:58  root
+   * patch18: regularized includes.
+   * 
+--- 1,9 ----
+! /* $Header: arg.c,v 1.0.1.9 88/02/04 17:47:31 root Exp $
+   *
+   * $Log:	arg.c,v $
++  * Revision 1.0.1.9  88/02/04  17:47:31  root
++  * patch20: made failing fork/exec exit.
++  * 
+   * Revision 1.0.1.8  88/02/04  11:14:58  root
+   * patch18: regularized includes.
+   * 
+***************
+*** 2032,2038 ****
+  	    value = (double)argflags;
+  	    goto donumset;
+  	}
+! 	/* FALL THROUGH */
+      case O_EXEC:
+  	if (arg[1].arg_flags & AF_SPECIAL)
+  	    value = (double)do_aexec(arg);
+--- 2035,2046 ----
+  	    value = (double)argflags;
+  	    goto donumset;
+  	}
+! 	if (arg[1].arg_flags & AF_SPECIAL)
+! 	    value = (double)do_aexec(arg);
+! 	else {
+! 	    value = (double)do_exec(str_get(sarg[1]));
+! 	}
+! 	_exit(-1);
+      case O_EXEC:
+  	if (arg[1].arg_flags & AF_SPECIAL)
+  	    value = (double)do_aexec(arg);
+ 
+Index: t/op.exec
+Prereq: 1.0
+*** t/op.exec.old	Thu Feb  4 17:50:21 1988
+--- t/op.exec	Thu Feb  4 17:50:22 1988
+***************
+*** 1,12 ****
+  #!./perl
+  
+! # $Header: op.exec,v 1.0 87/12/18 13:13:26 root Exp $
+  
+  $| = 1;				# flush stdout
+! print "1..4\n";
+  
+! system "echo ok \\1";		# shell interpreted
+! system "echo ok 2";		# split and directly called
+! system "echo", "ok", "3";	# directly called
+  
+! exec "echo","ok","4";
+--- 1,18 ----
+  #!./perl
+  
+! # $Header: op.exec,v 1.0.1.1 88/02/04 17:49:08 root Exp $
+  
+  $| = 1;				# flush stdout
+! print "1..7\n";
+  
+! print "not ok 1\n" if system "echo ok \\1";	# shell interpreted
+! print "not ok 2\n" if system "echo ok 2";	# split and directly called
+! print "not ok 3\n" if system "echo", "ok", "3"; # directly called
+  
+! if ((system "false") == 256) {print "ok 4\n";} else {print "not ok 4\n";}
+! 
+! if ((system "lskdfj") == 255 * 256) {print "ok 5\n";} else {print "not ok 5\n";}
+! 
+! unless (exec "lskdjfalksdjfdjfkls") {print "ok 6\n";} else {print "not ok 6\n";}
+! 
+! exec "echo","ok","7";
+ 
+Index: perl.man.1
+Prereq: 1.0.1.2
+*** perl.man.1.old	Thu Feb  4 17:50:00 1988
+--- perl.man.1	Thu Feb  4 17:50:02 1988
+***************
+*** 1,7 ****
+  .rn '' }`
+! ''' $Header: perl.man.1,v 1.0.1.2 88/01/30 17:04:07 root Exp $
+  ''' 
+  ''' $Log:	perl.man.1,v $
+  ''' Revision 1.0.1.2  88/01/30  17:04:07  root
+  ''' patch 11: random cleanup
+  ''' 
+--- 1,10 ----
+  .rn '' }`
+! ''' $Header: perl.man.1,v 1.0.1.3 88/02/04 17:48:02 root Exp $
+  ''' 
+  ''' $Log:	perl.man.1,v $
++ ''' Revision 1.0.1.3  88/02/04  17:48:02  root
++ ''' patch20: added missing chop($user); to example in chown.
++ ''' 
+  ''' Revision 1.0.1.2  88/01/30  17:04:07  root
+  ''' patch 11: random cleanup
+  ''' 
+***************
+*** 862,867 ****
+--- 865,871 ----
+  
+  	print "User: ";
+  	$user = <stdin>;
++ 	chop($user);
+  	open(pass,'/etc/passwd') || die "Can't open passwd";
+  	while (<pass>) {
+  		($login,$pass,$uid,$gid) = split(/:/);
+ 
+Index: perl.man.2
+Prereq: 1.0.1.3
+*** perl.man.2.old	Thu Feb  4 17:50:11 1988
+--- perl.man.2	Thu Feb  4 17:50:14 1988
+***************
+*** 1,7 ****
+  ''' Beginning of part 2
+! ''' $Header: perl.man.2,v 1.0.1.3 88/02/01 17:33:03 root Exp $
+  '''
+  ''' $Log:	perl.man.2,v $
+  ''' Revision 1.0.1.3  88/02/01  17:33:03  root
+  ''' patch12: documented split more adequately.
+  ''' 
+--- 1,10 ----
+  ''' Beginning of part 2
+! ''' $Header: perl.man.2,v 1.0.1.4 88/02/04 17:48:31 root Exp $
+  '''
+  ''' $Log:	perl.man.2,v $
++ ''' Revision 1.0.1.4  88/02/04  17:48:31  root
++ ''' patch20: documented return values of system better.
++ ''' 
+  ''' Revision 1.0.1.3  88/02/01  17:33:03  root
+  ''' patch12: documented split more adequately.
+  ''' 
+***************
+*** 401,408 ****
+  Does exactly the same thing as \*(L"exec LIST\*(R" except that a fork
+  is done first, and the parent process waits for the child process to complete.
+  Note that argument processing varies depending on the number of arguments.
+! The return value is the exit status of the program.
+! See exec.
+  .Ip "tell(FILEHANDLE)" 8 6
+  .Ip "tell" 8
+  Returns the current file position for FILEHANDLE.
+--- 404,413 ----
+  Does exactly the same thing as \*(L"exec LIST\*(R" except that a fork
+  is done first, and the parent process waits for the child process to complete.
+  Note that argument processing varies depending on the number of arguments.
+! The return value is the exit status of the program as returned by the wait()
+! call.
+! To get the actual exit value divide by 256.
+! See also exec.
+  .Ip "tell(FILEHANDLE)" 8 6
+  .Ip "tell" 8
+  Returns the current file position for FILEHANDLE.

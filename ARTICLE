@@ -1,0 +1,280 @@
+As to what it [perl] is, here's the hype paragraph from the manual page:
+
+     Perl is a interpreted language optimized for scanning arbi-
+     trary text files, extracting information from those text
+     files, and printing reports based on that information.  It's
+     also a good language for many system management tasks.  The
+     language is intended to be practical (easy to use, effi-
+     cient, complete) rather than beautiful (tiny, elegant,
+     minimal).	It combines (in the author's opinion, anyway)
+     some of the best features of C, sed, awk, and sh, so people
+     familiar with those languages should have little difficulty
+     with it.  (Language historians will also note some vestiges
+     of csh, Pascal, and even BASIC-PLUS.) Expression syntax
+     corresponds quite closely to C expression syntax.	If you
+     have a problem that would ordinarily use sed or awk or sh,
+     but it exceeds their capabilities or must run a little fas-
+     ter, and you don't want to write the silly thing in C, then
+     perl may be for you.  There are also translators to turn
+     your sed and awk scripts into perl scripts.
+
+That's all I wanted to put in the manual page, but I could tell you a little
+more.  First of all, why I wrote it: I wanted to set up a distributed
+configuration control system based on the news system, and I had to be
+able to print reports based on scanning a bunch of articles.  Awk and sed
+didn't permit me to navigate around the news system like I wanted to do
+(following embedded references to other articles).  The shells can navigate,
+but you can't do anything efficiently when you have to start up a new
+process every time you turn around.  I could have done it in C, of course,
+but text processing in C is an ungainly proposition at best.  On top of which,
+C didn't have the picture-style report formats I wanted.  And I didn't want
+to do a make every time I tweaked the program.
+
+Somewhat later I realized that many systems programming problems deal with
+text--the situation arises frequently that you want to take the output of
+various status programs (either directly via a pipe or indirectly from a log
+file) and massage the data to show you just what you want to know, or pick
+out various bits of information to drive some other operation.  In the first
+category is a set of LAN-wide status reporting scripts that deliver a report
+to me each morning concerning anomalous conditions on any of the machines I'm
+responsible for.  In the second category are programs like gsh and gcp, which
+are just like rsh and rcp except that they work globally on some set of machines
+defined in a system file.  In fact, I'll show you some of those programs to
+give you a taste of perl:
+
+Here's gsh:
+--------------------------------------------------------------------------------
+#!/bin/perl
+
+$SIG{'QUIT'} = 'quit';			# install signal handler for SIGQUIT
+
+while ($ARGV[0] =~ /^-/) {		# parse switches
+    $ARGV[0] =~ /^-h/ && ($showhost++,$silent++,shift,next);
+    $ARGV[0] =~ /^-s/ && ($silent++,shift,next);
+    $ARGV[0] =~ /^-d/ && ($dodist++,shift,next);
+    $ARGV[0] =~ /^-n/ && ($n=' -n',shift,next);
+    $ARGV[0] =~ /^-l/ && ($l=' -l ' . $ARGV[1],shift,shift,next);
+    last;
+}
+
+$systype = shift;			# get name representing set of hosts
+
+while ($ARGV[0] =~ /^-/) {		# we allow switches afterwards too
+    $ARGV[0] =~ /^-h/ && ($showhost++,$silent++,shift,next);
+    $ARGV[0] =~ /^-s/ && ($silent++,shift,next);
+    $ARGV[0] =~ /^-d/ && ($dodist++,shift,next);
+    $ARGV[0] =~ /^-n/ && ($n=' -n',shift,next);
+    $ARGV[0] =~ /^-l/ && ($l=' -l ' . $ARGV[1],shift,shift,next);
+    last;
+}
+
+if ($dodist) {				# distribute input over all rshes?
+    `cat >/tmp/gsh$$`;			#  get input into a handy place
+    $dist = " </tmp/gsh$$";		#  each rsh takes input from there
+}
+
+$cmd = join(' ',@ARGV);			# remaining args constitute the command
+$cmd =~ s/'/'"'"'/g;			# quote any embedded single quotes
+
+open(ghosts, '/etc/ghosts') || die 'No /etc/ghosts file';
+					# /etc/ghosts drives the rest
+
+$one_of_these = ":$systype:";		# prepare to expand "macros"
+if ($systype =~ s/\+/[+]/g) {		# we hope to end up with list of
+    $one_of_these =~ s/\+/:/g;		#  colon separated attributes
+}
+
+line: while (<ghosts>) {		# for each line of ghosts
+
+    s/[ \t]*\n//;			# trim leading whitespace
+    if (!$_ || /^#/) {			# skip blank line or comment
+	next line;
+    }
+
+    if (/^([a-zA-Z_0-9]+)=(.+)/) {	# a macro line?
+	$name = $1; $repl = $2;
+	$repl =~ s/\+/:/g;
+	$one_of_these =~ s/:$name:/:$repl:/;	# do expansion in "wanted" list
+	next line;
+    }
+
+    # we have a normal line
+
+    @attr = split;			# a list of attributes to match against
+					#   which we put into an array
+    $host = $attr[0];			# the first attribute is the host name
+    if ($showhost) {
+	$showhost = "$host:\t";
+    }
+
+    attr: while ($attr = pop(attr)) {			# iterate over gh array
+	if (index($one_of_these,":$attr:") >=0) {	# is host wanted?
+	    unless ($silent) { print "rsh $host$l$n '$cmd'\n"; }
+	    $SIG{'INT'} = 'DEFAULT';
+	    if (open(pipe,"rsh $host$l$n '$cmd'$dist |")) {	# start rsh
+		$SIG{'INT'} = 'cont';
+		while (<pipe>) { print $showhost,$_; }		# show results
+		close(pipe);
+	    } else {
+		$SIG{'INT'} = 'cont';
+		print "(Can't execute rsh.)\n";
+	    }
+	    last attr;				# don't select host twice
+	}
+    }
+}
+
+unlink "/tmp/gsh$$" if $dodist;
+
+# here are a couple of subroutines that serve as signal handlers
+
+sub cont {
+    print "\rContinuing...\n";
+}
+
+sub quit {
+    $| = 1;
+    print "\r";
+    $SIG{'INT'} = '';
+    kill 2, $$;
+}
+--------------------------------------------------------------------------------
+
+Gsh (and gcp) runs off the /etc/ghosts file, which looks like this:
+--------------------------------------------------------------------------------
+# This first section gives alternate sets defined in terms of the sets given
+# by the second section.
+
+all=sun+mc+vax
+baseline=sun+mc
+sun=sun2+sun3
+vax=750+8600
+passwd=devvax+chief+mc
+
+# This second section defines the basic sets.  Each host should have a line
+# that specifies which sets it is a member of.  Extra sets should be separated
+# by white space.  (The first section isn't strictly necessary, since all sets
+# could be defined in the second section, but then it wouldn't be so readable.)
+
+devvax	8600	src
+cdb0	sun3		sysdts
+cdb1	sun3		sysdts
+cdb2	sun3		sysdts
+chief	sun3	src
+tis0	sun3
+manny	sun3		sysdts
+moe	sun3		sysdts
+jack	sun3		sysdts
+disney	sun3
+huey	sun3		nd
+dewey	sun3		nd
+louie	sun3		nd
+bizet	sun2	src	sysdts
+gif0	mc	src
+mc0	mc
+dtv0	mc
+--------------------------------------------------------------------------------
+
+Enough of gsh.  How about you want to remove files with find, but don't want
+to exec rm on every file?  I just did this today in some of my news directories.
+
+	find . -mtime +14 -print | perl -n -e 'chop;unlink;'
+
+I could have done the equivalent by running the find from within a perl script.
+Note that the open statement opens up a pipe.
+
+	#!/bin/perl
+	open(goners,"find . -mtime +14 -print|");
+	while (<goners>) {
+	    chop;
+	    unlink;
+	}
+
+How about transforming that into a tool that will remove anything older than
+a specified number of days in a specified directory?
+
+	#!/bin/perl
+
+	die "Usage: euthanasia directory days" unless $#ARGV == 1;
+
+	($dir, $days) = @ARGV;		# assign array to list of variables
+
+	die "Can't find directory $dir" unless chdir $dir;
+
+	open(goners,"find . -mtime +$days -print|") || die "Can't run find";
+	while (<goners>) {
+	    chop;
+	    unlink;
+	}
+
+I mentioned my anomaly reporting system earlier.  Here is the script that scans
+a particular system for filesystems that are almost full.  Note the use of
+the C preprocessor to isolate Masscomp specific code.
+--------------------------------------------------------------------------------
+#!/bin/perl -P
+
+(chdir '/usr/adm/private/memories') || die "Can't cd.";
+`df >newdf`;
+open(Df, 'olddf');
+
+while (<Df>) {
+    ($fs,$kbytes,$used,$avail,$capacity,$mounted_on) = split;
+    next if $fs =~ /:/;
+    $oldused{$fs} = $used;
+}
+
+open(Df, 'newdf') || die "scan_df: can't open newdf";
+
+while (<Df>) {
+    ($fs,$kbytes,$used,$avail,$capacity,$mounted_on) = split;
+    next if $fs =~ /:/;
+    $oldused = $oldused{$fs};
+    next if ($oldused == $used && $capacity < 99);	# inactive filesystem
+    if ($capacity >= 90) {
+#if defined(mc300) || defined(mc500) || defined(mc700)
+	$_ = substr($_,0,13) . '        ' . substr($_,13,1000);
+	$kbytes /= 2;		# translate blocks to K
+	$used /= 2;
+	$oldused /= 2;
+	$avail /= 2;
+#endif
+	$diff = int($used - $oldused);
+	if ($avail < $diff * 2) {
+	    $mounted_on .= ' *';
+	}
+	next if $diff < 50 && $mounted_on eq '/';
+	$fs =~ s|/dev/||;
+	if ($diff >= 0) {
+	    $diff = '(+' . $diff . ')';
+	}
+	else {
+	    $diff = '(' . $diff . ')';
+	}
+	printf "%-8s%8d%8d %-8s%8d%7s    %s\n",
+	    $fs,$kbytes,$used,$diff,$avail,$capacity,$mounted_on;
+    }
+}
+
+rename('newdf','olddf');
+-------------------------------------------------------------------------------
+
+Well, that's enough examples for now.  In terms of speed, perl almost always
+beats awk and usually beats sed.  It's a superset of both awk and sed in
+terms of capabilities.  (That certainly makes the awk-to-perl and sed-to-perl
+translators work more easily--in fact, some of the features of perl are there
+simply to ease the translation process.  I wasn't going to add a "goto" except
+that the sed-to-perl translator needed one.  There's a way to make arrays
+have either origin 0 like C, or origin 1 like awk.  Etc.)
+
+As for reliability, perl has been in heavy use for over a year and a half.
+Some of the design of perl facilitates adding new keywords without blowing
+existing scripts out of the water.  Furthermore, perl has a regression test
+suite so that I know immediately if I've destroyed a previously available
+capability.  So you needn't worry too much about the next version of perl
+blowing your old scripts out of the water.
+
+Well, enough for now.
+
+Larry Wall
+lwall@jpl-devvax.jpl.nasa.gov
+

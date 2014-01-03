@@ -1,0 +1,1436 @@
+Path: utzoo!utgpu!water!watmath!clyde!bellcore!decvax!ucbvax!agate!ig!uwmcsd1!bbn!husc6!mit-eddie!ll-xn!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #22
+Summary: This is an official patch for perl 1.0.  Please apply it.
+Message-ID: <1300@devvax.JPL.NASA.GOV>
+Date: 12 Feb 88 21:20:29 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 1426
+
+System: perl version 1.0
+Patch #: 22
+Priority: HIGH in spots
+Subject: a mixed bag
+From: jbs@EDDIE.MIT.EDU (Jeff Siegal)
+From: imagen!jfinger (Jeff Finger)
+From: Syd Weinstein <syd@dsinc>
+From: ateng!chip (Chip Salzenberg)
+From: leblanc%bosco.Berkeley.EDU@ucbvax.Berkeley.EDU (Emile LeBlanc)
+From: stride.Stride.COM!bruce (Bruce Robertson)
+From: dukeac.uucp!bet (Bennett ???)
+From: Sakari Jalovaara <sja@santra.hut.fi>
+From: alan@uc.msc.umn.edu (Alan Kleitz)
+and many others too numerous to thank properly...
+
+Description:
+	Configure needed to use chmod +x instead of chmod 755 to avoid
+	clobbering group write permissions.
+
+	The Configure unit asking about index() vs strchr() was beginning
+	to show its age.
+
+	The libc unit didn't allow for C libraries called "/lib/clib" on
+	Apollos.
+
+	All the .SH files said ". config.sh", when they need to say
+	". ./config.sh" if . isn't in the path.
+
+	In the part of the tokener that snarfs multi-line strings there
+	was a null pointer dereference that caused grief if you had
+	a string that ran to the end of the file without a closing delimiter.
+
+	The SVID lets you bash register variables between a setjmp() and
+	a longjmp().  It would seem that most systems don't, but the Cray
+	does.  If anyone else's does, lemme know.  I like that register
+	declaration in cmd_exec() too much to make everybody do without it.
+
+	In arg.c, calls to do_kv() and do_each() caused a double free().
+	Well, actually, a realloc() followed by a free().
+
+	There were a couple of potential problems with null pointer
+	dereferencing in the O_PRINT code.
+
+	In O_SYSTEM, the returned status value was erroneously sign extended.
+
+	In O_{LEFT,RIGHT}_SHIFT, some compilers couldn't handle the complexity
+	of the expression.
+
+	The malloc routines really ought to yell if they get bad arguments.
+
+	The op.exec test assumed that the "false" script returns 1.  On
+	"standard" machines it returns 255.
+
+	The op.magic script magically put out an extra newline to the stderr
+	without lifting a finger.  Actually, it was the /bin/sh running the
+	script that put out the newline when the script used "kill 2,$$" on
+	itself.  The solution was to start a subscript that plays with
+	signals so that the parent is perl rather than sh.
+
+	The manual pages made use of \(bs, the Bell System Logo, which is
+	no longer defined everywhere.
+
+	The a2p program wasn't translating the ~ operator correctly due
+	to a missing line in the tokener.
+
+	The a2p program wan't scanning numbers correctly, so that a following
+	+ or - was erroneously thought to be part of the exponent.
+
+	The STDCHAR fix for str.c needed to be done to x2p/str.c also.
+
+Fix:	From rn, say "| patch -p -N -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch -p -N <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch (version 2.0, patchlevel of at least 9).
+
+	*** THE -p ABOVE IS ESSENTIAL ***
+
+	After applying patch:
+		Configure (optional)
+		make depend
+		make
+		make test
+		make install
+		
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation (or a
+	bang-style address from any major site to you), and LIST is the number
+	of one or more patches you need, separated by spaces, commas, and/or
+	hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches for perl and patch via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 21
+1c1
+< #define PATCHLEVEL 21
+---
+> #define PATCHLEVEL 22
+ 
+Index: Configure
+Prereq: 1.0.1.6
+*** Configure.old	Fri Feb 12 10:56:33 1988
+--- Configure	Fri Feb 12 10:56:38 1988
+***************
+*** 8,14 ****
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.6 88/02/02 11:20:07 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+--- 8,14 ----
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.7 88/02/12 10:14:22 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+***************
+*** 144,150 ****
+      cat >contains <<'EOSS'
+  grep "$1" "$2" >.greptmp && cat .greptmp && test -s .greptmp
+  EOSS
+! chmod 755 contains
+  esac
+  
+  : first determine how to suppress newline on echo command
+--- 144,150 ----
+      cat >contains <<'EOSS'
+  grep "$1" "$2" >.greptmp && cat .greptmp && test -s .greptmp
+  EOSS
+! chmod +x contains
+  esac
+  
+  : first determine how to suppress newline on echo command
+***************
+*** 280,286 ****
+  echo \$dflt
+  exit 1
+  EOSC
+! chmod 755 loc
+  $eunicefix loc
+  loclist="
+  expr
+--- 280,286 ----
+  echo \$dflt
+  exit 1
+  EOSC
+! chmod +x loc
+  $eunicefix loc
+  loclist="
+  expr
+***************
+*** 398,403 ****
+--- 398,406 ----
+      libc=/lib/libc.a
+  else
+      ans=`loc libc.a blurfl/dyick $libpth`
++     if test ! -f $ans; then
++ 	ans=`loc clib blurfl/dyick $libpth`
++     fi
+      if test -f $ans; then
+  	echo "Your C library is in $ans, of all places."
+  	libc=$ans
+***************
+*** 481,487 ****
+      echo "It's not Xenix..."
+      echo "exit 1" >xenix
+  fi
+! chmod 755 xenix
+  if test -f /venix; then
+      echo "Actually, this looks more like a VENIX system..."
+      echo "exit 0" >venix
+--- 484,490 ----
+      echo "It's not Xenix..."
+      echo "exit 1" >xenix
+  fi
+! chmod +x xenix
+  if test -f /venix; then
+      echo "Actually, this looks more like a VENIX system..."
+      echo "exit 0" >venix
+***************
+*** 494,500 ****
+      fi
+      echo "exit 1" >venix
+  fi
+! chmod 755 bsd usg v7 eunice venix xenix
+  $eunicefix bsd usg v7 eunice venix xenix
+  rmlist="$rmlist bsd usg v7 eunice venix xenix"
+  
+--- 497,503 ----
+      fi
+      echo "exit 1" >venix
+  fi
+! chmod +x bsd usg v7 eunice venix xenix
+  $eunicefix bsd usg v7 eunice venix xenix
+  rmlist="$rmlist bsd usg v7 eunice venix xenix"
+  
+***************
+*** 509,515 ****
+      echo "Okay, let's see if #! works on this system..."
+      echo "#!/bin/echo hi" > try
+      $eunicefix try
+!     chmod 755 try
+      try > today
+      if test -s today; then
+  	echo "It does."
+--- 512,518 ----
+      echo "Okay, let's see if #! works on this system..."
+      echo "#!/bin/echo hi" > try
+      $eunicefix try
+!     chmod +x try
+      try > today
+      if test -s today; then
+  	echo "It does."
+***************
+*** 517,523 ****
+      else
+  	echo "#! /bin/echo hi" > try
+  	$eunicefix try
+! 	chmod 755 try
+  	try > today
+  	if test -s today; then
+  	    echo "It does."
+--- 520,526 ----
+      else
+  	echo "#! /bin/echo hi" > try
+  	$eunicefix try
+! 	chmod +x try
+  	try > today
+  	if test -s today; then
+  	    echo "It does."
+***************
+*** 531,537 ****
+      echo "Your sh doesn't grok # comments--I will strip them later on."
+      shsharp=false
+      echo "exec grep -v '^#'" >spitshell
+!     chmod 755 spitshell
+      $eunicefix spitshell
+      spitshell=`pwd`/spitshell
+      echo "I presume that if # doesn't work, #! won't work either!"
+--- 534,540 ----
+      echo "Your sh doesn't grok # comments--I will strip them later on."
+      shsharp=false
+      echo "exec grep -v '^#'" >spitshell
+!     chmod +x spitshell
+      $eunicefix spitshell
+      spitshell=`pwd`/spitshell
+      echo "I presume that if # doesn't work, #! won't work either!"
+***************
+*** 549,555 ****
+  test "$?abc" != 1
+  EOSS
+  
+! chmod 755 try
+  $eunicefix try
+  if try; then
+      echo "Yup, it does."
+--- 552,558 ----
+  test "$?abc" != 1
+  EOSS
+  
+! chmod +x try
+  $eunicefix try
+  if try; then
+      echo "Yup, it does."
+***************
+*** 680,702 ****
+  echo " "
+  dflt=y
+  if $contains index libc.list >/dev/null 2>&1 ; then
+!     echo "Your system appears to use index() and rindex() rather than strchr()"
+!     $echo $n "and strrchr().  Is this correct? [$dflt] $c"
+!     rp='index() rather than strchr()? [$dflt]'
+!     . myread
+!     case "$ans" in
+! 	n*|f*) d_index="$define" ;;
+! 	*)     d_index="$undef" ;;
+!     esac
+  else
+!     echo "Your system appears to use strchr() and strrchr() rather than index()"
+!     $echo $n "and rindex().  Is this correct? [$dflt] $c"
+!     rp='strchr() rather than index()? [$dflt]'
+!     . myread
+!     case "$ans" in
+! 	n*|f*) d_index="$undef" ;;
+! 	*)     d_index="$define" ;;
+!     esac
+  fi
+  
+  : see if stat knows about block sizes
+--- 683,709 ----
+  echo " "
+  dflt=y
+  if $contains index libc.list >/dev/null 2>&1 ; then
+!     if $contains strchr libc.list >/dev/null 2>&1 ; then
+! 	echo "Your system has both index() and strchr().  Shall I use"
+! 	rp="index() rather than strchr()? [$dflt]"
+! 	$echo $n "$rp $c"
+! 	. myread
+! 	case "$ans" in
+! 	    n*) d_index="$define" ;;
+! 	    *)  d_index="$undef" ;;
+! 	esac
+!     else
+! 	d_index="$undef"
+! 	echo "index() found."
+!     fi
+  else
+!     if $contains strchr libc.list >/dev/null 2>&1 ; then
+! 	d_index="$define"
+! 	echo "strchr() found."
+!     else
+! 	echo "No index() or strchr() found!"
+! 	d_index="$undef"
+!     fi
+  fi
+  
+  : see if stat knows about block sizes
+***************
+*** 900,906 ****
+      ;;
+  esac
+  EOSS
+! chmod 755 filexp
+  $eunicefix filexp
+  
+  : determine where public executables go
+--- 907,913 ----
+      ;;
+  esac
+  EOSS
+! chmod +x filexp
+  $eunicefix filexp
+  
+  : determine where public executables go
+***************
+*** 1019,1025 ****
+  $rm -f /tmp/Cppsym\$\$ /tmp/Cppsym2\$\$
+  exit \$status
+  EOSS
+! chmod 755 Cppsym
+  $eunicefix Cppsym
+  echo "Your C preprocessor defines the following symbols:"
+  Cppsym -l $attrlist >Cppsym.true
+--- 1026,1032 ----
+  $rm -f /tmp/Cppsym\$\$ /tmp/Cppsym2\$\$
+  exit \$status
+  EOSS
+! chmod +x Cppsym
+  $eunicefix Cppsym
+  echo "Your C preprocessor defines the following symbols:"
+  Cppsym -l $attrlist >Cppsym.true
+ 
+Index: Makefile.SH
+Prereq: 1.0.1.7
+*** Makefile.SH.old	Fri Feb 12 10:56:51 1988
+--- Makefile.SH	Fri Feb 12 10:56:52 1988
+***************
+*** 6,12 ****
+  	ln ../../../config.sh . || \
+  	(echo "Can't find config.sh."; exit 1)
+      fi
+!     . config.sh
+      ;;
+  esac
+  case "$0" in
+--- 6,12 ----
+  	ln ../../../config.sh . || \
+  	(echo "Can't find config.sh."; exit 1)
+      fi
+!     . ./config.sh
+      ;;
+  esac
+  case "$0" in
+***************
+*** 20,28 ****
+  
+  echo "Extracting Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.7 88/02/04 10:25:41 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
+  # Revision 1.0.1.7  88/02/04  10:25:41  root
+  # patch17: changed chmod 755 to +x.
+  # 
+--- 20,31 ----
+  
+  echo "Extracting Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.8 88/02/12 10:16:02 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
++ # Revision 1.0.1.8  88/02/12  10:16:02  root
++ # patch22: more glitches on systems without . in path.
++ # 
+  # Revision 1.0.1.7  88/02/04  10:25:41  root
+  # patch17: changed chmod 755 to +x.
+  # 
+ 
+Index: x2p/Makefile.SH
+Prereq: 1.0.1.2
+*** x2p/Makefile.SH.old	Fri Feb 12 10:59:26 1988
+--- x2p/Makefile.SH	Fri Feb 12 10:59:27 1988
+***************
+*** 6,12 ****
+  	ln ../../../config.sh . || \
+  	(echo "Can't find config.sh."; exit 1)
+      fi
+!     . config.sh
+      ;;
+  esac
+  case "$0" in
+--- 6,12 ----
+  	ln ../../../config.sh . || \
+  	(echo "Can't find config.sh."; exit 1)
+      fi
+!     . ./config.sh
+      ;;
+  esac
+  case "$0" in
+***************
+*** 18,26 ****
+  esac
+  echo "Extracting x2p/Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.2 88/02/04 10:27:04 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
+  # Revision 1.0.1.2  88/02/04  10:27:04  root
+  # patch17: changed chmod 755 to +x.
+  # 
+--- 18,29 ----
+  esac
+  echo "Extracting x2p/Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.3 88/02/12 10:52:32 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
++ # Revision 1.0.1.3  88/02/12  10:52:32  root
++ # patch22: support for systems without . in path
++ # 
+  # Revision 1.0.1.2  88/02/04  10:27:04  root
+  # patch17: changed chmod 755 to +x.
+  # 
+ 
+Index: x2p/a2py.c
+Prereq: 1.0.1.2
+*** x2p/a2py.c.old	Fri Feb 12 10:59:35 1988
+--- x2p/a2py.c	Fri Feb 12 10:59:36 1988
+***************
+*** 1,6 ****
+! /* $Header: a2py.c,v 1.0.1.2 88/02/04 00:19:38 root Exp $
+   *
+   * $Log:	a2py.c,v $
+   * Revision 1.0.1.2  88/02/04  00:19:38  root
+   * patch16: yylex() didn't recognize >> as GRGR token.
+   * 
+--- 1,9 ----
+! /* $Header: a2py.c,v 1.0.1.3 88/02/12 10:53:13 root Exp $
+   *
+   * $Log:	a2py.c,v $
++  * Revision 1.0.1.3  88/02/12  10:53:13  root
++  * patch22: tokener wasn't creating proper value for "~" or lexing numbers right
++  * 
+   * Revision 1.0.1.2  88/02/04  00:19:38  root
+   * patch16: yylex() didn't recognize >> as GRGR token.
+   * 
+***************
+*** 217,222 ****
+--- 220,226 ----
+  	XTERM(tmp);
+      case '~':
+  	s++;
++ 	yylval = string("~",1);
+  	XTERM(MATCHOP);
+      case '+':
+      case '-':
+***************
+*** 569,586 ****
+      case '1': case '2': case '3': case '4': case '5':
+      case '6': case '7': case '8': case '9': case '0' : case '.':
+  	d = tokenbuf;
+! 	while (isdigit(*s) || *s == '_')
+  	    *d++ = *s++;
+! 	if (*s == '.' && index("0123456789eE",s[1]))
+  	    *d++ = *s++;
+! 	while (isdigit(*s) || *s == '_')
+  	    *d++ = *s++;
+! 	if (index("eE",*s) && index("+-0123456789",s[1]))
+! 	    *d++ = *s++;
+! 	if (*s == '+' || *s == '-')
+! 	    *d++ = *s++;
+! 	while (isdigit(*s))
+! 	    *d++ = *s++;
+  	*d = '\0';
+  	yylval = string(tokenbuf,0);
+  	break;
+--- 573,594 ----
+      case '1': case '2': case '3': case '4': case '5':
+      case '6': case '7': case '8': case '9': case '0' : case '.':
+  	d = tokenbuf;
+! 	while (isdigit(*s)) {
+  	    *d++ = *s++;
+! 	}
+! 	if (*s == '.' && index("0123456789eE",s[1])) {
+  	    *d++ = *s++;
+! 	    while (isdigit(*s)) {
+! 		*d++ = *s++;
+! 	    }
+! 	}
+! 	if (index("eE",*s) && index("+-0123456789",s[1])) {
+  	    *d++ = *s++;
+! 	    if (*s == '+' || *s == '-')
+! 		*d++ = *s++;
+! 	    while (isdigit(*s))
+! 		*d++ = *s++;
+! 	}
+  	*d = '\0';
+  	yylval = string(tokenbuf,0);
+  	break;
+ 
+Index: arg.c
+Prereq: 1.0.1.10
+*** arg.c.old	Fri Feb 12 10:57:14 1988
+--- arg.c	Fri Feb 12 10:57:20 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.c,v 1.0.1.10 88/02/06 00:17:48 root Exp $
+   *
+   * $Log:	arg.c,v $
+   * Revision 1.0.1.10  88/02/06  00:17:48  root
+   * patch21: fixed code so /foo/ && s//bar/ would work.  Also /foo/i.
+   * 
+--- 1,15 ----
+! /* $Header: arg.c,v 1.0.1.11 88/02/12 10:46:30 root Exp $
+   *
+   * $Log:	arg.c,v $
++  * Revision 1.0.1.11  88/02/12  10:46:30  root
++  * patch22: fixed double free() problem, null ptr dereference, unwanted
++  * 	sign extension on return status from wait().
++  * 
++  * Revision 1.0.1.11  88/02/12  10:17:37  root
++  * patch22: fixed a double free() (one was actually a realloc())
++  * 	fixed possible null pointer dereference
++  * 	prevented sign extension on system return value
++  * 
+   * Revision 1.0.1.10  88/02/06  00:17:48  root
+   * patch21: fixed code so /foo/ && s//bar/ would work.  Also /foo/i.
+   * 
+***************
+*** 1044,1053 ****
+  }
+  
+  int
+! do_kv(hash,kv,sarg,retary)
+  HASH *hash;
+  int kv;
+- register STR **sarg;
+  STR ***retary;
+  {
+      register ARRAY *ary;
+--- 1053,1061 ----
+  }
+  
+  int
+! do_kv(hash,kv,retary)
+  HASH *hash;
+  int kv;
+  STR ***retary;
+  {
+      register ARRAY *ary;
+***************
+*** 1055,1060 ****
+--- 1063,1069 ----
+      int i;
+      static ARRAY *myarray = Null(ARRAY*);
+      register HENT *entry;
++     register STR **sarg;
+  
+      ary = myarray;
+      if (!ary)
+***************
+*** 1070,1076 ****
+  	    apush(ary,str_make(str_get(hiterval(entry))));
+      }
+      if (retary) { /* array wanted */
+! 	sarg = (STR**)saferealloc((char*)sarg,(max+2)*sizeof(STR*));
+  	sarg[0] = Nullstr;
+  	sarg[max+1] = Nullstr;
+  	for (i = 1; i <= max; i++)
+--- 1079,1085 ----
+  	    apush(ary,str_make(str_get(hiterval(entry))));
+      }
+      if (retary) { /* array wanted */
+! 	sarg = (STR**)safemalloc((max+2)*sizeof(STR*));
+  	sarg[0] = Nullstr;
+  	sarg[max+1] = Nullstr;
+  	for (i = 1; i <= max; i++)
+***************
+*** 1081,1094 ****
+  }
+  
+  STR *
+! do_each(hash,sarg,retary)
+  HASH *hash;
+- register STR **sarg;
+  STR ***retary;
+  {
+      static STR *mystr = Nullstr;
+      STR *retstr;
+      HENT *entry = hiternext(hash);
+  
+      if (mystr) {
+  	str_free(mystr);
+--- 1090,1103 ----
+  }
+  
+  STR *
+! do_each(hash,retary)
+  HASH *hash;
+  STR ***retary;
+  {
+      static STR *mystr = Nullstr;
+      STR *retstr;
+      HENT *entry = hiternext(hash);
++     register STR **sarg;
+  
+      if (mystr) {
+  	str_free(mystr);
+***************
+*** 1097,1103 ****
+  
+      if (retary) { /* array wanted */
+  	if (entry) {
+! 	    sarg = (STR**)saferealloc((char*)sarg,4*sizeof(STR*));
+  	    sarg[0] = Nullstr;
+  	    sarg[3] = Nullstr;
+  	    sarg[1] = mystr = str_make(hiterkey(entry));
+--- 1106,1112 ----
+  
+      if (retary) { /* array wanted */
+  	if (entry) {
+! 	    sarg = (STR**)safemalloc(4*sizeof(STR*));
+  	    sarg[0] = Nullstr;
+  	    sarg[3] = Nullstr;
+  	    sarg[1] = mystr = str_make(hiterkey(entry));
+***************
+*** 1105,1111 ****
+  	    *retary = sarg;
+  	}
+  	else {
+! 	    sarg = (STR**)saferealloc((char*)sarg,2*sizeof(STR*));
+  	    sarg[0] = Nullstr;
+  	    sarg[1] = retstr = Nullstr;
+  	    *retary = sarg;
+--- 1114,1120 ----
+  	    *retary = sarg;
+  	}
+  	else {
+! 	    sarg = (STR**)safemalloc(2*sizeof(STR*));
+  	    sarg[0] = Nullstr;
+  	    sarg[1] = retstr = Nullstr;
+  	    *retary = sarg;
+***************
+*** 1543,1553 ****
+  	goto donumset;
+      case O_LEFT_SHIFT:
+  	value = str_gnum(sarg[1]);
+! 	value = (double)(((long)value) << (long)str_gnum(sarg[2]));
+  	goto donumset;
+      case O_RIGHT_SHIFT:
+  	value = str_gnum(sarg[1]);
+! 	value = (double)(((long)value) >> (long)str_gnum(sarg[2]));
+  	goto donumset;
+      case O_LT:
+  	value = str_gnum(sarg[1]);
+--- 1552,1564 ----
+  	goto donumset;
+      case O_LEFT_SHIFT:
+  	value = str_gnum(sarg[1]);
+! 	tmplong = (long)str_gnum(sarg[2]);
+! 	value = (double)(((long)value) << tmplong);
+  	goto donumset;
+      case O_RIGHT_SHIFT:
+  	value = str_gnum(sarg[1]);
+! 	tmplong = (long)str_gnum(sarg[2]);
+! 	value = (double)(((long)value) >> tmplong);
+  	goto donumset;
+      case O_LT:
+  	value = str_gnum(sarg[1]);
+***************
+*** 1702,1708 ****
+  	STABSET(str);
+  	break;
+      case O_EACH:
+! 	str_sset(str,do_each(arg[1].arg_ptr.arg_stab->stab_hash,sarg,retary));
+  	retary = Null(STR***);		/* do_each already did retary */
+  	STABSET(str);
+  	break;
+--- 1713,1719 ----
+  	STABSET(str);
+  	break;
+      case O_EACH:
+! 	str_sset(str,do_each(arg[1].arg_ptr.arg_stab->stab_hash,retary));
+  	retary = Null(STR***);		/* do_each already did retary */
+  	STABSET(str);
+  	break;
+***************
+*** 1709,1716 ****
+      case O_VALUES:
+      case O_KEYS:
+  	value = (double) do_kv(arg[1].arg_ptr.arg_stab->stab_hash,
+! 	  optype,sarg,retary);
+! 	retary = Null(STR***);		/* do_keys already did retary */
+  	goto donumset;
+      case O_ARRAY:
+  	if (maxarg == 1) {
+--- 1720,1727 ----
+      case O_VALUES:
+      case O_KEYS:
+  	value = (double) do_kv(arg[1].arg_ptr.arg_stab->stab_hash,
+! 	  optype,retary);
+! 	retary = Null(STR***);		/* do_kv already did retary */
+  	goto donumset;
+      case O_ARRAY:
+  	if (maxarg == 1) {
+***************
+*** 1862,1876 ****
+  	}
+  	if (!stab->stab_io)
+  	    value = 0.0;
+- 	else if (arg[1].arg_flags & AF_SPECIAL)
+- 	    value = (double)do_aprint(arg,stab->stab_io->fp);
+  	else {
+! 	    value = (double)do_print(str_get(sarg[1]),stab->stab_io->fp);
+! 	    if (ors && optype == O_PRINT)
+! 		do_print(ors, stab->stab_io->fp);
+  	}
+- 	if (stab->stab_io->flags & IOF_FLUSH)
+- 	    fflush(stab->stab_io->fp);
+  	goto donumset;
+      case O_CHDIR:
+  	tmps = str_get(sarg[1]);
+--- 1873,1889 ----
+  	}
+  	if (!stab->stab_io)
+  	    value = 0.0;
+  	else {
+! 	    if (arg[1].arg_flags & AF_SPECIAL)
+! 		value = (double)do_aprint(arg,stab->stab_io->fp);
+! 	    else {
+! 		value = (double)do_print(str_get(sarg[1]),stab->stab_io->fp);
+! 		if (ors && optype == O_PRINT)
+! 		    do_print(ors, stab->stab_io->fp);
+! 	    }
+! 	    if (stab->stab_io->flags & IOF_FLUSH && stab->stab_io->fp)
+! 		fflush(stab->stab_io->fp);
+  	}
+  	goto donumset;
+      case O_CHDIR:
+  	tmps = str_get(sarg[1]);
+***************
+*** 2039,2044 ****
+--- 2052,2060 ----
+  		;
+  	    if (maxarg == -1)
+  		argflags = -1;
++ 	    else {
++ 		argflags &= 0xffff;
++ 	    }
+  	    signal(SIGINT, ihand);
+  	    signal(SIGQUIT, qhand);
+  	    value = (double)argflags;
+ 
+Index: cmd.c
+Prereq: 1.0.1.3
+*** cmd.c.old	Fri Feb 12 10:57:34 1988
+--- cmd.c	Fri Feb 12 10:57:38 1988
+***************
+*** 1,6 ****
+! /* $Header: cmd.c,v 1.0.1.3 88/02/06 00:18:47 root Exp $
+   *
+   * $Log:	cmd.c,v $
+   * Revision 1.0.1.3  88/02/06  00:18:47  root
+   * patch21: fixed loop and block exits to pop label stack consistently.
+   * 
+--- 1,9 ----
+! /* $Header: cmd.c,v 1.0.1.4 88/02/12 10:22:09 root Exp $
+   *
+   * $Log:	cmd.c,v $
++  * Revision 1.0.1.4  88/02/12  10:22:09  root
++  * patch22: a fix for cray, who for some reason takes SVID seriously
++  * 
+   * Revision 1.0.1.3  88/02/06  00:18:47  root
+   * patch21: fixed loop and block exits to pop label stack consistently.
+   * 
+***************
+*** 27,33 ****
+--- 30,40 ----
+  
+  STR *
+  cmd_exec(cmd)
++ #ifdef cray	/* nobody else has complained yet */
++ CMD *cmd;
++ #else
+  register CMD *cmd;
++ #endif
+  {
+      SPAT *oldspat;
+  #ifdef DEBUGGING
+ 
+Index: config.h.SH
+*** config.h.SH.old	Fri Feb 12 10:57:45 1988
+--- config.h.SH	Fri Feb 12 10:57:46 1988
+***************
+*** 7,13 ****
+  	(echo "Can't find config.sh."; exit 1)
+  	echo "Using config.sh from above..."
+      fi
+!     . config.sh
+      ;;
+  esac
+  echo "Extracting config.h (with variable substitutions)"
+--- 7,13 ----
+  	(echo "Can't find config.sh."; exit 1)
+  	echo "Using config.sh from above..."
+      fi
+!     . ./config.sh
+      ;;
+  esac
+  echo "Extracting config.h (with variable substitutions)"
+ 
+Index: makedepend.SH
+Prereq: 1.0.1.2
+*** makedepend.SH.old	Fri Feb 12 10:57:52 1988
+--- makedepend.SH	Fri Feb 12 10:57:53 1988
+***************
+*** 6,12 ****
+  	ln ../../../config.sh . || \
+  	(echo "Can't find config.sh."; exit 1)
+      fi
+!     . config.sh
+      ;;
+  esac
+  case "$0" in
+--- 6,12 ----
+  	ln ../../../config.sh . || \
+  	(echo "Can't find config.sh."; exit 1)
+      fi
+!     . ./config.sh
+      ;;
+  esac
+  case "$0" in
+***************
+*** 15,23 ****
+  echo "Extracting makedepend (with variable substitutions)"
+  $spitshell >makedepend <<!GROK!THIS!
+  $startsh
+! # $Header: makedepend.SH,v 1.0.1.2 88/02/04 10:26:06 root Exp $
+  #
+  # $Log:	makedepend.SH,v $
+  # Revision 1.0.1.2  88/02/04  10:26:06  root
+  # patch17: changed chmod 755 to +x.
+  # 
+--- 15,26 ----
+  echo "Extracting makedepend (with variable substitutions)"
+  $spitshell >makedepend <<!GROK!THIS!
+  $startsh
+! # $Header: makedepend.SH,v 1.0.1.3 88/02/12 10:25:22 root Exp $
+  #
+  # $Log:	makedepend.SH,v $
++ # Revision 1.0.1.3  88/02/12  10:25:22  root
++ # patch22: fix for systems without . in path
++ # 
+  # Revision 1.0.1.2  88/02/04  10:26:06  root
+  # patch17: changed chmod 755 to +x.
+  # 
+ 
+Index: makedir.SH
+Prereq: 1.0.1.1
+*** makedir.SH.old	Fri Feb 12 10:57:59 1988
+--- makedir.SH	Fri Feb 12 10:58:00 1988
+***************
+*** 6,12 ****
+  	ln ../../../config.sh . || \
+  	(echo "Can't find config.sh."; exit 1)
+      fi
+!     . config.sh
+      ;;
+  esac
+  case "$0" in
+--- 6,12 ----
+  	ln ../../../config.sh . || \
+  	(echo "Can't find config.sh."; exit 1)
+      fi
+!     . ./config.sh
+      ;;
+  esac
+  case "$0" in
+***************
+*** 15,23 ****
+  echo "Extracting makedir (with variable substitutions)"
+  $spitshell >makedir <<!GROK!THIS!
+  $startsh
+! # $Header: makedir.SH,v 1.0.1.1 88/02/04 10:26:18 root Exp $
+  # 
+  # $Log:	makedir.SH,v $
+  # Revision 1.0.1.1  88/02/04  10:26:18  root
+  # patch17: changed chmod 755 to +x.
+  # 
+--- 15,26 ----
+  echo "Extracting makedir (with variable substitutions)"
+  $spitshell >makedir <<!GROK!THIS!
+  $startsh
+! # $Header: makedir.SH,v 1.0.1.2 88/02/12 10:25:55 root Exp $
+  # 
+  # $Log:	makedir.SH,v $
++ # Revision 1.0.1.2  88/02/12  10:25:55  root
++ # patch22: fix for systems without . in path
++ # 
+  # Revision 1.0.1.1  88/02/04  10:26:18  root
+  # patch17: changed chmod 755 to +x.
+  # 
+ 
+Index: malloc.c
+Prereq: 1.0.1.2
+*** malloc.c.old	Fri Feb 12 10:58:05 1988
+--- malloc.c	Fri Feb 12 10:58:07 1988
+***************
+*** 1,6 ****
+! /* $Header: malloc.c,v 1.0.1.2 88/02/04 11:16:24 root Exp $
+   *
+   * $Log:	malloc.c,v $
+   * Revision 1.0.1.2  88/02/04  11:16:24  root
+   * patch18: regularized includes.
+   * 
+--- 1,9 ----
+! /* $Header: malloc.c,v 1.0.1.3 88/02/12 10:26:09 root Exp $
+   *
+   * $Log:	malloc.c,v $
++  * Revision 1.0.1.3  88/02/12  10:26:09  root
++  * patch22: made yell about bad free()
++  * 
+   * Revision 1.0.1.2  88/02/04  11:16:24  root
+   * patch18: regularized includes.
+   * 
+***************
+*** 66,71 ****
+--- 69,75 ----
+  };
+  
+  #define	MAGIC		0xff		/* magic # on accounting info */
++ #define OLDMAGIC	0x7f		/* same after a free() */
+  #define RMAGIC		0x55555555	/* magic # on range info */
+  #ifdef RCHECK
+  #define	RSLOP		sizeof (u_int)
+***************
+*** 218,225 ****
+  #ifdef debug
+    	ASSERT(op->ov_magic == MAGIC);		/* make sure it was in use */
+  #else
+! 	if (op->ov_magic != MAGIC)
+  		return;				/* sanity */
+  #endif
+  #ifdef RCHECK
+    	ASSERT(op->ov_rmagic == RMAGIC);
+--- 222,233 ----
+  #ifdef debug
+    	ASSERT(op->ov_magic == MAGIC);		/* make sure it was in use */
+  #else
+! 	if (op->ov_magic != MAGIC) {
+! 		fprintf(stderr,"%s free() ignored\n",
+! 		    op->ov_magic == OLDMAGIC ? "Duplicate" : "Bad");
+  		return;				/* sanity */
++ 	}
++ 	op->ov_magic = OLDMAGIC;
+  #endif
+  #ifdef RCHECK
+    	ASSERT(op->ov_rmagic == RMAGIC);
+ 
+Index: t/op.exec
+Prereq: 1.0.1.1
+*** t/op.exec.old	Fri Feb 12 10:59:09 1988
+--- t/op.exec	Fri Feb 12 10:59:09 1988
+***************
+*** 1,18 ****
+  #!./perl
+  
+! # $Header: op.exec,v 1.0.1.1 88/02/04 17:49:08 root Exp $
+  
+  $| = 1;				# flush stdout
+! print "1..7\n";
+  
+  print "not ok 1\n" if system "echo ok \\1";	# shell interpreted
+  print "not ok 2\n" if system "echo ok 2";	# split and directly called
+  print "not ok 3\n" if system "echo", "ok", "3"; # directly called
+  
+! if ((system "false") == 256) {print "ok 4\n";} else {print "not ok 4\n";}
+  
+! if ((system "lskdfj") == 255 * 256) {print "ok 5\n";} else {print "not ok 5\n";}
+  
+! unless (exec "lskdjfalksdjfdjfkls") {print "ok 6\n";} else {print "not ok 6\n";}
+  
+! exec "echo","ok","7";
+--- 1,21 ----
+  #!./perl
+  
+! # $Header: op.exec,v 1.0.1.2 88/02/12 10:50:53 root Exp $
+  
+  $| = 1;				# flush stdout
+! print "1..8\n";
+  
+  print "not ok 1\n" if system "echo ok \\1";	# shell interpreted
+  print "not ok 2\n" if system "echo ok 2";	# split and directly called
+  print "not ok 3\n" if system "echo", "ok", "3"; # directly called
+  
+! if (system "true") {print "not ok 4\n";} else {print "ok 4\n";}
+  
+! if ((system "/bin/sh -c 'exit 1'") != 256) { print "not "; }
+! print "ok 5\n";
+  
+! if ((system "lskdfj") == 255 << 8) {print "ok 6\n";} else {print "not ok 6\n";}
+  
+! unless (exec "lskdjfalksdjfdjfkls") {print "ok 7\n";} else {print "not ok 7\n";}
+! 
+! exec "echo","ok","8";
+ 
+Index: t/op.magic
+Prereq: 1.0
+*** t/op.magic.old	Fri Feb 12 10:59:20 1988
+--- t/op.magic	Fri Feb 12 10:59:21 1988
+***************
+*** 1,11 ****
+  #!./perl
+  
+! # $Header: op.magic,v 1.0 87/12/18 13:13:54 root Exp $
+  
+- print "1..4\n";
+- 
+  $| = 1;		# command buffering
+  
+  $ENV{'foo'} = 'hi there';
+  if (`echo \$foo` eq "hi there\n") {print "ok 1\n";} else {print "not ok 1\n";}
+  
+--- 1,11 ----
+  #!./perl
+  
+! # $Header: op.magic,v 1.0.1.1 88/02/12 10:52:07 root Exp $
+  
+  $| = 1;		# command buffering
+  
++ print "1..4\n";
++ 
+  $ENV{'foo'} = 'hi there';
+  if (`echo \$foo` eq "hi there\n") {print "ok 1\n";} else {print "not ok 1\n";}
+  
+***************
+*** 13,27 ****
+  open(foo,'ajslkdfpqjsjfkslkjdflksd');
+  if ($! == 2) {print "ok 2\n";} else {print "not ok 2\n";}
+  
+! $SIG{'INT'} = 'ok3';
+! kill 2,$$;
+! $SIG{'INT'} = 'IGNORE';
+! kill 2,$$;
+! print "ok 4\n";
+! $SIG{'INT'} = 'DEFAULT';
+! kill 2,$$;
+! print "not ok\n";
+  
+! sub ok3 {
+!     print "ok 3\n" if pop(@_) eq 'INT';
+! }
+--- 13,26 ----
+  open(foo,'ajslkdfpqjsjfkslkjdflksd');
+  if ($! == 2) {print "ok 2\n";} else {print "not ok 2\n";}
+  
+! # the next tests are embedded inside system simply because sh spits out
+! # a newline onto stderr when a child process kills itself with SIGINT.
+  
+! system './perl',
+! '-e', '$| = 1;		# command buffering',
+! 
+! '-e', '$SIG{"INT"} = "ok3"; kill 2,$$;',
+! '-e', '$SIG{"INT"} = "IGNORE"; kill 2,$$; print "ok 4\n";',
+! '-e', '$SIG{"INT"} = "DEFAULT"; kill 2,$$; print "not ok\n";',
+! 
+! '-e', 'sub ok3 { print "ok 3\n" if pop(@_) eq "INT"; }';
+ 
+Index: perl.man.1
+Prereq: 1.0.1.4
+*** perl.man.1.old	Fri Feb 12 10:58:21 1988
+--- perl.man.1	Fri Feb 12 10:58:25 1988
+***************
+*** 1,7 ****
+  .rn '' }`
+! ''' $Header: perl.man.1,v 1.0.1.4 88/02/06 00:19:44 root Exp $
+  ''' 
+  ''' $Log:	perl.man.1,v $
+  ''' Revision 1.0.1.4  88/02/06  00:19:44  root
+  ''' patch21: documented -v, /foo/i.
+  ''' 
+--- 1,10 ----
+  .rn '' }`
+! ''' $Header: perl.man.1,v 1.0.1.5 88/02/12 10:26:35 root Exp $
+  ''' 
+  ''' $Log:	perl.man.1,v $
++ ''' Revision 1.0.1.5  88/02/12  10:26:35  root
++ ''' patch22: some systems don't have \(bs
++ ''' 
+  ''' Revision 1.0.1.4  88/02/06  00:19:44  root
+  ''' patch21: documented -v, /foo/i.
+  ''' 
+***************
+*** 40,50 ****
+  '''     string Tr holds user defined translation string.
+  '''     Bell System Logo is used as a dummy character.
+  '''
+! .tr \(bs-|\(bv\*(Tr
+  .ie n \{\
+! .ds -- \(bs-
+! .if (\n(.H=4u)&(1m=24u) .ds -- \(bs\h'-12u'\(bs\h'-12u'-\" diablo 10 pitch
+! .if (\n(.H=4u)&(1m=20u) .ds -- \(bs\h'-12u'\(bs\h'-8u'-\" diablo 12 pitch
+  .ds L" ""
+  .ds R" ""
+  .ds L' '
+--- 43,53 ----
+  '''     string Tr holds user defined translation string.
+  '''     Bell System Logo is used as a dummy character.
+  '''
+! .tr \(*W-|\(bv\*(Tr
+  .ie n \{\
+! .ds -- \(*W-
+! .if (\n(.H=4u)&(1m=24u) .ds -- \(*W\h'-12u'\(*W\h'-12u'-\" diablo 10 pitch
+! .if (\n(.H=4u)&(1m=20u) .ds -- \(*W\h'-12u'\(*W\h'-8u'-\" diablo 12 pitch
+  .ds L" ""
+  .ds R" ""
+  .ds L' '
+ 
+Index: perldb.man
+Prereq: 1.0.1.2
+*** perldb.man.old	Fri Feb 12 10:58:32 1988
+--- perldb.man	Fri Feb 12 10:58:33 1988
+***************
+*** 1,7 ****
+  .rn '' }`
+! ''' $Header: perldb.man,v 1.0.1.2 88/01/30 17:04:48 root Exp $
+  ''' 
+  ''' $Log:	perldb.man,v $
+  ''' Revision 1.0.1.2  88/01/30  17:04:48  root
+  ''' patch 11: random cleanup
+  ''' 
+--- 1,10 ----
+  .rn '' }`
+! ''' $Header: perldb.man,v 1.0.1.3 88/02/12 10:27:21 root Exp $
+  ''' 
+  ''' $Log:	perldb.man,v $
++ ''' Revision 1.0.1.3  88/02/12  10:27:21  root
++ ''' patch22: some systems don't have \(bs
++ ''' 
+  ''' Revision 1.0.1.2  88/01/30  17:04:48  root
+  ''' patch 11: random cleanup
+  ''' 
+***************
+*** 28,38 ****
+  '''     string Tr holds user defined translation string.
+  '''     Bell System Logo is used as a dummy character.
+  '''
+! .tr \(bs-|\(bv\*(Tr
+  .ie n \{\
+! .ds -- \(bs-
+! .if (\n(.H=4u)&(1m=24u) .ds -- \(bs\h'-12u'\(bs\h'-12u'-\" diablo 10 pitch
+! .if (\n(.H=4u)&(1m=20u) .ds -- \(bs\h'-12u'\(bs\h'-8u'-\" diablo 12 pitch
+  .ds L" ""
+  .ds R" ""
+  .ds L' '
+--- 34,44 ----
+  '''     string Tr holds user defined translation string.
+  '''     Bell System Logo is used as a dummy character.
+  '''
+! .tr \(*W-|\(bv\*(Tr
+  .ie n \{\
+! .ds -- \(*W-
+! .if (\n(.H=4u)&(1m=24u) .ds -- \(*W\h'-12u'\(*W\h'-12u'-\" diablo 10 pitch
+! .if (\n(.H=4u)&(1m=20u) .ds -- \(*W\h'-12u'\(*W\h'-8u'-\" diablo 12 pitch
+  .ds L" ""
+  .ds R" ""
+  .ds L' '
+ 
+Index: perly.c
+Prereq: 1.0.1.5
+*** perly.c.old	Fri Feb 12 10:58:49 1988
+--- perly.c	Fri Feb 12 10:58:55 1988
+***************
+*** 1,6 ****
+! char rcsid[] = "$Header: perly.c,v 1.0.1.5 88/02/06 00:22:51 root Exp $";
+  /*
+   * $Log:	perly.c,v $
+   * Revision 1.0.1.5  88/02/06  00:22:51  root
+   * patch21: added /foo/i, /$var/.
+   * 
+--- 1,10 ----
+! char rcsid[] = "$Header: perly.c,v 1.0.1.6 88/02/12 10:27:36 root Exp $";
+  /*
+   * $Log:	perly.c,v $
++  * Revision 1.0.1.6  88/02/12  10:27:36  root
++  * patch22: fixed a null pointer problem on strings that run to EOF
++  * 	fixed some expressions that blew up some SysV compilers
++  * 
+   * Revision 1.0.1.5  88/02/06  00:22:51  root
+   * patch21: added /foo/i, /$var/.
+   * 
+***************
+*** 1676,1682 ****
+  	    s = str_append_till(tmpstr,s+1,term,leave);
+  	    while (!*s) {	/* multiple line string? */
+  		s = str_gets(linestr, rsfp);
+! 		if (!*s)
+  		    fatal("EOF in string at line %d\n",sqstart);
+  		line++;
+  		s = str_append_till(tmpstr,s,term,leave);
+--- 1680,1686 ----
+  	    s = str_append_till(tmpstr,s+1,term,leave);
+  	    while (!*s) {	/* multiple line string? */
+  		s = str_gets(linestr, rsfp);
+! 		if (!s)
+  		    fatal("EOF in string at line %d\n",sqstart);
+  		line++;
+  		s = str_append_till(tmpstr,s,term,leave);
+***************
+*** 1905,1910 ****
+--- 1909,1915 ----
+      double value;		/* must not be register */
+      register char *tmps;
+      int i;
++     long tmplong;
+      double exp(), log(), sqrt(), modf();
+      char *crypt();
+  
+***************
+*** 1955,1965 ****
+  	    break;
+  	case O_LEFT_SHIFT:
+  	    value = str_gnum(s1);
+! 	    str_numset(str,(double)(((long)value) << ((long)str_gnum(s2))));
+  	    break;
+  	case O_RIGHT_SHIFT:
+  	    value = str_gnum(s1);
+! 	    str_numset(str,(double)(((long)value) >> ((long)str_gnum(s2))));
+  	    break;
+  	case O_LT:
+  	    value = str_gnum(s1);
+--- 1960,1972 ----
+  	    break;
+  	case O_LEFT_SHIFT:
+  	    value = str_gnum(s1);
+!     tmplong = (long)str_gnum(s2);
+! 	    str_numset(str,(double)(((long)value) << tmplong));
+  	    break;
+  	case O_RIGHT_SHIFT:
+  	    value = str_gnum(s1);
+!     tmplong = (long)str_gnum(s2);
+! 	    str_numset(str,(double)(((long)value) >> tmplong));
+  	    break;
+  	case O_LT:
+  	    value = str_gnum(s1);
+ 
+Index: x2p/str.c
+Prereq: 1.0
+*** x2p/str.c.old	Fri Feb 12 10:59:46 1988
+--- x2p/str.c	Fri Feb 12 10:59:46 1988
+***************
+*** 1,6 ****
+! /* $Header: str.c,v 1.0 87/12/18 13:07:26 root Exp $
+   *
+   * $Log:	str.c,v $
+   * Revision 1.0  87/12/18  13:07:26  root
+   * Initial revision
+   * 
+--- 1,9 ----
+! /* $Header: str.c,v 1.0.1.1 88/02/12 10:54:41 root Exp $
+   *
+   * $Log:	str.c,v $
++  * Revision 1.0.1.1  88/02/12  10:54:41  root
++  * patch22: propagated STDCHAR patch from str.c in ..
++  * 
+   * Revision 1.0  87/12/18  13:07:26  root
+   * Initial revision
+   * 
+***************
+*** 281,287 ****
+  
+      register char *bp;		/* we're going to steal some values */
+      register int cnt;		/*  from the stdio struct and put EVERYTHING */
+!     register char *ptr;		/*   in the innermost loop into registers */
+      register char newline = '\n';	/* (assuming at least 6 registers) */
+      int i;
+      int bpx;
+--- 284,290 ----
+  
+      register char *bp;		/* we're going to steal some values */
+      register int cnt;		/*  from the stdio struct and put EVERYTHING */
+!     register STDCHAR *ptr;	/*   in the innermost loop into registers */
+      register char newline = '\n';	/* (assuming at least 6 registers) */
+      int i;
+      int bpx;
+ 
+Index: x2p/a2p.man
+Prereq: 1.0
+*** x2p/a2p.man.old	Fri Feb 12 11:02:53 1988
+--- x2p/a2p.man	Fri Feb 12 11:02:54 1988
+***************
+*** 1,7 ****
+  .rn '' }`
+! ''' $Header: a2p.man,v 1.0 87/12/18 17:23:56 root Exp $
+  ''' 
+  ''' $Log:	a2p.man,v $
+  ''' Revision 1.0  87/12/18  17:23:56  root
+  ''' Initial revision
+  ''' 
+--- 1,10 ----
+  .rn '' }`
+! ''' $Header: a2p.man,v 1.0.1.1 88/02/12 10:52:54 root Exp $
+  ''' 
+  ''' $Log:	a2p.man,v $
++ ''' Revision 1.0.1.1  88/02/12  10:52:54  root
++ ''' patch22: some systems don't have \(bs
++ ''' 
+  ''' Revision 1.0  87/12/18  17:23:56  root
+  ''' Initial revision
+  ''' 
+***************
+*** 28,38 ****
+  '''     string Tr holds user defined translation string.
+  '''     Bell System Logo is used as a dummy character.
+  '''
+! .tr \(bs-|\(bv\*(Tr
+  .ie n \{\
+! .ds -- \(bs-
+! .if (\n(.H=4u)&(1m=24u) .ds -- \(bs\h'-12u'\(bs\h'-12u'-\" diablo 10 pitch
+! .if (\n(.H=4u)&(1m=20u) .ds -- \(bs\h'-12u'\(bs\h'-8u'-\" diablo 12 pitch
+  .ds L" ""
+  .ds R" ""
+  .ds L' '
+--- 31,41 ----
+  '''     string Tr holds user defined translation string.
+  '''     Bell System Logo is used as a dummy character.
+  '''
+! .tr \(*W-|\(bv\*(Tr
+  .ie n \{\
+! .ds -- \(*W-
+! .if (\n(.H=4u)&(1m=24u) .ds -- \(*W\h'-12u'\(*W\h'-12u'-\" diablo 10 pitch
+! .if (\n(.H=4u)&(1m=20u) .ds -- \(*W\h'-12u'\(*W\h'-8u'-\" diablo 12 pitch
+  .ds L" ""
+  .ds R" ""
+  .ds L' '
+ 
+Index: x2p/s2p.man
+Prereq: 1.0
+*** x2p/s2p.man.old	Fri Feb 12 11:03:09 1988
+--- x2p/s2p.man	Fri Feb 12 11:03:10 1988
+***************
+*** 1,7 ****
+  .rn '' }`
+! ''' $Header: s2p.man,v 1.0 87/12/18 17:37:16 root Exp $
+  ''' 
+  ''' $Log:	s2p.man,v $
+  ''' Revision 1.0  87/12/18  17:37:16  root
+  ''' Initial revision
+  ''' 
+--- 1,10 ----
+  .rn '' }`
+! ''' $Header: s2p.man,v 1.0.1.1 88/02/12 10:54:18 root Exp $
+  ''' 
+  ''' $Log:	s2p.man,v $
++ ''' Revision 1.0.1.1  88/02/12  10:54:18  root
++ ''' patch22: some systems don't have \(bs
++ ''' 
+  ''' Revision 1.0  87/12/18  17:37:16  root
+  ''' Initial revision
+  ''' 
+***************
+*** 28,38 ****
+  '''     string Tr holds user defined translation string.
+  '''     Bell System Logo is used as a dummy character.
+  '''
+! .tr \(bs-|\(bv\*(Tr
+  .ie n \{\
+! .ds -- \(bs-
+! .if (\n(.H=4u)&(1m=24u) .ds -- \(bs\h'-12u'\(bs\h'-12u'-\" diablo 10 pitch
+! .if (\n(.H=4u)&(1m=20u) .ds -- \(bs\h'-12u'\(bs\h'-8u'-\" diablo 12 pitch
+  .ds L" ""
+  .ds R" ""
+  .ds L' '
+--- 31,41 ----
+  '''     string Tr holds user defined translation string.
+  '''     Bell System Logo is used as a dummy character.
+  '''
+! .tr \(*W-|\(bv\*(Tr
+  .ie n \{\
+! .ds -- \(*W-
+! .if (\n(.H=4u)&(1m=24u) .ds -- \(*W\h'-12u'\(*W\h'-12u'-\" diablo 10 pitch
+! .if (\n(.H=4u)&(1m=20u) .ds -- \(*W\h'-12u'\(*W\h'-8u'-\" diablo 12 pitch
+  .ds L" ""
+  .ds R" ""
+  .ds L' '

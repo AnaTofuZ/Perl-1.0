@@ -1,0 +1,349 @@
+Path: utzoo!mnetor!uunet!lll-winken!lll-lcc!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #27
+Message-ID: <1477@devvax.JPL.NASA.GOV>
+Date: 4 Mar 88 04:08:25 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 338
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 27
+Priority: MEDIUM
+Subject: hacked around the printf bug that can't print fields >128 chars.
+Subject: some close() calls weren't checking return status.
+Subject: $* = 1; "ab\ncd\n" =~ /^cd/ failed from overzealous optimization
+Subject: the crypt() routine needed ifdeffing in perly.c as well as arg.c
+Subject: io.fs uses ./tmp rather than /tmp now
+
+Description:
+	My manual page says printf can't print a field longer than 128 chars.
+	Since perl was using printf to format %s, it would fail on the same
+	input.  Since long strings are usually printed with a plain old %s,
+	I hacked a bypass printf in the simple situation.
+
+	The automatic closes that happen when you open another file on the same
+	channel were not paying close enough attention to the return status.
+	They now print out a warning if all did not go well.
+
+	Setting $* = 1 is supposed to let patterns like /^foo/ match after
+	any newline in the searched string.  This was not working part of the
+	time, due to an optimization botch.
+
+	The crypt() function does not exist on all implementations of Unix,
+	due to excessive US government paranoia that people will find out
+	what they already know.  Anyway, the crypt function is ifdeffed in
+	arg.c, but should also have been ifdeffed in perly.c in the evalstatic()
+	routine.
+
+	The io.fs test used /tmp for a scratch directory, which sometime led
+	to conflicts with other users of the directory.  The io.fs test now
+	create its own local tmp directory to work with.
+
+Fix:	From rn, say "| patch -p -N -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch -p -N <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch (version 2.0, latest patchlevel [currently 9]).
+
+	After patching:
+		make
+		make test
+		make install
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).  You can also get kits at
+	some recent patchlevel from this location.
+
+Index: patchlevel.h
+Prereq: 26
+1c1
+< #define PATCHLEVEL 26
+---
+> #define PATCHLEVEL 27
+ 
+Index: Configure
+Prereq: 1.0.1.9
+*** Configure.old	Thu Mar  3 19:38:56 1988
+--- Configure	Thu Mar  3 19:39:01 1988
+***************
+*** 8,14 ****
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.9 88/03/03 16:02:26 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+--- 8,14 ----
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.10 88/03/03 19:32:23 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+***************
+*** 126,132 ****
+  attrlist="mc68000 sun gcos unix ibm gimpel interdata tss os mert pyr"
+  attrlist="$attrlist vax pdp11 i8086 z8000 u3b2 u3b5 u3b20 u3b200"
+  attrlist="$attrlist ns32000 ns16000 iAPX286 mc300 mc500 mc700 sparc"
+! pth="/usr/ucb /bin /usr/bin /usr/local /usr/local/bin /usr/lbin /etc /usr/lib /lib" : find out where common programs are
+  defvoidused=7
+  
+  : some greps do not return status, grrr.
+--- 126,133 ----
+  attrlist="mc68000 sun gcos unix ibm gimpel interdata tss os mert pyr"
+  attrlist="$attrlist vax pdp11 i8086 z8000 u3b2 u3b5 u3b20 u3b200"
+  attrlist="$attrlist ns32000 ns16000 iAPX286 mc300 mc500 mc700 sparc"
+! pth="/usr/ucb /bin /usr/bin /usr/local /usr/local/bin /usr/lbin /etc /usr/lib /lib"
+! : find out where common programs are
+  defvoidused=7
+  
+  : some greps do not return status, grrr.
+ 
+Index: arg.c
+Prereq: 1.0.1.14
+*** arg.c.old	Thu Mar  3 19:54:43 1988
+--- arg.c	Thu Mar  3 19:54:51 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.c,v 1.0.1.14 88/03/03 16:02:57 root Exp $
+   *
+   * $Log:	arg.c,v $
+   * Revision 1.0.1.14  88/03/03  16:02:57  root
+   * patch26: use GIDTYPE for getgroups() call
+   * 
+--- 1,11 ----
+! /* $Header: arg.c,v 1.0.1.15 88/03/03 19:52:14 root Exp $
+   *
+   * $Log:	arg.c,v $
++  * Revision 1.0.1.15  88/03/03  19:52:14  root
++  * patch27: hacked around printf bug that chokes on fields >128 chars
++  * patch27: some close() calls weren't checking return status
++  * patch27: $* = 1; "ab\ncd\n" =~ /^cd/ failed from overzealous optimization
++  * 
+   * Revision 1.0.1.14  88/03/03  16:02:57  root
+   * patch26: use GIDTYPE for getgroups() call
+   * 
+***************
+*** 121,127 ****
+  #endif
+  	if (!*spat->spat_compex.precomp && lastspat)
+  	    spat = lastspat;
+! 	if (spat->spat_first) {
+  	    if (spat->spat_flags & SPAT_SCANFIRST) {
+  		str_free(spat->spat_first);
+  		spat->spat_first = Nullstr;	/* disable optimization */
+--- 126,132 ----
+  #endif
+  	if (!*spat->spat_compex.precomp && lastspat)
+  	    spat = lastspat;
+! 	if (!multiline && spat->spat_first) {
+  	    if (spat->spat_flags & SPAT_SCANFIRST) {
+  		str_free(spat->spat_first);
+  		spat->spat_first = Nullstr;	/* disable optimization */
+***************
+*** 175,181 ****
+  #endif
+      if (!*spat->spat_compex.precomp && lastspat)
+  	spat = lastspat;
+!     if (spat->spat_first) {
+  	if (spat->spat_flags & SPAT_SCANFIRST) {
+  	    str_free(spat->spat_first);
+  	    spat->spat_first = Nullstr;	/* disable optimization */
+--- 180,186 ----
+  #endif
+      if (!*spat->spat_compex.precomp && lastspat)
+  	spat = lastspat;
+!     if (!multiline && spat->spat_first) {
+  	if (spat->spat_flags & SPAT_SCANFIRST) {
+  	    str_free(spat->spat_first);
+  	    spat->spat_first = Nullstr;	/* disable optimization */
+***************
+*** 353,358 ****
+--- 358,364 ----
+      int len = strlen(name);
+      register STIO *stio = stab->stab_io;
+      char *myname = savestr(name);
++     int result;
+  
+      name = myname;
+      while (len && isspace(name[len-1]))
+***************
+*** 361,369 ****
+  	stio = stab->stab_io = stio_new();
+      if (stio->fp) {
+  	if (stio->type == '|')
+! 	    pclose(stio->fp);
+  	else if (stio->type != '-')
+! 	    fclose(stio->fp);
+  	stio->fp = Nullfp;
+      }
+      stio->type = *name;
+--- 367,380 ----
+  	stio = stab->stab_io = stio_new();
+      if (stio->fp) {
+  	if (stio->type == '|')
+! 	    result = pclose(stio->fp);
+  	else if (stio->type != '-')
+! 	    result = fclose(stio->fp);
+! 	else
+! 	    result = 0;
+! 	if (result == EOF)
+! 	    fprintf(stderr,"Warning: unable to close filehandle %s properly.\n",
+! 	      stab->stab_name);
+  	stio->fp = Nullfp;
+      }
+      stio->type = *name;
+***************
+*** 764,770 ****
+  	    case 's':
+  		ch = *(++t);
+  		*t = '\0';
+! 		sprintf(buf,s,str_get(*(sarg++)));
+  		s = t;
+  		*(t--) = ch;
+  		break;
+--- 775,786 ----
+  	    case 's':
+  		ch = *(++t);
+  		*t = '\0';
+! 		if (strEQ(s,"%s")) {	/* some printfs fail on >128 chars */
+! 		    *buf = '\0';
+! 		    str_scat(str,*(sarg++));  /* so handle simple case */
+! 		}
+! 		else
+! 		    sprintf(buf,s,str_get(*(sarg++)));
+  		s = t;
+  		*(t--) = ch;
+  		break;
+ 
+Index: t/io.fs
+Prereq: 1.0.1.1
+*** t/io.fs.old	Thu Mar  3 19:40:05 1988
+--- t/io.fs	Thu Mar  3 19:40:06 1988
+***************
+*** 1,6 ****
+  #!./perl
+  
+! # $Header: io.fs,v 1.0.1.1 88/03/02 12:57:26 root Exp $
+  
+  print "1..20\n";
+  
+--- 1,6 ----
+  #!./perl
+  
+! # $Header: io.fs,v 1.0.1.2 88/03/03 19:37:33 root Exp $
+  
+  print "1..20\n";
+  
+***************
+*** 7,13 ****
+  $wd = `pwd`;
+  chop($wd);
+  
+! chdir '/tmp';
+  `/bin/rm -rf a b c x`;
+  
+  umask(022);
+--- 7,14 ----
+  $wd = `pwd`;
+  chop($wd);
+  
+! `mkdir tmp`;
+! chdir './tmp';
+  `/bin/rm -rf a b c x`;
+  
+  umask(022);
+ 
+Index: t/op.pat
+Prereq: 1.0.1.1
+*** t/op.pat.old	Thu Mar  3 19:40:12 1988
+--- t/op.pat	Thu Mar  3 19:40:13 1988
+***************
+*** 1,7 ****
+  #!./perl
+  
+! # $Header: op.pat,v 1.0.1.1 88/02/06 00:26:35 root Exp $
+! print "1..23\n";
+  
+  $x = "abc\ndef\n";
+  
+--- 1,7 ----
+  #!./perl
+  
+! # $Header: op.pat,v 1.0.1.2 88/03/03 19:38:00 root Exp $
+! print "1..24\n";
+  
+  $x = "abc\ndef\n";
+  
+***************
+*** 56,58 ****
+--- 56,61 ----
+  if (m|bc/*d|) {print "ok 22\n";} else {print "not ok 22\n";}
+  
+  if (/^$_$/) {print "ok 23\n";} else {print "not ok 23\n";}
++ 
++ $* = 1;		# test 3 only tested the optimized version--this one is for real
++ if ("ab\ncd\n" =~ /^cd/) {print "ok 24\n";} else {print "not ok 24\n";}
+ 
+Index: perly.c
+Prereq: 1.0.1.8
+*** perly.c.old	Thu Mar  3 19:39:47 1988
+--- perly.c	Thu Mar  3 19:39:54 1988
+***************
+*** 1,6 ****
+! char rcsid[] = "$Header: perly.c,v 1.0.1.8 88/03/02 12:45:28 root Exp $";
+  /*
+   * $Log:	perly.c,v $
+   * Revision 1.0.1.8  88/03/02  12:45:28  root
+   * patch24: added new filetest and symlink operations
+   * patch24: made assume_* unique in 7 chars
+--- 1,9 ----
+! char rcsid[] = "$Header: perly.c,v 1.0.1.9 88/03/03 19:36:31 root Exp $";
+  /*
+   * $Log:	perly.c,v $
++  * Revision 1.0.1.9  88/03/03  19:36:31  root
++  * patch27: the crypt() routine needed ifdeffing in this file as well as arg.c
++  * 
+   * Revision 1.0.1.8  88/03/02  12:45:28  root
+   * patch24: added new filetest and symlink operations
+   * patch24: made assume_* unique in 7 chars
+***************
+*** 2169,2176 ****
+--- 2172,2184 ----
+  	    str_numset(str,(double)(strNE(tmps,str_get(s2))));
+  	    break;
+  	case O_CRYPT:
++ #ifdef CRYPT
+  	    tmps = str_get(s1);
+  	    str_set(str,crypt(tmps,str_get(s2)));
++ #else
++ 	    fatal(
++ 	    "The crypt() function is unimplemented due to excessive paranoia.");
++ #endif
+  	    break;
+  	case O_EXP:
+  	    str_numset(str,exp(str_gnum(s1)));

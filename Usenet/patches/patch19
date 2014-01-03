@@ -1,0 +1,87 @@
+Path: utzoo!mnetor!uunet!lll-winken!lll-lcc!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #19
+Message-ID: <1230@devvax.JPL.NASA.GOV>
+Date: 4 Feb 88 22:43:27 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 76
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 19
+Priority: depends on your floating point accuracy
+Subject: Some machines fail base.lex because of floating point roundoff.
+From: ncrcpx!craig (R. Craig Peterson)
+
+Description:
+	Some machines get numbers like 25910246.520000003 for test 7 of
+	base.lex.  That's okay, but the test should allow for it.
+
+Fix:	From rn, say "| patch -p0 -N -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch -p0 -N <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch (version 2.0, latest patchlevel).
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 18
+1c1
+< #define PATCHLEVEL 18
+---
+> #define PATCHLEVEL 19
+ 
+Index: t/base.lex
+Prereq: 1.0.1.2
+*** t/base.lex.old	Thu Feb  4 14:34:07 1988
+--- t/base.lex	Thu Feb  4 14:34:08 1988
+***************
+*** 1,6 ****
+  #!./perl
+  
+! # $Header: base.lex,v 1.0.1.2 88/02/03 16:27:16 root Exp $
+  
+  print "1..7\n";
+  
+--- 1,6 ----
+  #!./perl
+  
+! # $Header: base.lex,v 1.0.1.3 88/02/04 14:33:39 root Exp $
+  
+  print "1..7\n";
+  
+***************
+*** 33,36 ****
+  
+  eval '$foo = 123+123.4+123e4+123.4E5+123.4e+5+.12;';
+  
+! if ($foo eq 25910246.52) {print "ok 7\n";} else {print "not ok 7\n";}
+--- 33,37 ----
+  
+  eval '$foo = 123+123.4+123e4+123.4E5+123.4e+5+.12;';
+  
+! $foo = int($foo * 100 + .5);
+! if ($foo eq 2591024652) {print "ok 7\n";} else {print "not ok 7\n";}

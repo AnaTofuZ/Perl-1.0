@@ -1,0 +1,482 @@
+Path: utzoo!mnetor!uunet!lll-winken!lll-lcc!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #13
+Message-ID: <1209@devvax.JPL.NASA.GOV>
+Date: 2 Feb 88 19:43:03 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 470
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 13
+Priority: MEDIUM-HIGH for 20 minutes, then simmer 3 hours
+Subject: fix for faulty patch 12, plus random portability glitches
+From: pwcmrd!skipnyc!skip (Skip Gilbrech)
+From: kyrimis@Princeton.EDU (Kriton Kyrimis)
+
+Description:
+	I botched patch #12, so that split(' ') only works on the first
+	line of input due to unintended interference by the optimization
+	that was added at the same time.  Yes, I tested it, but only on
+	one line of input.  *Sigh*
+
+	Some glitches have turned up on some of the rusty pig iron out there,
+	so here are some unglitchifications.
+
+Fix:	From rn, say "| patch -p0 -d DIR", where DIR is your perl source
+			      ^^^
+	directory.  Outside of rn, say "cd DIR; patch -p0 <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch.
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 12
+1c1
+< #define PATCHLEVEL 12
+---
+> #define PATCHLEVEL 13
+ 
+Index: Configure
+Prereq: 1.0.1.5
+*** Configure.old	Tue Feb  2 11:27:30 1988
+--- Configure	Tue Feb  2 11:27:33 1988
+***************
+*** 8,14 ****
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.5 88/01/30 09:21:20 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+--- 8,14 ----
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.6 88/02/02 11:20:07 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+***************
+*** 70,79 ****
+--- 70,81 ----
+  cppminus=''
+  d_bcopy=''
+  d_charsprf=''
++ d_crypt=''
+  d_index=''
+  d_statblks=''
+  d_stdstdio=''
+  d_strctcpy=''
++ d_symlink=''
+  d_tminsys=''
+  d_vfork=''
+  d_voidsig=''
+***************
+*** 664,669 ****
+--- 666,681 ----
+      d_charsprf="$undef"
+  fi
+  
++ : see if crypt exists
++ echo " "
++ if $contains crypt libc.list >/dev/null 2>&1; then
++     echo 'crypt() found.'
++     d_crypt="$define"
++ else
++     echo 'crypt() not found.'
++     d_crypt="$undef"
++ fi
++ 
+  : index or strcpy
+  echo " "
+  dflt=y
+***************
+*** 1233,1238 ****
+--- 1245,1260 ----
+      cc=cc
+  fi
+  
++ : see if symlink exists
++ echo " "
++ if $contains symlink libc.list >/dev/null 2>&1; then
++     echo 'symlink() found.'
++     d_symlink="$define"
++ else
++     echo 'symlink() not found.'
++     d_symlink="$undef"
++ fi
++ 
+  : see if we should include -lnm
+  echo " "
+  if $test -r /usr/lib/libnm.a || $test -r /usr/local/lib/libnm.a ; then
+***************
+*** 1328,1337 ****
+--- 1350,1361 ----
+  cppminus='$cppminus'
+  d_bcopy='$d_bcopy'
+  d_charsprf='$d_charsprf'
++ d_crypt='$d_crypt'
+  d_index='$d_index'
+  d_statblks='$d_statblks'
+  d_stdstdio='$d_stdstdio'
+  d_strctcpy='$d_strctcpy'
++ d_symlink='$d_symlink'
+  d_tminsys='$d_tminsys'
+  d_vfork='$d_vfork'
+  d_voidsig='$d_voidsig'
+ 
+Index: Makefile.SH
+Prereq: 1.0.1.4
+*** Makefile.SH.old	Tue Feb  2 11:27:47 1988
+--- Makefile.SH	Tue Feb  2 11:27:48 1988
+***************
+*** 12,22 ****
+  case "$0" in
+  */*) cd `expr X$0 : 'X\(.*\)/'` ;;
+  esac
+  echo "Extracting Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.4 88/01/28 10:17:59 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
+  # Revision 1.0.1.4  88/01/28  10:17:59  root
+  # patch8: added perldb.man
+  # 
+--- 12,31 ----
+  case "$0" in
+  */*) cd `expr X$0 : 'X\(.*\)/'` ;;
+  esac
++ 
++ case "$d_symlink" in
++ *define*) sln='ln -s' ;;
++ *) sln='ln';;
++ esac
++ 
+  echo "Extracting Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.5 88/02/02 11:20:49 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
++ # Revision 1.0.1.5  88/02/02  11:20:49  root
++ # patch13: added d_symlink dependency, changed TEST to ./perl TEST.
++ # 
+  # Revision 1.0.1.4  88/01/28  10:17:59  root
+  # patch8: added perldb.man
+  # 
+***************
+*** 44,49 ****
+--- 53,59 ----
+  LARGE = $large $split
+  mallocsrc = $mallocsrc
+  mallocobj = $mallocobj
++ SLN = $sln
+  
+  libs = $libnm -lm
+  !GROK!THIS!
+***************
+*** 152,158 ****
+  
+  test: perl
+  	chmod 755 t/TEST t/base.* t/comp.* t/cmd.* t/io.* t/op.*
+! 	cd t && (rm -f perl; ln -s ../perl . || ln ../perl .) && TEST
+  
+  clist:
+  	echo $(c) | tr ' ' '\012' >.clist
+--- 162,168 ----
+  
+  test: perl
+  	chmod 755 t/TEST t/base.* t/comp.* t/cmd.* t/io.* t/op.*
+! 	cd t && (rm -f perl; $(SLN) ../perl .) && ./perl TEST
+  
+  clist:
+  	echo $(c) | tr ' ' '\012' >.clist
+ 
+Index: arg.c
+Prereq: 1.0.1.6
+*** arg.c.old	Tue Feb  2 11:28:00 1988
+--- arg.c	Tue Feb  2 11:28:04 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.c,v 1.0.1.6 88/02/01 17:32:26 root Exp $
+   *
+   * $Log:	arg.c,v $
+   * Revision 1.0.1.6  88/02/01  17:32:26  root
+   * patch12: made split(' ') behave like awk in ignoring leading white space.
+   * 
+--- 1,9 ----
+! /* $Header: arg.c,v 1.0.1.7 88/02/02 11:22:19 root Exp $
+   *
+   * $Log:	arg.c,v $
++  * Revision 1.0.1.7  88/02/02  11:22:19  root
++  * patch13: fixed split(' ') to work right second time.  Added CRYPT dependency.
++  * 
+   * Revision 1.0.1.6  88/02/01  17:32:26  root
+   * patch12: made split(' ') behave like awk in ignoring leading white space.
+   * 
+***************
+*** 225,231 ****
+  	m = str_get(eval(spat->spat_runtime,Null(STR***)));
+  	if (!*m || (*m == ' ' && !m[1])) {
+  	    m = "[ \\t\\n]+";
+! 	    while (isspace(*s)) s++;
+  	}
+  	if (spat->spat_runtime->arg_type == O_ITEM &&
+  	  spat->spat_runtime[1].arg_type == A_SINGLE) {
+--- 228,234 ----
+  	m = str_get(eval(spat->spat_runtime,Null(STR***)));
+  	if (!*m || (*m == ' ' && !m[1])) {
+  	    m = "[ \\t\\n]+";
+! 	    spat->spat_flags |= SPAT_SKIPWHITE;
+  	}
+  	if (spat->spat_runtime->arg_type == O_ITEM &&
+  	  spat->spat_runtime[1].arg_type == A_SINGLE) {
+***************
+*** 251,256 ****
+--- 254,263 ----
+      if (!ary)
+  	myarray = ary = anew();
+      ary->ary_fill = -1;
++     if (spat->spat_flags & SPAT_SKIPWHITE) {
++ 	while (isspace(*s))
++ 	    s++;
++     }
+      while (*s && (m = execute(&spat->spat_compex, s, (iters == 0), 1))) {
+  	if (spat->spat_compex.numsubs)
+  	    s = spat->spat_compex.subbase;
+***************
+*** 1952,1959 ****
+--- 1959,1971 ----
+  	retary = Null(STR***);		/* do_stat already did retary */
+  	goto donumset;
+      case O_CRYPT:
++ #ifdef CRYPT
+  	tmps = str_get(sarg[1]);
+  	str_set(str,crypt(tmps,str_get(sarg[2])));
++ #else
++ 	fatal(
++ 	  "The crypt() function is unimplemented due to excessive paranoia.");
++ #endif
+  	break;
+      case O_EXP:
+  	value = exp(str_gnum(sarg[1]));
+ 
+Index: config.h.SH
+*** config.h.SH.old	Tue Feb  2 11:28:14 1988
+--- config.h.SH	Tue Feb  2 11:28:16 1988
+***************
+*** 65,70 ****
+--- 65,76 ----
+   */
+  #$d_charsprf	CHARSPRINTF 	/**/
+  
++ /* CRYPT:
++  *	This symbol, if defined, indicates that the crypt routine is available
++  *	to encrypt passwords and the like.
++  */
++ #$d_crypt	CRYPT		/**/
++ 
+  /* index:
+   *	This preprocessor symbol is defined, along with rindex, if the system
+   *	uses the strchr and strrchr routines instead.
+***************
+*** 94,99 ****
+--- 100,111 ----
+   *	routine of some sort instead.
+   */
+  #$d_strctcpy	STRUCTCOPY	/**/
++ 
++ /* SYMLINK:
++  *	This symbol, if defined, indicates that the symlink routine is available
++  *	to create symbolic links.
++  */
++ #$d_symlink	SYMLINK		/**/
+  
+  /* TMINSYS:
+   *	This symbol is defined if this system declares "struct tm" in
+ 
+Index: makedepend.SH
+Prereq: 1.0
+*** makedepend.SH.old	Tue Feb  2 11:28:23 1988
+--- makedepend.SH	Tue Feb  2 11:28:24 1988
+***************
+*** 15,23 ****
+  echo "Extracting makedepend (with variable substitutions)"
+  $spitshell >makedepend <<!GROK!THIS!
+  $startsh
+! # $Header: makedepend.SH,v 1.0 87/12/18 17:54:32 root Exp $
+  #
+  # $Log:	makedepend.SH,v $
+  # Revision 1.0  87/12/18  17:54:32  root
+  # Initial revision
+  # 
+--- 15,26 ----
+  echo "Extracting makedepend (with variable substitutions)"
+  $spitshell >makedepend <<!GROK!THIS!
+  $startsh
+! # $Header: makedepend.SH,v 1.0.1.1 88/02/02 11:24:05 root Exp $
+  #
+  # $Log:	makedepend.SH,v $
++ # Revision 1.0.1.1  88/02/02  11:24:05  root
++ # patch13: removed spurious -I./h.
++ # 
+  # Revision 1.0  87/12/18  17:54:32  root
+  # Initial revision
+  # 
+***************
+*** 83,89 ****
+  	-e 's|\\$||' \
+  	-e p \
+  	-e '}'
+!     $cpp -I/usr/local/include -I. -I./h $file.c | \
+      $sed \
+  	-e '/^# *[0-9]/!d' \
+  	-e 's/^.*"\(.*\)".*$/'$filebase'.o: \1/' \
+--- 86,92 ----
+  	-e 's|\\$||' \
+  	-e p \
+  	-e '}'
+!     $cpp -I/usr/local/include -I. $file.c | \
+      $sed \
+  	-e '/^# *[0-9]/!d' \
+  	-e 's/^.*"\(.*\)".*$/'$filebase'.o: \1/' \
+ 
+Index: t/op.split
+Prereq: 1.0
+*** t/op.split.old	Tue Feb  2 11:28:40 1988
+--- t/op.split	Tue Feb  2 11:28:40 1988
+***************
+*** 1,8 ****
+  #!./perl
+  
+! # $Header: op.split,v 1.0 87/12/18 13:14:20 root Exp $
+  
+! print "1..4\n";
+  
+  $FS = ':';
+  
+--- 1,8 ----
+  #!./perl
+  
+! # $Header: op.split,v 1.0.1.1 88/02/02 11:26:37 root Exp $
+  
+! print "1..6\n";
+  
+  $FS = ':';
+  
+***************
+*** 22,24 ****
+--- 22,31 ----
+  $_ = "a:b:c::::";
+  @ary = split(/:/);
+  if (join(".",@ary) eq "a.b.c") {print "ok 4\n";} else {print "not ok 4\n";}
++ 
++ $_ = join(':',split(' ','    a b	c '));
++ if ($_ eq 'a:b:c') {print "ok 5\n";} else {print "not ok 5\n";}
++ 
++ $_ = join(':',split(/ */,"foo  bar bie\tdoll"));
++ if ($_ eq "f:o:o:b:a:r:b:i:e:\t:d:o:l:l")
++ 	{print "ok 6\n";} else {print "not ok 6\n";}
+ 
+Index: spat.h
+Prereq: 1.0
+*** spat.h.old	Tue Feb  2 11:28:29 1988
+--- spat.h	Tue Feb  2 11:28:29 1988
+***************
+*** 1,6 ****
+! /* $Header: spat.h,v 1.0 87/12/18 13:06:10 root Exp $
+   *
+   * $Log:	spat.h,v $
+   * Revision 1.0  87/12/18  13:06:10  root
+   * Initial revision
+   * 
+--- 1,9 ----
+! /* $Header: spat.h,v 1.0.1.1 88/02/02 11:24:37 root Exp $
+   *
+   * $Log:	spat.h,v $
++  * Revision 1.0.1.1  88/02/02  11:24:37  root
++  * patch13: added flag for stripping leading spaces on split.
++  * 
+   * Revision 1.0  87/12/18  13:06:10  root
+   * Initial revision
+   * 
+***************
+*** 20,25 ****
+--- 23,29 ----
+  #define SPAT_USE_ONCE 2			/* use pattern only once per article */
+  #define SPAT_SCANFIRST 4		/* initial constant not anchored */
+  #define SPAT_SCANALL 8			/* initial constant is whole pat */
++ #define SPAT_SKIPWHITE 16		/* skip leading whitespace for split */
+  
+  EXT SPAT *spat_root;		/* list of all spats */
+  EXT SPAT *curspat;		/* what to do \ interps from */
+ 
+Index: stab.c
+Prereq: 1.0.1.1
+*** stab.c.old	Tue Feb  2 11:28:33 1988
+--- stab.c	Tue Feb  2 11:28:34 1988
+***************
+*** 1,6 ****
+! /* $Header: stab.c,v 1.0.1.1 88/01/28 10:35:17 root Exp $
+   *
+   * $Log:	stab.c,v $
+   * Revision 1.0.1.1  88/01/28  10:35:17  root
+   * patch8: changed some stabents to support eval operator.
+   * 
+--- 1,9 ----
+! /* $Header: stab.c,v 1.0.1.2 88/02/02 11:25:53 root Exp $
+   *
+   * $Log:	stab.c,v $
++  * Revision 1.0.1.2  88/02/02  11:25:53  root
++  * patch13: moved extern int out of function for a poor Xenix machine.
++  * 
+   * Revision 1.0.1.1  88/01/28  10:35:17  root
+   * patch8: changed some stabents to support eval operator.
+   * 
+***************
+*** 64,69 ****
+--- 67,74 ----
+      ,0
+      };
+  
++ extern int errno;
++ 
+  STR *
+  stab_str(stab)
+  STAB *stab;
+***************
+*** 70,76 ****
+  {
+      register int paren;
+      register char *s;
+-     extern int errno;
+  
+      switch (*stab->stab_name) {
+      case '0': case '1': case '2': case '3': case '4':
+--- 75,80 ----
+

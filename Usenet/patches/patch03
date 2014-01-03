@@ -1,0 +1,108 @@
+Path: bbn.com!bbn!oberon!cit-vax!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #3
+Summary: This is an official patch for perl 1.0.  Please apply it.
+Message-ID: <1145@devvax.JPL.NASA.GOV>
+Date: 24 Jan 88 12:28:53 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 98
+
+System: perl version 1.0
+Patch #: 3
+Priority: HIGH
+Subject: Patch 2 was incomplete
+
+Description:
+	I left one file out of patch 2.  This is perhaps forgivable since
+	it is a file that is produced automatically by metaconfig along
+	with Configure.
+
+Fix:	From rn, say "| patch -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch.
+
+	After applying the patch, rerun Configure.
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 2
+1c1
+< #define PATCHLEVEL 2
+---
+> #define PATCHLEVEL 3
+ 
+Index: config.h.SH
+*** config.h.SH.old	Sun Jan 24 04:23:55 1988
+--- config.h.SH	Sun Jan 24 04:23:56 1988
+***************
+*** 51,56 ****
+--- 51,62 ----
+  #define CPP "$cpp"
+  #define CPPMINUS "$cppminus"
+  
++ /* BCOPY:
++  *	This symbol, if defined, indicates that the bcopy routine is available
++  *	to copy blocks of memory.  Otherwise you should probably use memcpy().
++  */
++ #$d_bcopy	BCOPY		/**/
++ 
+  /* CHARSPRINTF:
+   *	This symbol is defined if this system declares "char *sprintf()" in
+   *	stdio.h.  The trend seems to be to declare it as "int sprintf()".  It
+***************
+*** 70,75 ****
+--- 76,87 ----
+  #$d_index	index strchr	/* cultural */
+  #$d_index	rindex strrchr	/*  differences? */
+  
++ /* STATBLOCKS:
++  *	This symbol is defined if this system has a stat structure declaring
++  *	st_blksize and st_blocks.
++  */
++ #$d_statblks	STATBLOCKS 	/**/
++ 
+  /* STDSTDIO:
+   *	This symbol is defined if this system has a FILE structure declaring
+   *	_ptr and _cnt in stdio.h.
+***************
+*** 82,87 ****
+--- 94,107 ----
+   *	routine of some sort instead.
+   */
+  #$d_strctcpy	STRUCTCOPY	/**/
++ 
++ /* TMINSYS:
++  *	This symbol is defined if this system declares "struct tm" in
++  *	in <sys/time.h> rather than <time.h>.  We can't just say
++  *	-I/usr/include/sys because some systems have both time files, and
++  *	the -I trick gets the wrong one.
++  */
++ #$d_tminsys	TMINSYS 	/**/
+  
+  /* vfork:
+   *	This symbol, if defined, remaps the vfork routine to fork if the

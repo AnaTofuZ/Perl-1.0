@@ -1,0 +1,239 @@
+Path: utzoo!mnetor!uunet!lll-winken!lll-lcc!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #26
+Message-ID: <1476@devvax.JPL.NASA.GOV>
+Date: 4 Mar 88 04:08:22 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 228
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 26
+Priority: As high as patches 24 and 25
+Subject: patch 24 made use of a possibly unknown type
+
+Description:
+	Some of the code for file tests calls the getgroups() system call
+	on systems that support it.  Unfortunately, it is rather difficult
+	to determine what type of array it returns.  On 4.3 it returns gid_t,
+	on our Suns, int, and on Masscomp, ushort.  There is now a Configure
+	unit that figures it all out.
+
+Fix:	From rn, say "| patch -p0 -N -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch -p0 -N <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch (version 2.0, latest patchlevel).
+
+	After patching:
+		Configure
+		make depend
+		make
+		make test
+		make install
+		cd x2p
+		make depend
+		make
+		make install
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 25
+1c1
+< #define PATCHLEVEL 25
+---
+> #define PATCHLEVEL 26
+ 
+Index: Configure
+Prereq: 1.0.1.8
+*** Configure.old	Thu Mar  3 16:04:15 1988
+--- Configure	Thu Mar  3 16:04:19 1988
+***************
+*** 8,14 ****
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.8 88/02/25 11:29:46 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+--- 8,14 ----
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.9 88/03/03 16:02:26 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+***************
+*** 81,86 ****
+--- 81,87 ----
+  d_tminsys=''
+  d_vfork=''
+  d_voidsig=''
++ gidtype=''
+  libc=''
+  libnm=''
+  mallocsrc=''
+***************
+*** 770,775 ****
+--- 771,786 ----
+  fi
+  $rm -f try.*
+  
++ : see if symlink exists
++ echo " "
++ if $contains symlink libc.list >/dev/null 2>&1; then
++     echo 'symlink() found.'
++     d_symlink="$define"
++ else
++     echo 'symlink() not found.'
++     d_symlink="$undef"
++ fi
++ 
+  : see if struct tm is defined in sys/time.h
+  echo " "
+  if $contains 'struct tm' /usr/include/time.h >/dev/null 2>&1 ; then
+***************
+*** 870,875 ****
+--- 881,909 ----
+  voidflags="$ans"
+  $rm -f try.* .out
+  
++ : see what type gids are declared as in the kernel
++ case "$gidtype" in
++ '')
++     if $contains 'gid_t;' /usr/include/sys/types.h >/dev/null 2>&1 ; then
++ 	dflt='gid_t';
++     else
++ 	set `grep 'groups\[NGROUPS\];' /usr/include/sys/user.h 2>/dev/null` unsigned short
++ 	case $1 in
++ 	unsigned) dflt="$1 $2" ;;
++ 	*) dflt="$1" ;;
++ 	esac
++     fi
++     ;;
++ *)  dflt="$gidtype"
++     ;;
++ esac
++ cont=true
++ echo " "
++ rp="What type are group ids on this system declared as? [$dflt]"
++ $echo $n "$rp $c"
++ . myread
++ gidtype="$ans"
++ 
+  : see what type of char stdio uses.
+  echo " "
+  if $contains 'unsigned.*char.*_ptr;' /usr/include/stdio.h >/dev/null 2>&1 ; then
+***************
+*** 1264,1279 ****
+      cc=cc
+  fi
+  
+- : see if symlink exists
+- echo " "
+- if $contains symlink libc.list >/dev/null 2>&1; then
+-     echo 'symlink() found.'
+-     d_symlink="$define"
+- else
+-     echo 'symlink() not found.'
+-     d_symlink="$undef"
+- fi
+- 
+  : see if we should include -lnm
+  echo " "
+  if $test -r /usr/lib/libnm.a || $test -r /usr/local/lib/libnm.a ; then
+--- 1298,1303 ----
+***************
+*** 1380,1385 ****
+--- 1404,1410 ----
+  d_tminsys='$d_tminsys'
+  d_vfork='$d_vfork'
+  d_voidsig='$d_voidsig'
++ gidtype='$gidtype'
+  libc='$libc'
+  libnm='$libnm'
+  mallocsrc='$mallocsrc'
+ 
+Index: arg.c
+Prereq: 1.0.1.13
+*** arg.c.old	Thu Mar  3 16:04:42 1988
+--- arg.c	Thu Mar  3 16:04:50 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.c,v 1.0.1.13 88/03/02 11:29:29 root Exp $
+   *
+   * $Log:	arg.c,v $
+   * Revision 1.0.1.13  88/03/02  11:29:29  root
+   * patch24: upgraded runtime error messages
+   * patch24: sprintf blasts errno on Xenix
+--- 1,9 ----
+! /* $Header: arg.c,v 1.0.1.14 88/03/03 16:02:57 root Exp $
+   *
+   * $Log:	arg.c,v $
++  * Revision 1.0.1.14  88/03/03  16:02:57  root
++  * patch26: use GIDTYPE for getgroups() call
++  * 
+   * Revision 1.0.1.13  88/03/02  11:29:29  root
+   * patch24: upgraded runtime error messages
+   * patch24: sprintf blasts errno on Xenix
+***************
+*** 2231,2237 ****
+  		str = &str_yes;	/* ok as "group" */
+  	    else {
+  #ifdef NGROUPS
+! 		gid_t gary[NGROUPS];
+  
+  		str = &str_no;
+  		anum = getgroups(NGROUPS,gary);
+--- 2234,2240 ----
+  		str = &str_yes;	/* ok as "group" */
+  	    else {
+  #ifdef NGROUPS
+! 		GIDTYPE gary[NGROUPS];
+  
+  		str = &str_no;
+  		anum = getgroups(NGROUPS,gary);
+ 
+Index: config.h.SH
+*** config.h.SH.old	Thu Mar  3 16:05:04 1988
+--- config.h.SH	Thu Mar  3 16:05:05 1988
+***************
+*** 136,141 ****
+--- 136,147 ----
+   */
+  #$d_voidsig	VOIDSIG 	/**/
+  
++ /* GIDTYPE:
++  *	This symbol has a value like gid_t, int, ushort, or whatever type is
++  *	used to declare group ids in the kernel.
++  */
++ #define GIDTYPE $gidtype		/**/
++ 
+  /* STDCHAR:
+   *	This symbol is defined to be the type of char used in stdio.h.
+   *	It has the values "unsigned char" or "char".

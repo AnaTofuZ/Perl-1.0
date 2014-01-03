@@ -1,0 +1,655 @@
+Path: utzoo!mnetor!uunet!husc6!hao!ames!elroy!devvax!lwall
+From: lwall@devvax.JPL.NASA.GOV (Larry Wall)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #18 (REPOST)
+Message-ID: <1237@devvax.JPL.NASA.GOV>
+Date: 5 Feb 88 19:04:31 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 645
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 18
+Priority: LOW if you have void, MEDIUM if not
+Subject: irregular #includes break #define void int
+From: hplabs!hpwala!rob (Rob Sartin)
+
+Description:
+	Due to the helter-skelter order of includes, config.h wasn't included
+	in time for some purposes.  This patch regularizes all .c files to
+	include perl.h (and thus config.h) as the first thing (after including
+	EXTERN.h or INTERN.h).
+
+	NOTE:  This isn't related, but if you are on System V and have trouble
+	in the regression testing (such as op.unshift looping), try saying
+	"yes" to Configure when it asks whether to use the malloc that comes
+	with perl.  Some people have found this helpful.  Presumably I'm
+	calling malloc/free with something that's confusing some Sys V mallocs,
+	but I haven't chased it down yet.
+
+Fix:	From rn, say "| patch -p0 -N -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch -p0 -N <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch (version 2.0, latest patchlevel).
+
+	After patching, do:
+	    make depend
+	    make
+	    make test
+	    make install
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 17
+1c1
+< #define PATCHLEVEL 17
+---
+> #define PATCHLEVEL 18
+ 
+Index: arg.c
+Prereq: 1.0.1.7
+*** arg.c.old	Thu Feb  4 11:28:43 1988
+--- arg.c	Thu Feb  4 11:28:49 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.c,v 1.0.1.7 88/02/02 11:22:19 root Exp $
+   *
+   * $Log:	arg.c,v $
+   * Revision 1.0.1.7  88/02/02  11:22:19  root
+   * patch13: fixed split(' ') to work right second time.  Added CRYPT dependency.
+   * 
+--- 1,9 ----
+! /* $Header: arg.c,v 1.0.1.8 88/02/04 11:14:58 root Exp $
+   *
+   * $Log:	arg.c,v $
++  * Revision 1.0.1.8  88/02/04  11:14:58  root
++  * patch18: regularized includes.
++  * 
+   * Revision 1.0.1.7  88/02/02  11:22:19  root
+   * patch13: fixed split(' ') to work right second time.  Added CRYPT dependency.
+   * 
+***************
+*** 24,35 ****
+   * 
+   */
+  
+- #include <signal.h>
+- #include "handy.h"
+  #include "EXTERN.h"
+- #include "search.h"
+- #include "util.h"
+  #include "perl.h"
+  
+  ARG *debarg;
+  
+--- 27,36 ----
+   * 
+   */
+  
+  #include "EXTERN.h"
+  #include "perl.h"
++ 
++ #include <signal.h>
+  
+  ARG *debarg;
+  
+ 
+Index: array.c
+Prereq: 1.0
+*** array.c.old	Thu Feb  4 11:29:04 1988
+--- array.c	Thu Feb  4 11:29:04 1988
+***************
+*** 1,16 ****
+! /* $Header: array.c,v 1.0 87/12/18 13:04:42 root Exp $
+   *
+   * $Log:	array.c,v $
+   * Revision 1.0  87/12/18  13:04:42  root
+   * Initial revision
+   * 
+   */
+  
+- #include <stdio.h>
+  #include "EXTERN.h"
+- #include "handy.h"
+- #include "util.h"
+- #include "search.h"
+  #include "perl.h"
+  
+  STR *
+--- 1,15 ----
+! /* $Header: array.c,v 1.0.1.1 88/02/04 11:15:54 root Exp $
+   *
+   * $Log:	array.c,v $
++  * Revision 1.0.1.1  88/02/04  11:15:54  root
++  * patch18: regularized includes.
++  * 
+   * Revision 1.0  87/12/18  13:04:42  root
+   * Initial revision
+   * 
+   */
+  
+  #include "EXTERN.h"
+  #include "perl.h"
+  
+  STR *
+ 
+Index: cmd.c
+Prereq: 1.0.1.1
+*** cmd.c.old	Thu Feb  4 11:29:10 1988
+--- cmd.c	Thu Feb  4 11:29:11 1988
+***************
+*** 1,6 ****
+! /* $Header: cmd.c,v 1.0.1.1 88/01/21 21:24:16 root Exp $
+   *
+   * $Log:	cmd.c,v $
+   * Revision 1.0.1.1  88/01/21  21:24:16  root
+   * The redo cmd got a segmentation fault because trace context stack overflowed.
+   * 
+--- 1,9 ----
+! /* $Header: cmd.c,v 1.0.1.2 88/02/04 11:15:58 root Exp $
+   *
+   * $Log:	cmd.c,v $
++  * Revision 1.0.1.2  88/02/04  11:15:58  root
++  * patch18: regularized includes.
++  * 
+   * Revision 1.0.1.1  88/01/21  21:24:16  root
+   * The redo cmd got a segmentation fault because trace context stack overflowed.
+   * 
+***************
+*** 9,18 ****
+   * 
+   */
+  
+- #include "handy.h"
+  #include "EXTERN.h"
+- #include "search.h"
+- #include "util.h"
+  #include "perl.h"
+  
+  static STR str_chop;
+--- 12,18 ----
+ 
+Index: dump.c
+Prereq: 1.0
+*** dump.c.old	Thu Feb  4 11:29:18 1988
+--- dump.c	Thu Feb  4 11:29:19 1988
+***************
+*** 1,15 ****
+! /* $Header: dump.c,v 1.0 87/12/18 13:05:03 root Exp $
+   *
+   * $Log:	dump.c,v $
+   * Revision 1.0  87/12/18  13:05:03  root
+   * Initial revision
+   * 
+   */
+  
+- #include "handy.h"
+  #include "EXTERN.h"
+- #include "search.h"
+- #include "util.h"
+  #include "perl.h"
+  
+  #ifdef DEBUGGING
+--- 1,15 ----
+! /* $Header: dump.c,v 1.0.1.1 88/02/04 11:16:02 root Exp $
+   *
+   * $Log:	dump.c,v $
++  * Revision 1.0.1.1  88/02/04  11:16:02  root
++  * patch18: regularized includes.
++  * 
+   * Revision 1.0  87/12/18  13:05:03  root
+   * Initial revision
+   * 
+   */
+  
+  #include "EXTERN.h"
+  #include "perl.h"
+  
+  #ifdef DEBUGGING
+ 
+Index: form.c
+Prereq: 1.0
+*** form.c.old	Thu Feb  4 11:29:24 1988
+--- form.c	Thu Feb  4 11:29:25 1988
+***************
+*** 1,15 ****
+! /* $Header: form.c,v 1.0 87/12/18 13:05:07 root Exp $
+   *
+   * $Log:	form.c,v $
+   * Revision 1.0  87/12/18  13:05:07  root
+   * Initial revision
+   * 
+   */
+  
+- #include "handy.h"
+  #include "EXTERN.h"
+- #include "search.h"
+- #include "util.h"
+  #include "perl.h"
+  
+  /* Forms stuff */
+--- 1,15 ----
+! /* $Header: form.c,v 1.0.1.1 88/02/04 11:16:16 root Exp $
+   *
+   * $Log:	form.c,v $
++  * Revision 1.0.1.1  88/02/04  11:16:16  root
++  * patch18: regularized includes.
++  * 
+   * Revision 1.0  87/12/18  13:05:07  root
+   * Initial revision
+   * 
+   */
+  
+  #include "EXTERN.h"
+  #include "perl.h"
+  
+  /* Forms stuff */
+ 
+Index: hash.c
+Prereq: 1.0
+*** hash.c.old	Thu Feb  4 11:29:34 1988
+--- hash.c	Thu Feb  4 11:29:35 1988
+***************
+*** 1,16 ****
+! /* $Header: hash.c,v 1.0 87/12/18 13:05:17 root Exp $
+   *
+   * $Log:	hash.c,v $
+   * Revision 1.0  87/12/18  13:05:17  root
+   * Initial revision
+   * 
+   */
+  
+- #include <stdio.h>
+  #include "EXTERN.h"
+- #include "handy.h"
+- #include "util.h"
+- #include "search.h"
+  #include "perl.h"
+  
+  STR *
+--- 1,15 ----
+! /* $Header: hash.c,v 1.0.1.1 88/02/04 11:16:20 root Exp $
+   *
+   * $Log:	hash.c,v $
++  * Revision 1.0.1.1  88/02/04  11:16:20  root
++  * patch18: regularized includes.
++  * 
+   * Revision 1.0  87/12/18  13:05:17  root
+   * Initial revision
+   * 
+   */
+  
+  #include "EXTERN.h"
+  #include "perl.h"
+  
+  STR *
+ 
+Index: malloc.c
+Prereq: 1.0.1.1
+*** malloc.c.old	Thu Feb  4 11:29:43 1988
+--- malloc.c	Thu Feb  4 11:29:44 1988
+***************
+*** 1,6 ****
+! /* $Header: malloc.c,v 1.0.1.1 88/01/24 03:53:23 root Exp $
+   *
+   * $Log:	malloc.c,v $
+   * Revision 1.0.1.1  88/01/24  03:53:23  root
+   * patch 2: made depend on perl.h.
+   * 
+--- 1,9 ----
+! /* $Header: malloc.c,v 1.0.1.2 88/02/04 11:16:24 root Exp $
+   *
+   * $Log:	malloc.c,v $
++  * Revision 1.0.1.2  88/02/04  11:16:24  root
++  * patch18: regularized includes.
++  * 
+   * Revision 1.0.1.1  88/01/24  03:53:23  root
+   * patch 2: made depend on perl.h.
+   * 
+***************
+*** 12,18 ****
+  #ifndef lint
+  static char sccsid[] = "@(#)malloc.c	4.3 (Berkeley) 9/16/83";
+  #endif
+- #include <stdio.h>
+  
+  #define RCHECK
+  /*
+--- 15,20 ----
+***************
+*** 28,35 ****
+   */
+  
+  #include "EXTERN.h"
+- #include "handy.h"
+- #include "search.h"
+  #include "perl.h"
+  
+  /* I don't much care whether these are defined in sys/types.h--LAW */
+--- 30,35 ----
+ 
+Index: perl.h
+Prereq: 1.0.1.4
+*** perl.h.old	Thu Feb  4 11:29:53 1988
+--- perl.h	Thu Feb  4 11:29:54 1988
+***************
+*** 1,6 ****
+! /* $Header: perl.h,v 1.0.1.4 88/01/30 08:54:00 root Exp $
+   *
+   * $Log:	perl.h,v $
+   * Revision 1.0.1.4  88/01/30  08:54:00  root
+   * patch9: changed #define YYDEBUG; to #define YYDEBUG 1
+   * 
+--- 1,9 ----
+! /* $Header: perl.h,v 1.0.1.5 88/02/04 11:19:35 root Exp $
+   *
+   * $Log:	perl.h,v $
++  * Revision 1.0.1.5  88/02/04  11:19:35  root
++  * patch18: regularized includes.
++  * 
+   * Revision 1.0.1.4  88/01/30  08:54:00  root
+   * patch9: changed #define YYDEBUG; to #define YYDEBUG 1
+   * 
+***************
+*** 51,57 ****
+--- 54,64 ----
+  typedef struct string STR;
+  typedef struct atbl ARRAY;
+  typedef struct htbl HASH;
++ typedef struct compex COMPEX;
+  
++ #include "handy.h"
++ #include "search.h"
++ #include "util.h"
+  #include "str.h"
+  #include "form.h"
+  #include "stab.h"
+ 
+Index: perl.y
+Prereq: 1.0.1.1
+*** perl.y.old	Thu Feb  4 11:30:01 1988
+--- perl.y	Thu Feb  4 11:30:02 1988
+***************
+*** 1,6 ****
+! /* $Header: perl.y,v 1.0.1.1 88/01/28 10:25:31 root Exp $
+   *
+   * $Log:	perl.y,v $
+   * Revision 1.0.1.1  88/01/28  10:25:31  root
+   * patch8: added eval operator.
+   * 
+--- 1,9 ----
+! /* $Header: perl.y,v 1.0.1.2 88/02/04 11:17:12 root Exp $
+   *
+   * $Log:	perl.y,v $
++  * Revision 1.0.1.2  88/02/04  11:17:12  root
++  * patch18: regularized includes.
++  * 
+   * Revision 1.0.1.1  88/01/28  10:25:31  root
+   * patch8: added eval operator.
+   * 
+***************
+*** 10,21 ****
+   */
+  
+  %{
+- #include "handy.h"
+- #include "EXTERN.h"
+- #include "search.h"
+- #include "util.h"
+  #include "INTERN.h"
+  #include "perl.h"
+  char *tokename[] = {
+  "256",
+  "word",
+--- 13,21 ----
+   */
+  
+  %{
+  #include "INTERN.h"
+  #include "perl.h"
++ 
+  char *tokename[] = {
+  "256",
+  "word",
+ 
+Index: search.c
+Prereq: 1.0.1.2
+*** search.c.old	Thu Feb  4 11:30:13 1988
+--- search.c	Thu Feb  4 11:30:14 1988
+***************
+*** 1,6 ****
+! /* $Header: search.c,v 1.0.1.2 88/01/28 10:30:46 root Exp $
+   *
+   * $Log:	search.c,v $
+   * Revision 1.0.1.2  88/01/28  10:30:46  root
+   * patch8: uncommented free_compex for use with eval operator.
+   * 
+--- 1,9 ----
+! /* $Header: search.c,v 1.0.1.3 88/02/04 11:16:48 root Exp $
+   *
+   * $Log:	search.c,v $
++  * Revision 1.0.1.3  88/02/04  11:16:48  root
++  * patch18: regularized includes.
++  * 
+   * Revision 1.0.1.2  88/01/28  10:30:46  root
+   * patch8: uncommented free_compex for use with eval operator.
+   * 
+***************
+*** 14,24 ****
+  
+  /* string search routines */
+   
+- #include "EXTERN.h"
+- #include "handy.h"
+- #include "util.h"
+- #include "INTERN.h"
+- #include "search.h"
+  #include "EXTERN.h"
+  #include "perl.h"
+  
+--- 17,22 ----
+ 
+Index: search.h
+Prereq: 1.0
+*** search.h.old	Thu Feb  4 11:30:21 1988
+--- search.h	Thu Feb  4 11:30:22 1988
+***************
+*** 1,6 ****
+! /* $Header: search.h,v 1.0 87/12/18 13:06:06 root Exp $
+   *
+   * $Log:	search.h,v $
+   * Revision 1.0  87/12/18  13:06:06  root
+   * Initial revision
+   * 
+--- 1,10 ----
+! /* $Header: search.h,v 1.0.1.1 88/02/04 11:20:02 root Exp $
+   *
+   * $Log:	search.h,v $
++  * Revision 1.0.1.1  88/02/04  11:20:02  root
++  * patch18: regularized includes.  Changed typedef COMPEX to struct compex
++  * 	so that typedef COMPEX could be done as a forward declaration.
++  * 
+   * Revision 1.0  87/12/18  13:06:06  root
+   * Initial revision
+   * 
+***************
+*** 10,16 ****
+  #define	MAXSUB	10		/* how many sub-patterns are allowed */
+  #define MAXALT	10		/* how many alternatives are allowed */
+   
+! typedef struct {	
+      char *precomp;		/* the original pattern, for debug output */
+      char *compbuf;		/* the compiled pattern */
+      int complen;		/* length of compbuf */
+--- 14,20 ----
+  #define	MAXSUB	10		/* how many sub-patterns are allowed */
+  #define MAXALT	10		/* how many alternatives are allowed */
+   
+! struct compex {	
+      char *precomp;		/* the original pattern, for debug output */
+      char *compbuf;		/* the compiled pattern */
+      int complen;		/* length of compbuf */
+***************
+*** 21,27 ****
+      char lastparen;		/* which subpattern matched last */
+      char numsubs;		/* how many subpatterns the compiler saw */
+      bool do_folding;		/* fold upper and lower case? */
+! } COMPEX;
+  
+  EXT int multiline INIT(0);
+  
+--- 25,31 ----
+      char lastparen;		/* which subpattern matched last */
+      char numsubs;		/* how many subpatterns the compiler saw */
+      bool do_folding;		/* fold upper and lower case? */
+! };
+  
+  EXT int multiline INIT(0);
+  
+ 
+Index: stab.c
+Prereq: 1.0.1.4
+*** stab.c.old	Thu Feb  4 11:30:29 1988
+--- stab.c	Thu Feb  4 11:30:31 1988
+***************
+*** 1,6 ****
+! /* $Header: stab.c,v 1.0.1.4 88/02/04 10:26:31 root Exp $
+   *
+   * $Log:	stab.c,v $
+   * Revision 1.0.1.4  88/02/04  10:26:31  root
+   * patch17: now prints warning if no signal handler defined.
+   * 
+--- 1,9 ----
+! /* $Header: stab.c,v 1.0.1.5 88/02/04 11:16:57 root Exp $
+   *
+   * $Log:	stab.c,v $
++  * Revision 1.0.1.5  88/02/04  11:16:57  root
++  * patch18: regularized includes.
++  * 
+   * Revision 1.0.1.4  88/02/04  10:26:31  root
+   * patch17: now prints warning if no signal handler defined.
+   * 
+***************
+*** 18,29 ****
+   * 
+   */
+  
+- #include <signal.h>
+- #include "handy.h"
+  #include "EXTERN.h"
+- #include "search.h"
+- #include "util.h"
+  #include "perl.h"
+  
+  static char *sig_name[] = {
+      "",
+--- 21,30 ----
+   * 
+   */
+  
+  #include "EXTERN.h"
+  #include "perl.h"
++ 
++ #include <signal.h>
+  
+  static char *sig_name[] = {
+      "",
+ 
+Index: str.c
+Prereq: 1.0.1.1
+*** str.c.old	Thu Feb  4 11:30:38 1988
+--- str.c	Thu Feb  4 11:30:40 1988
+***************
+*** 1,6 ****
+! /* $Header: str.c,v 1.0.1.1 88/01/21 21:28:39 root Exp $
+   *
+   * $Log:	str.c,v $
+   * Revision 1.0.1.1  88/01/21  21:28:39  root
+   * Suppressed warning messages on signed vs unsigned chars in str_gets().
+   * 
+--- 1,9 ----
+! /* $Header: str.c,v 1.0.1.2 88/02/04 11:17:02 root Exp $
+   *
+   * $Log:	str.c,v $
++  * Revision 1.0.1.2  88/02/04  11:17:02  root
++  * patch18: regularized includes.
++  * 
+   * Revision 1.0.1.1  88/01/21  21:28:39  root
+   * Suppressed warning messages on signed vs unsigned chars in str_gets().
+   * 
+***************
+*** 9,18 ****
+   * 
+   */
+  
+- #include "handy.h"
+  #include "EXTERN.h"
+- #include "search.h"
+- #include "util.h"
+  #include "perl.h"
+  
+  str_reset(s)
+--- 12,18 ----
+ 
+Index: util.c
+Prereq: 1.0.1.2
+*** util.c.old	Thu Feb  4 11:30:51 1988
+--- util.c	Thu Feb  4 11:30:52 1988
+***************
+*** 1,6 ****
+! /* $Header: util.c,v 1.0.1.2 88/02/04 00:15:15 root Exp $
+   *
+   * $Log:	util.c,v $
+   * Revision 1.0.1.2  88/02/04  00:15:15  root
+   * patch16: safefree wasn't safe from null pointers.
+   * 
+--- 1,9 ----
+! /* $Header: util.c,v 1.0.1.3 88/02/04 11:17:05 root Exp $
+   *
+   * $Log:	util.c,v $
++  * Revision 1.0.1.3  88/02/04  11:17:05  root
++  * patch18: regularized includes.
++  * 
+   * Revision 1.0.1.2  88/02/04  00:15:15  root
+   * patch16: safefree wasn't safe from null pointers.
+   * 
+***************
+*** 12,25 ****
+   * 
+   */
+  
+- #include <stdio.h>
+- 
+- #include "handy.h"
+  #include "EXTERN.h"
+- #include "search.h"
+  #include "perl.h"
+- #include "INTERN.h"
+- #include "util.h"
+  
+  #define FLUSH
+  #define MEM_SIZE unsigned int
+--- 15,22 ----

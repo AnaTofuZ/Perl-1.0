@@ -1,0 +1,480 @@
+Path: utzoo!mnetor!uunet!lll-winken!lll-lcc!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #11
+Message-ID: <1189@devvax.JPL.NASA.GOV>
+Date: 1 Feb 88 17:30:11 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 469
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 11
+Priority: LOW
+Subject: documentation upgrade
+From: lwall@jpl-devvax.jpl.nasa.gov (Larry Wall)
+From: markb@rdcf.sm.unisys.com (Mark Biggar)
+
+Description:
+	I documented the new eval operator for patch 8 but my automatic
+	patch generator overlooked it for some reason.
+
+	Here's the documentation for the eval operator, along with some
+	other documentation changes suggested by Mark.
+
+Fix:	From rn, say "| patch -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch.
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 10
+1c1
+< #define PATCHLEVEL 10
+---
+> #define PATCHLEVEL 11
+ 
+Index: perl.man.1
+Prereq: 1.0
+*** perl.man.1.old	Sat Jan 30 17:05:13 1988
+--- perl.man.1	Sat Jan 30 17:05:15 1988
+***************
+*** 1,7 ****
+  .rn '' }`
+! ''' $Header: perl.man.1,v 1.0 87/12/18 16:18:16 root Exp $
+  ''' 
+  ''' $Log:	perl.man.1,v $
+  ''' Revision 1.0  87/12/18  16:18:16  root
+  ''' Initial revision
+  ''' 
+--- 1,13 ----
+  .rn '' }`
+! ''' $Header: perl.man.1,v 1.0.1.2 88/01/30 17:04:07 root Exp $
+  ''' 
+  ''' $Log:	perl.man.1,v $
++ ''' Revision 1.0.1.2  88/01/30  17:04:07  root
++ ''' patch 11: random cleanup
++ ''' 
++ ''' Revision 1.0.1.1  88/01/28  10:24:44  root
++ ''' patch8: added eval operator.
++ ''' 
+  ''' Revision 1.0  87/12/18  16:18:16  root
+  ''' Initial revision
+  ''' 
+***************
+*** 92,98 ****
+  compiles it to an internal form.
+  If the script is syntactically correct, it is executed.
+  .Sh "Options"
+! Note: on first reading this section won't make much sense to you.  It's here
+  at the front for easy reference.
+  .PP
+  A single-character option may be combined with the following option, if any.
+--- 98,104 ----
+  compiles it to an internal form.
+  If the script is syntactically correct, it is executed.
+  .Sh "Options"
+! Note: on first reading this section may not make much sense to you.  It's here
+  at the front for easy reference.
+  .PP
+  A single-character option may be combined with the following option, if any.
+***************
+*** 208,213 ****
+--- 214,224 ----
+  To suppress printing use the
+  .B \-n
+  switch.
++ A
++ .B \-p
++ overrides a
++ .B \-n
++ switch.
+  .TP 5
+  .B \-P
+  causes your script to be run through the C preprocessor before
+***************
+*** 219,235 ****
+  .TP 5
+  .B \-s
+  enables some rudimentary switch parsing for switches on the command line
+! after the script name but before any filename arguments.
+! Any switch found there will set the corresponding variable in the
+  .I perl
+  script.
+  The following script prints \*(L"true\*(R" if and only if the script is
+! invoked with a -x switch.
+  .nf
+  
+  .ne 2
+  	#!/bin/perl -s
+! 	if ($x) { print "true\en"; }
+  
+  .fi
+  .Sh "Data Types and Objects"
+--- 230,246 ----
+  .TP 5
+  .B \-s
+  enables some rudimentary switch parsing for switches on the command line
+! after the script name but before any filename arguments (or before a --).
+! Any switch found there is removed from @ARGV and sets the corresponding variable in the
+  .I perl
+  script.
+  The following script prints \*(L"true\*(R" if and only if the script is
+! invoked with a -xyz switch.
+  .nf
+  
+  .ne 2
+  	#!/bin/perl -s
+! 	if ($xyz) { print "true\en"; }
+  
+  .fi
+  .Sh "Data Types and Objects"
+***************
+*** 307,312 ****
+--- 318,325 ----
+      print "The price is $Price.\e\|n";\h'|3.5i'# interpreted
+  
+  .fi
++ Note that you can put curly brackets around the identifier to delimit it
++ from following alphanumerics.
+  .PP
+  Array literals are denoted by separating individual values by commas, and
+  enclosing the list in parentheses.
+***************
+*** 315,320 ****
+--- 328,334 ----
+  For example,
+  .nf
+  
++ .ne 4
+      @foo = ('cc', '\-E', $bar);
+  
+  assigns the entire array value to array foo, but
+***************
+*** 343,348 ****
+--- 357,363 ----
+  The command is executed each time the pseudo-literal is evaluated.
+  Unlike in \f2csh\f1, no interpretation is done on the
+  data\*(--newlines remain newlines.
++ The status value of the command is returned in $?.
+  .PP
+  Evaluating a filehandle in angle brackets yields the next line
+  from that file (newline included, so it's never false until EOF).
+***************
+*** 409,415 ****
+--- 424,432 ----
+  It also uses filehandle ARGV internally.
+  You can modify @ARGV before the first <> as long as you leave the first
+  filename at the beginning of the array.
++ Line numbers ($.) continue as if the input was one big happy file.
+  .PP
++ .ne 5
+  If you want to set @ARGV to you own list of files, go right ahead.
+  If you want to pass switches into your script, you can
+  put a loop on the front like this:
+***************
+*** 486,492 ****
+  	LABEL BLOCK continue BLOCK
+  
+  .fi
+! (Note that, unlike C and Pascal, these are defined in terms of BLOCKs, not
+  statements.
+  This means that the curly brackets are \fIrequired\fR\*(--no dangling statements allowed.
+  If you want to write conditionals without curly brackets there are several
+--- 503,509 ----
+  	LABEL BLOCK continue BLOCK
+  
+  .fi
+! Note that, unlike C and Pascal, these are defined in terms of BLOCKs, not
+  statements.
+  This means that the curly brackets are \fIrequired\fR\*(--no dangling statements allowed.
+  If you want to write conditionals without curly brackets there are several
+***************
+*** 499,507 ****
+      die "Can't open $foo" unless open(foo);
+      open(foo) || die "Can't open $foo";	# foo or bust!
+      open(foo) ? die "Can't open $foo" : 'hi mom';
+  
+  .fi
+- though the last one is a bit exotic.)
+  .PP
+  The
+  .I if
+--- 516,524 ----
+      die "Can't open $foo" unless open(foo);
+      open(foo) || die "Can't open $foo";	# foo or bust!
+      open(foo) ? die "Can't open $foo" : 'hi mom';
++ 			    # a bit exotic, that last one
+  
+  .fi
+  .PP
+  The
+  .I if
+***************
+*** 641,647 ****
+  (See the
+  .I do
+  operator below.  Note also that the loop control commands described later will
+! NOT work in this construct, since loop modifiers don't take loop labels.
+  Sorry.)
+  .Sh "Expressions"
+  Since
+--- 658,664 ----
+  (See the
+  .I do
+  operator below.  Note also that the loop control commands described later will
+! NOT work in this construct, since modifiers don't take loop labels.
+  Sorry.)
+  .Sh "Expressions"
+  Since
+***************
+*** 839,848 ****
+  	$cnt = (chown $uid,$gid,'foo');
+  
+  .fi
+  Here's an example of looking up non-numeric uids:
+  .nf
+  
+- .ne 16
+  	print "User: ";
+  	$user = <stdin>;
+  	open(pass,'/etc/passwd') || die "Can't open passwd";
+--- 856,865 ----
+  	$cnt = (chown $uid,$gid,'foo');
+  
+  .fi
++ .ne 18
+  Here's an example of looking up non-numeric uids:
+  .nf
+  
+  	print "User: ";
+  	$user = <stdin>;
+  	open(pass,'/etc/passwd') || die "Can't open passwd";
+***************
+*** 922,927 ****
+--- 939,945 ----
+  assigned produces a FALSE (0) value).
+  The next call to each() after that will start iterating again.
+  The iterator can be reset only by reading all the elements from the array.
++ You should not modify the array while iterating over it.
+  The following prints out your environment like the printenv program, only
+  in a different order:
+  .nf
+***************
+*** 954,959 ****
+--- 972,986 ----
+  	}
+  
+  .fi
++ .Ip "eval EXPR" 8 6
++ EXPR is parsed and executed as if it were a little perl program.
++ It is executed in the context of the current perl program, so that
++ any variable settings, subroutine or format definitions remain afterwards.
++ The value returned is the value of the last expression evaluated, just
++ as with subroutines.
++ If there is a syntax error or runtime error, a null string is returned by
++ eval, and $@ is set to the error message.
++ If there was no error, $@ is null.
+  .Ip "exec LIST" 8 6
+  If there is more than one argument in LIST,
+  calls execvp() with the arguments in LIST.
+ 
+Index: perl.man.2
+Prereq: 1.0
+*** perl.man.2.old	Sat Jan 30 17:05:24 1988
+--- perl.man.2	Sat Jan 30 17:05:26 1988
+***************
+*** 1,7 ****
+  ''' Beginning of part 2
+! ''' $Header: perl.man.2,v 1.0 87/12/18 16:18:41 root Exp $
+  '''
+  ''' $Log:	perl.man.2,v $
+  ''' Revision 1.0  87/12/18  16:18:41  root
+  ''' Initial revision
+  ''' 
+--- 1,13 ----
+  ''' Beginning of part 2
+! ''' $Header: perl.man.2,v 1.0.1.2 88/01/30 17:04:28 root Exp $
+  '''
+  ''' $Log:	perl.man.2,v $
++ ''' Revision 1.0.1.2  88/01/30  17:04:28  root
++ ''' patch 11: random cleanup
++ ''' 
++ ''' Revision 1.0.1.1  88/01/28  10:25:11  root
++ ''' patch8: added $@ variable.
++ ''' 
+  ''' Revision 1.0  87/12/18  16:18:41  root
+  ''' Initial revision
+  ''' 
+***************
+*** 145,152 ****
+  with a \*(L"|\*(R", the filename is interpreted as command which pipes
+  input to us.
+  (You may not have a command that pipes both in and out.)
+! On non-pipe opens, the filename '\-' represents either stdin or stdout, as
+! appropriate.
+  Open returns 1 upon success, '' otherwise.
+  Examples:
+  .nf
+--- 151,157 ----
+  with a \*(L"|\*(R", the filename is interpreted as command which pipes
+  input to us.
+  (You may not have a command that pipes both in and out.)
+! Opening '\-' opens stdin and opening '>\-' opens stdout.
+  Open returns 1 upon success, '' otherwise.
+  Examples:
+  .nf
+***************
+*** 310,316 ****
+  Shifts the first value of the array off, shortening the array by 1 and
+  moving everything down.
+  If ARRAY is omitted, shifts the ARGV array.
+! See also unshift().
+  .Ip "sleep EXPR" 8 6
+  .Ip "sleep" 8
+  Causes the script to sleep for EXPR seconds, or forever if no EXPR.
+--- 315,323 ----
+  Shifts the first value of the array off, shortening the array by 1 and
+  moving everything down.
+  If ARRAY is omitted, shifts the ARGV array.
+! See also unshift(), push() and pop().
+! Shift() and unshift() do the same thing to the left end of an array that push()
+! and pop() do to the right end.
+  .Ip "sleep EXPR" 8 6
+  .Ip "sleep" 8
+  Causes the script to sleep for EXPR seconds, or forever if no EXPR.
+***************
+*** 326,332 ****
+  (Note that the delimiter may be longer than one character.)
+  Trailing null fields are stripped, which potential users of pop() would
+  do well to remember.
+! A pattern matching the null string will split into separate characters.
+  .sp
+  Example:
+  .nf
+--- 333,340 ----
+  (Note that the delimiter may be longer than one character.)
+  Trailing null fields are stripped, which potential users of pop() would
+  do well to remember.
+! A pattern matching the null string will split the value of EXPR into separate
+! characters.
+  .sp
+  Example:
+  .nf
+***************
+*** 373,378 ****
+--- 381,387 ----
+  Does exactly the same thing as \*(L"exec LIST\*(R" except that a fork
+  is done first, and the parent process waits for the child process to complete.
+  Note that argument processing varies depending on the number of arguments.
++ The return value is the exit status of the program.
+  See exec.
+  .Ip "tell(FILEHANDLE)" 8 6
+  .Ip "tell" 8
+***************
+*** 422,427 ****
+--- 431,437 ----
+  	$cnt = (unlink 'a','b','c');
+  
+  .fi
++ .ne 7
+  .Ip "unshift(ARRAY,LIST)" 8 4
+  Does the opposite of a shift.
+  Prepends list to the front of the array, and returns the number of elements
+***************
+*** 817,822 ****
+--- 827,837 ----
+  The value should be copied elsewhere before any pattern matching happens, which
+  clobbers $0.
+  (Mnemonic: same as sh and ksh.)
++ .Ip $<digit> 8
++ Contains the subpattern from the corresponding set of parentheses in the last
++ pattern matched, not counting patterns matched in nested blocks that have
++ been exited already.
++ (Mnemonic: like \edigit.)
+  .Ip $[ 8 2
+  The index of the first element in an array, and of the first character in
+  a substring.
+***************
+*** 830,835 ****
+--- 845,854 ----
+  .Ip $! 8 2
+  The current value of errno, with all the usual caveats.
+  (Mnemonic: What just went bang?)
++ .Ip $@ 8 2
++ The error message from the last eval command.
++ If null, the last eval parsed and executed correctly.
++ (Mnemonic: Where was the syntax error "at"?)
+  .Ip @ARGV 8 3
+  The array ARGV contains the command line arguments intended for the script.
+  Note that $#ARGV is the generally number of arguments minus one, since
+***************
+*** 882,887 ****
+--- 901,908 ----
+  a2p	awk to perl translator
+  .br
+  s2p	sed to perl translator
++ .br
++ perldb	interactive perl debugger
+  .SH DIAGNOSTICS
+  Compilation errors will tell you the line number of the error, with an
+  indication of the next token or token type that was to be examined.
+
+Index: perldb.man
+Prereq: 1.0.1.1
+*** perldb.man.old	Mon Feb  1 09:00:34 1988
+--- perldb.man	Sat Jan 30 17:05:04 1988
+***************
+*** 1,7 ****
+  .rn '' }`
+! ''' $Header: perldb.man,v 1.0.1.1 88/01/28 10:28:19 root Exp $
+  ''' 
+  ''' $Log:	perldb.man,v $
+  ''' Revision 1.0.1.1  88/01/28  10:28:19  root
+  ''' patch8: created this file.
+  ''' 
+--- 1,10 ----
+  .rn '' }`
+! ''' $Header: perldb.man,v 1.0.1.2 88/01/30 17:04:48 root Exp $
+  ''' 
+  ''' $Log:	perldb.man,v $
++ ''' Revision 1.0.1.2  88/01/30  17:04:48  root
++ ''' patch 11: random cleanup
++ ''' 
+  ''' Revision 1.0.1.1  88/01/28  10:28:19  root
+  ''' patch8: created this file.
+  ''' 
+***************
+*** 91,96 ****
+--- 94,100 ----
+  List breakpoints.
+  .Ip t 8
+  Toggle trace mode.
++ Trace mode causes lines to be printed out as they are executed.
+  .Ip "b line" 8
+  Set breakpoint at indicated line.
+  .Ip "d line" 8

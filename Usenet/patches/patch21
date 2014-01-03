@@ -1,0 +1,909 @@
+Path: utzoo!mnetor!uunet!husc6!hao!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #21
+Message-ID: <1241@devvax.JPL.NASA.GOV>
+Date: 6 Feb 88 08:58:23 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 899
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 21
+Priority: varied
+Subject: /foo/i && s//bar/; TEST nonportabilities; bare blocks can blow core
+From: jbs@EDDIE.MIT.EDU (Jeff Siegal)
+From: psivax!uunet!hocpb!rer (Rick Richardson)
+From: mlm@ei.ecn.purdue.edu (Michael L. McLean)
+From: lwall@jpl-devvax.jpl.nasa.gov (me)
+
+Description:
+	TEST didn't find subtests if . wasn't in $PATH.
+
+	Some of the tests depended on the existence of /etc/termcap, which
+	isn't guaranteed.
+
+	The construct "/foo/ && s//bar/" didn't work as intended, so certain
+	sed scripts didn't work right when translated to perl.
+
+	There was no way to get at the code for doing case-insensitive
+	searches, so I added an i modifier.
+
+	Null loops and blocks (which are loops that execute just once) did
+	not pop the loop label off the stack properly.  Hence perl would
+	dump core eventually on "perl -n -e '{print;}' </usr/dict/words".
+
+Fix:	From rn, say "| patch -p0 -N -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch -p0 -N <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch (version 2.0, latest patchlevel).
+
+	After applying patch:
+		make
+		make test
+		make install
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 20
+1c1
+< #define PATCHLEVEL 20
+---
+> #define PATCHLEVEL 21
+ 
+Index: t/TEST
+Prereq: 1.0.1.2
+*** t/TEST.old	Sat Feb  6 00:31:03 1988
+--- t/TEST	Sat Feb  6 00:31:04 1988
+***************
+*** 1,6 ****
+  #!./perl
+  
+! # $Header: TEST,v 1.0.1.2 88/02/04 00:14:07 root Exp $
+  
+  # This is written in a peculiar style, since we're trying to avoid
+  # most of the constructs we'll be testing for.
+--- 1,6 ----
+  #!./perl
+  
+! # $Header: TEST,v 1.0.1.3 88/02/06 00:24:22 root Exp $
+  
+  # This is written in a peculiar style, since we're trying to avoid
+  # most of the constructs we'll be testing for.
+***************
+*** 23,34 ****
+  }
+  $bad = 0;
+  while ($test = shift) {
+!     if ($test =~ /.*\.orig$/) {
+  	next;
+      }
+      print "$test...";
+      if ($sharpbang) {
+! 	open(results,"$test|") || (print "can't run.\n");
+      } else {
+  	open(script,"$test") || die "Can't run $test";
+  	$_ = <script>;
+--- 23,34 ----
+  }
+  $bad = 0;
+  while ($test = shift) {
+!     if ($test =~ /\.orig$/) {
+  	next;
+      }
+      print "$test...";
+      if ($sharpbang) {
+! 	open(results,"./$test|") || (print "can't run.\n");
+      } else {
+  	open(script,"$test") || die "Can't run $test";
+  	$_ = <script>;
+ 
+Index: arg.c
+Prereq: 1.0.1.9
+*** arg.c.old	Sat Feb  6 00:29:07 1988
+--- arg.c	Sat Feb  6 00:29:15 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.c,v 1.0.1.9 88/02/04 17:47:31 root Exp $
+   *
+   * $Log:	arg.c,v $
+   * Revision 1.0.1.9  88/02/04  17:47:31  root
+   * patch20: made failing fork/exec exit.
+   * 
+--- 1,9 ----
+! /* $Header: arg.c,v 1.0.1.10 88/02/06 00:17:48 root Exp $
+   *
+   * $Log:	arg.c,v $
++  * Revision 1.0.1.10  88/02/06  00:17:48  root
++  * patch21: fixed code so /foo/ && s//bar/ would work.  Also /foo/i.
++  * 
+   * Revision 1.0.1.9  88/02/04  17:47:31  root
+   * patch20: made failing fork/exec exit.
+   * 
+***************
+*** 61,77 ****
+  	if (debug & 8)
+  	    deb("2.SPAT /%s/\n",t);
+  #endif
+! 	if (d = compile(&spat->spat_compex,t,TRUE,FALSE)) {
+  #ifdef DEBUGGING
+  	    deb("/%s/: %s\n", t, d);
+  #endif
+  	    return FALSE;
+  	}
+! 	if (spat->spat_compex.complen <= 1 && curspat)
+! 	    spat = curspat;
+  	if (execute(&spat->spat_compex, s, TRUE, 0)) {
+  	    if (spat->spat_compex.numsubs)
+  		curspat = spat;
+  	    return TRUE;
+  	}
+  	else
+--- 64,82 ----
+  	if (debug & 8)
+  	    deb("2.SPAT /%s/\n",t);
+  #endif
+! 	if (d = compile(&spat->spat_compex,t,TRUE,
+! 	  spat->spat_flags & SPAT_FOLD )) {
+  #ifdef DEBUGGING
+  	    deb("/%s/: %s\n", t, d);
+  #endif
+  	    return FALSE;
+  	}
+! 	if (!*spat->spat_compex.precomp && lastspat)
+! 	    spat = lastspat;
+  	if (execute(&spat->spat_compex, s, TRUE, 0)) {
+  	    if (spat->spat_compex.numsubs)
+  		curspat = spat;
++ 	    lastspat = spat;
+  	    return TRUE;
+  	}
+  	else
+***************
+*** 89,96 ****
+  	    deb("2.SPAT %c%s%c\n",ch,spat->spat_compex.precomp,ch);
+  	}
+  #endif
+! 	if (spat->spat_compex.complen <= 1 && curspat)
+! 	    spat = curspat;
+  	if (spat->spat_first) {
+  	    if (spat->spat_flags & SPAT_SCANFIRST) {
+  		str_free(spat->spat_first);
+--- 94,101 ----
+  	    deb("2.SPAT %c%s%c\n",ch,spat->spat_compex.precomp,ch);
+  	}
+  #endif
+! 	if (!*spat->spat_compex.precomp && lastspat)
+! 	    spat = lastspat;
+  	if (spat->spat_first) {
+  	    if (spat->spat_flags & SPAT_SCANFIRST) {
+  		str_free(spat->spat_first);
+***************
+*** 103,108 ****
+--- 108,114 ----
+  	if (execute(&spat->spat_compex, s, TRUE, 0)) {
+  	    if (spat->spat_compex.numsubs)
+  		curspat = spat;
++ 	    lastspat = spat;
+  	    if (spat->spat_flags & SPAT_USE_ONCE)
+  		spat->spat_flags |= SPAT_USED;
+  	    return TRUE;
+***************
+*** 131,137 ****
+  	char *d;
+  
+  	m = str_get(eval(spat->spat_runtime,Null(STR***)));
+! 	if (d = compile(&spat->spat_compex,m,TRUE,FALSE)) {
+  #ifdef DEBUGGING
+  	    deb("/%s/: %s\n", m, d);
+  #endif
+--- 137,144 ----
+  	char *d;
+  
+  	m = str_get(eval(spat->spat_runtime,Null(STR***)));
+! 	if (d = compile(&spat->spat_compex,m,TRUE,
+! 	  spat->spat_flags & SPAT_FOLD )) {
+  #ifdef DEBUGGING
+  	    deb("/%s/: %s\n", m, d);
+  #endif
+***************
+*** 143,150 ****
+  	deb("2.SPAT /%s/\n",spat->spat_compex.precomp);
+      }
+  #endif
+!     if (spat->spat_compex.complen <= 1 && curspat)
+! 	spat = curspat;
+      if (spat->spat_first) {
+  	if (spat->spat_flags & SPAT_SCANFIRST) {
+  	    str_free(spat->spat_first);
+--- 150,157 ----
+  	deb("2.SPAT /%s/\n",spat->spat_compex.precomp);
+      }
+  #endif
+!     if (!*spat->spat_compex.precomp && lastspat)
+! 	spat = lastspat;
+      if (spat->spat_first) {
+  	if (spat->spat_flags & SPAT_SCANFIRST) {
+  	    str_free(spat->spat_first);
+***************
+*** 160,165 ****
+--- 167,173 ----
+  	dstr = str_new(str_len(str));
+  	if (spat->spat_compex.numsubs)
+  	    curspat = spat;
++ 	lastspat = spat;
+  	do {
+  	    if (iters++ > 10000)
+  		fatal("Substitution loop?\n");
+***************
+*** 239,245 ****
+  	    arg_free(spat->spat_runtime);	/* it won't change, so */
+  	    spat->spat_runtime = Nullarg;	/* no point compiling again */
+  	}
+! 	if (d = compile(&spat->spat_compex,m,TRUE,FALSE)) {
+  #ifdef DEBUGGING
+  	    deb("/%s/: %s\n", m, d);
+  #endif
+--- 247,254 ----
+  	    arg_free(spat->spat_runtime);	/* it won't change, so */
+  	    spat->spat_runtime = Nullarg;	/* no point compiling again */
+  	}
+! 	if (d = compile(&spat->spat_compex,m,TRUE,
+! 	  spat->spat_flags & SPAT_FOLD )) {
+  #ifdef DEBUGGING
+  	    deb("/%s/: %s\n", m, d);
+  #endif
+ 
+Index: t/base.term
+Prereq: 1.0
+*** t/base.term.old	Sat Feb  6 00:31:16 1988
+--- t/base.term	Sat Feb  6 00:31:17 1988
+***************
+*** 1,6 ****
+  #!./perl
+  
+! # $Header: base.term,v 1.0 87/12/18 13:11:59 root Exp $
+  
+  print "1..6\n";
+  
+--- 1,6 ----
+  #!./perl
+  
+! # $Header: base.term,v 1.0.1.1 88/02/06 00:25:14 root Exp $
+  
+  print "1..6\n";
+  
+***************
+*** 32,36 ****
+  open(try, "/dev/null") || (die "Can't open /dev/null.");
+  if (<try> eq '') {print "ok 5\n";} else {print "not ok 5\n";}
+  
+! open(try, "/etc/termcap") || (die "Can't open /etc/termcap.");
+  if (<try> ne '') {print "ok 6\n";} else {print "not ok 6\n";}
+--- 32,36 ----
+  open(try, "/dev/null") || (die "Can't open /dev/null.");
+  if (<try> eq '') {print "ok 5\n";} else {print "not ok 5\n";}
+  
+! open(try, "../Makefile") || (die "Can't open ../Makefile.");
+  if (<try> ne '') {print "ok 6\n";} else {print "not ok 6\n";}
+ 
+Index: cmd.c
+Prereq: 1.0.1.2
+*** cmd.c.old	Sat Feb  6 00:29:28 1988
+--- cmd.c	Sat Feb  6 00:29:30 1988
+***************
+*** 1,6 ****
+! /* $Header: cmd.c,v 1.0.1.2 88/02/04 11:15:58 root Exp $
+   *
+   * $Log:	cmd.c,v $
+   * Revision 1.0.1.2  88/02/04  11:15:58  root
+   * patch18: regularized includes.
+   * 
+--- 1,9 ----
+! /* $Header: cmd.c,v 1.0.1.3 88/02/06 00:18:47 root Exp $
+   *
+   * $Log:	cmd.c,v $
++  * Revision 1.0.1.3  88/02/06  00:18:47  root
++  * patch21: fixed loop and block exits to pop label stack consistently.
++  * 
+   * Revision 1.0.1.2  88/02/04  11:15:58  root
+   * patch18: regularized includes.
+   * 
+***************
+*** 108,122 ****
+  		    olddlevel = dlevel;
+  #endif
+  		    curspat = oldspat;
+! #ifdef DEBUGGING
+! 		    if (debug & 4) {
+! 			deb("(Popping label #%d %s)\n",loop_ptr,
+! 			    loop_stack[loop_ptr].loop_label);
+! 		    }
+! #endif
+! 		    loop_ptr--;
+! 		    cmd = cmd->c_next;
+! 		    goto tail_recursion_entry;
+  		case O_NEXT:	/* not done unless go_to found */
+  		    go_to = Nullch;
+  		    goto next_iter;
+--- 111,117 ----
+  		    olddlevel = dlevel;
+  #endif
+  		    curspat = oldspat;
+! 		    goto next_cmd;
+  		case O_NEXT:	/* not done unless go_to found */
+  		    go_to = Nullch;
+  		    goto next_iter;
+***************
+*** 155,162 ****
+  		goto finish_while;
+  	    }
+  	    cmd = cmd->c_next;
+! 	    if (cmd && cmd->c_head == cmd)	/* reached end of while loop */
+  		return retstr;		/* targ isn't in this block */
+  	    goto tail_recursion_entry;
+  	}
+      }
+--- 150,167 ----
+  		goto finish_while;
+  	    }
+  	    cmd = cmd->c_next;
+! 	    if (cmd && cmd->c_head == cmd)
+! 					/* reached end of while loop */
+  		return retstr;		/* targ isn't in this block */
++ 	    if (cmdflags & CF_ONCE) {
++ #ifdef DEBUGGING
++ 		if (debug & 4) {
++ 		    deb("(Popping label #%d %s)\n",loop_ptr,
++ 			loop_stack[loop_ptr].loop_label);
++ 		}
++ #endif
++ 		loop_ptr--;
++ 	    }
+  	    goto tail_recursion_entry;
+  	}
+      }
+***************
+*** 311,320 ****
+      maybe:
+  	if (cmdflags & CF_INVERT)
+  	    match = !match;
+! 	if (!match && cmd->c_type != C_IF) {
+! 	    cmd = cmd->c_next;
+! 	    goto tail_recursion_entry;
+! 	}
+      }
+  
+      /* now to do the actual command, if any */
+--- 316,323 ----
+      maybe:
+  	if (cmdflags & CF_INVERT)
+  	    match = !match;
+! 	if (!match && cmd->c_type != C_IF)
+! 	    goto next_cmd;
+      }
+  
+      /* now to do the actual command, if any */
+***************
+*** 374,388 ****
+  	case O_LAST:
+  	    retstr = &str_no;
+  	    curspat = oldspat;
+! #ifdef DEBUGGING
+! 	    if (debug & 4) {
+! 		deb("(Popping label #%d %s)\n",loop_ptr,
+! 		    loop_stack[loop_ptr].loop_label);
+! 	    }
+! #endif
+! 	    loop_ptr--;
+! 	    cmd = cmd->c_next;
+! 	    goto tail_recursion_entry;
+  	case O_NEXT:
+  	    goto next_iter;
+  	case O_REDO:
+--- 377,383 ----
+  	case O_LAST:
+  	    retstr = &str_no;
+  	    curspat = oldspat;
+! 	    goto next_cmd;
+  	case O_NEXT:
+  	    goto next_iter;
+  	case O_REDO:
+***************
+*** 403,409 ****
+  #endif
+  	    cmd_exec(cmd->ucmd.ccmd.cc_true);
+  	}
+! 	/* actually, this spot is never reached anymore since the above
+  	 * cmd_exec() returns through longjmp().  Hooray for structure.
+  	 */
+        next_iter:
+--- 398,404 ----
+  #endif
+  	    cmd_exec(cmd->ucmd.ccmd.cc_true);
+  	}
+! 	/* actually, this spot is rarely reached anymore since the above
+  	 * cmd_exec() returns through longjmp().  Hooray for structure.
+  	 */
+        next_iter:
+***************
+*** 429,435 ****
+--- 424,440 ----
+  	cmdflags |= CF_COND;		/* now test the condition */
+  	goto until_loop;
+      }
++   next_cmd:
+      cmd = cmd->c_next;
++     if (cmdflags & CF_ONCE) {
++ #ifdef DEBUGGING
++ 	if (debug & 4) {
++ 	    deb("(Popping label #%d %s)\n",loop_ptr,
++ 		loop_stack[loop_ptr].loop_label);
++ 	}
++ #endif
++ 	loop_ptr--;
++     }
+      goto tail_recursion_entry;
+  }
+  
+ 
+Index: t/op.eval
+*** t/op.eval.old	Sat Feb  6 00:31:25 1988
+--- t/op.eval	Sat Feb  6 00:31:28 1988
+***************
+*** 1,6 ****
+  #!./perl
+  
+! print "1..7\n";
+  
+  eval 'print "ok 1\n";';
+  
+--- 1,6 ----
+  #!./perl
+  
+! print "1..8\n";
+  
+  eval 'print "ok 1\n";';
+  
+***************
+*** 20,22 ****
+--- 20,29 ----
+  if ($@ =~ /Search/) {print "ok 6\n";} else {print "not ok 6\n";}
+  
+  print eval '"ok 7\n";';
++ 
++ # calculate a factorial with recursive evals
++ 
++ $foo = 5;
++ $fact = 'if ($foo <= 1) {1;} else {push(@x,$foo--); (eval $fact) * pop(@x);}';
++ $ans = eval $fact;
++ if ($ans == 120) {print "ok 8\n";} else {print "not ok 8\n";}
+ 
+Index: t/op.flip
+Prereq: 1.0
+*** t/op.flip.old	Sat Feb  6 00:31:38 1988
+--- t/op.flip	Sat Feb  6 00:31:39 1988
+***************
+*** 1,6 ****
+  #!./perl
+  
+! # $Header: op.flip,v 1.0 87/12/18 13:13:34 root Exp $
+  
+  print "1..8\n";
+  
+--- 1,6 ----
+  #!./perl
+  
+! # $Header: op.flip,v 1.0.1.1 88/02/06 00:26:12 root Exp $
+  
+  print "1..8\n";
+  
+***************
+*** 17,23 ****
+  
+  @a = ('a','b','c','d','e','f','g');
+  
+! open(of,'/etc/termcap');
+  while (<of>) {
+      (3 .. 5) && $foo .= $_;
+  }
+--- 17,23 ----
+  
+  @a = ('a','b','c','d','e','f','g');
+  
+! open(of,'../Makefile');
+  while (<of>) {
+      (3 .. 5) && $foo .= $_;
+  }
+ 
+Index: t/op.pat
+Prereq: 1.0
+*** t/op.pat.old	Sat Feb  6 00:31:49 1988
+--- t/op.pat	Sat Feb  6 00:31:50 1988
+***************
+*** 1,7 ****
+  #!./perl
+  
+! # $Header: op.pat,v 1.0 87/12/18 13:14:07 root Exp $
+! print "1..22\n";
+  
+  $x = "abc\ndef\n";
+  
+--- 1,7 ----
+  #!./perl
+  
+! # $Header: op.pat,v 1.0.1.1 88/02/06 00:26:35 root Exp $
+! print "1..23\n";
+  
+  $x = "abc\ndef\n";
+  
+***************
+*** 54,56 ****
+--- 54,58 ----
+  if (/xyz|bcd/) {print "ok 21\n";} else {print "not ok 21\n";}
+  
+  if (m|bc/*d|) {print "ok 22\n";} else {print "not ok 22\n";}
++ 
++ if (/^$_$/) {print "ok 23\n";} else {print "not ok 23\n";}
+ 
+Index: t/op.subst
+Prereq: 1.0
+*** t/op.subst.old	Sat Feb  6 00:31:59 1988
+--- t/op.subst	Sat Feb  6 00:32:01 1988
+***************
+*** 1,8 ****
+  #!./perl
+  
+! # $Header: op.subst,v 1.0 87/12/18 13:14:30 root Exp $
+  
+! print "1..7\n";
+  
+  $x = 'foo';
+  $_ = "x";
+--- 1,8 ----
+  #!./perl
+  
+! # $Header: op.subst,v 1.0.1.1 88/02/06 00:27:19 root Exp $
+  
+! print "1..8\n";
+  
+  $x = 'foo';
+  $_ = "x";
+***************
+*** 36,38 ****
+--- 36,41 ----
+  
+  if (($a =~ s/b/y/g) == 1 && $a eq 'xyxcxdx')
+      {print "ok 7\n";} else {print "not ok 7\n";}
++ 
++ $_ = 'ABACADA';
++ if (/a/i && s///gi && $_ eq 'BCD') {print "ok 8\n";} else {print "not ok 8\n";}
+ 
+Index: perl.man.1
+Prereq: 1.0.1.3
+*** perl.man.1.old	Sat Feb  6 00:29:45 1988
+--- perl.man.1	Sat Feb  6 00:29:48 1988
+***************
+*** 1,7 ****
+  .rn '' }`
+! ''' $Header: perl.man.1,v 1.0.1.3 88/02/04 17:48:02 root Exp $
+  ''' 
+  ''' $Log:	perl.man.1,v $
+  ''' Revision 1.0.1.3  88/02/04  17:48:02  root
+  ''' patch20: added missing chop($user); to example in chown.
+  ''' 
+--- 1,10 ----
+  .rn '' }`
+! ''' $Header: perl.man.1,v 1.0.1.4 88/02/06 00:19:44 root Exp $
+  ''' 
+  ''' $Log:	perl.man.1,v $
++ ''' Revision 1.0.1.4  88/02/06  00:19:44  root
++ ''' patch21: documented -v, /foo/i.
++ ''' 
+  ''' Revision 1.0.1.3  88/02/04  17:48:02  root
+  ''' patch20: added missing chop($user); to example in chown.
+  ''' 
+***************
+*** 246,251 ****
+--- 249,257 ----
+  	if ($xyz) { print "true\en"; }
+  
+  .fi
++ .TP 5
++ .B \-v
++ prints the version and patchlevel of your perl executable.
+  .Sh "Data Types and Objects"
+  .PP
+  Perl has about two and a half data types: strings, arrays of strings, and
+***************
+*** 785,791 ****
+  .PP
+  Along with the literals and variables mentioned earlier,
+  the following operations can serve as terms in an expression:
+! .Ip "/PATTERN/" 8 4
+  Searches a string for a pattern, and returns true (1) or false ('').
+  If no string is specified via the =~ or !~ operator,
+  the $_ string is searched.
+--- 791,797 ----
+  .PP
+  Along with the literals and variables mentioned earlier,
+  the following operations can serve as terms in an expression:
+! .Ip "/PATTERN/i" 8 4
+  Searches a string for a pattern, and returns true (1) or false ('').
+  If no string is specified via the =~ or !~ operator,
+  the $_ string is searched.
+***************
+*** 794,799 ****
+--- 800,807 ----
+  .Sp
+  If you prepend an `m' you can use any pair of characters as delimiters.
+  This is particularly useful for matching Unix path names that contain `/'.
++ If the final delimiter is followed by the optional letter `i', the matching is
++ done in a case-insensitive manner.
+  .Sp
+  Examples:
+  .nf
+***************
+*** 800,806 ****
+  
+  .ne 4
+      open(tty, '/dev/tty');
+!     <tty> \|=~ \|/\|^[Yy]\|/ \|&& \|do foo(\|);	# do foo if desired
+  
+      if (/Version: \|*\|([0-9.]*\|)\|/\|) { $version = $1; }
+  
+--- 808,814 ----
+  
+  .ne 4
+      open(tty, '/dev/tty');
+!     <tty> \|=~ \|/\|^y\|/i \|&& \|do foo(\|);	# do foo if desired
+  
+      if (/Version: \|*\|([0-9.]*\|)\|/\|) { $version = $1; }
+  
+ 
+Index: perl.man.2
+Prereq: 1.0.1.4
+*** perl.man.2.old	Sat Feb  6 00:30:03 1988
+--- perl.man.2	Sat Feb  6 00:30:08 1988
+***************
+*** 1,7 ****
+  ''' Beginning of part 2
+! ''' $Header: perl.man.2,v 1.0.1.4 88/02/04 17:48:31 root Exp $
+  '''
+  ''' $Log:	perl.man.2,v $
+  ''' Revision 1.0.1.4  88/02/04  17:48:31  root
+  ''' patch20: documented return values of system better.
+  ''' 
+--- 1,10 ----
+  ''' Beginning of part 2
+! ''' $Header: perl.man.2,v 1.0.1.5 88/02/06 00:22:26 root Exp $
+  '''
+  ''' $Log:	perl.man.2,v $
++ ''' Revision 1.0.1.5  88/02/06  00:22:26  root
++ ''' patch21: documented s/foo/bar/i.
++ ''' 
+  ''' Revision 1.0.1.4  88/02/04  17:48:31  root
+  ''' patch20: documented return values of system better.
+  ''' 
+***************
+*** 259,269 ****
+      reset;	\h'|2i'# just reset ?? searches
+  
+  .fi
+! .Ip "s/PATTERN/REPLACEMENT/g" 8 3
+  Searches a string for a pattern, and if found, replaces that pattern with the
+  replacement text and returns the number of substitutions made.
+  Otherwise it returns false (0).
+  The \*(L"g\*(R" is optional, and if present, indicates that all occurences
+  of the pattern are to be replaced.
+  Any delimiter may replace the slashes; if single quotes are used, no
+  interpretation is done on the replacement string.
+--- 262,275 ----
+      reset;	\h'|2i'# just reset ?? searches
+  
+  .fi
+! .Ip "s/PATTERN/REPLACEMENT/gi" 8 3
+  Searches a string for a pattern, and if found, replaces that pattern with the
+  replacement text and returns the number of substitutions made.
+  Otherwise it returns false (0).
+  The \*(L"g\*(R" is optional, and if present, indicates that all occurences
++ of the pattern are to be replaced.
++ The \*(L"i\*(R" is also optional, and if present, indicates that matching
++ is to be done in a case-insensitive manner.
+  of the pattern are to be replaced.
+  Any delimiter may replace the slashes; if single quotes are used, no
+  interpretation is done on the replacement string.
+ 
+Index: perly.c
+Prereq: 1.0.1.4
+*** perly.c.old	Sat Feb  6 00:30:32 1988
+--- perly.c	Sat Feb  6 00:30:39 1988
+***************
+*** 1,6 ****
+! char rcsid[] = "$Header: perly.c,v 1.0.1.4 88/02/03 16:25:19 root Exp $";
+  /*
+   * $Log:	perly.c,v $
+   * Revision 1.0.1.4  88/02/03  16:25:19  root
+   * patch15: 1+$foo confused tokener.
+   * Also, the return value in do_eval got tromped by cmd_free().
+--- 1,9 ----
+! char rcsid[] = "$Header: perly.c,v 1.0.1.5 88/02/06 00:22:51 root Exp $";
+  /*
+   * $Log:	perly.c,v $
++  * Revision 1.0.1.5  88/02/06  00:22:51  root
++  * patch21: added /foo/i, /$var/.
++  * 
+   * Revision 1.0.1.4  88/02/03  16:25:19  root
+   * patch15: 1+$foo confused tokener.
+   * Also, the return value in do_eval got tromped by cmd_free().
+***************
+*** 932,937 ****
+--- 935,955 ----
+      if (!*s)
+  	fatal("Search pattern not terminated:\n%s",str_get(linestr));
+      s++;
++     if (*s == 'i') {
++ 	s++;
++ 	spat->spat_flags |= SPAT_FOLD;
++     }
++     for (d=tokenbuf; *d; d++) {
++ 	if (*d == '$' && d[1] && d[-1] != '\\' && d[1] != '|') {
++ 	    register ARG *arg;
++ 
++ 	    spat->spat_runtime = arg = op_new(1);
++ 	    arg->arg_type = O_ITEM;
++ 	    arg[1].arg_type = A_DOUBLE;
++ 	    arg[1].arg_ptr.arg_str = str_make(tokenbuf);
++ 	    goto got_pat;		/* skip compiling for now */
++ 	}
++     }
+      if (*tokenbuf == '^') {
+  	spat->spat_first = scanconst(tokenbuf+1);
+  	if (spat->spat_first) {
+***************
+*** 949,956 ****
+  		spat->spat_flags |= SPAT_SCANALL;
+  	}
+      }	
+!     if (d = compile(&spat->spat_compex,tokenbuf,TRUE,FALSE))
+  	fatal(d);
+      yylval.arg = make_match(O_MATCH,stab_to_arg(A_STAB,defstab),spat);
+      return s;
+  }
+--- 967,976 ----
+  		spat->spat_flags |= SPAT_SCANALL;
+  	}
+      }	
+!     if (d = compile(&spat->spat_compex,tokenbuf,TRUE,
+!       spat->spat_flags & SPAT_FOLD ))
+  	fatal(d);
++   got_pat:
+      yylval.arg = make_match(O_MATCH,stab_to_arg(A_STAB,defstab),spat);
+      return s;
+  }
+***************
+*** 999,1010 ****
+      if (!*s)
+  	fatal("Substitution replacement not terminated:\n%s",str_get(linestr));
+      spat->spat_repl = yylval.arg;
+!     if (*s == 'g') {
+! 	s++;
+! 	spat->spat_flags &= ~SPAT_USE_ONCE;
+      }
+!     else
+! 	spat->spat_flags |= SPAT_USE_ONCE;
+      yylval.arg = make_match(O_SUBST,stab_to_arg(A_STAB,defstab),spat);
+      return s;
+  }
+--- 1019,1036 ----
+      if (!*s)
+  	fatal("Substitution replacement not terminated:\n%s",str_get(linestr));
+      spat->spat_repl = yylval.arg;
+!     spat->spat_flags |= SPAT_USE_ONCE;
+!     while (*s == 'g' || *s == 'i') {
+! 	if (*s == 'g') {
+! 	    s++;
+! 	    spat->spat_flags &= ~SPAT_USE_ONCE;
+! 	}
+! 	if (*s == 'i') {
+! 	    s++;
+! 	    spat->spat_flags |= SPAT_FOLD;
+! 	}
+      }
+!     spat->spat_compex.do_folding = spat->spat_flags & SPAT_FOLD;
+      yylval.arg = make_match(O_SUBST,stab_to_arg(A_STAB,defstab),spat);
+      return s;
+  }
+ 
+Index: spat.h
+Prereq: 1.0.1.1
+*** spat.h.old	Sat Feb  6 00:30:54 1988
+--- spat.h	Sat Feb  6 00:30:55 1988
+***************
+*** 1,6 ****
+! /* $Header: spat.h,v 1.0.1.1 88/02/02 11:24:37 root Exp $
+   *
+   * $Log:	spat.h,v $
+   * Revision 1.0.1.1  88/02/02  11:24:37  root
+   * patch13: added flag for stripping leading spaces on split.
+   * 
+--- 1,9 ----
+! /* $Header: spat.h,v 1.0.1.2 88/02/06 00:23:48 root Exp $
+   *
+   * $Log:	spat.h,v $
++  * Revision 1.0.1.2  88/02/06  00:23:48  root
++  * patch21: add SPAT_FOLD flag for case insensitive searches.
++  * 
+   * Revision 1.0.1.1  88/02/02  11:24:37  root
+   * patch13: added flag for stripping leading spaces on split.
+   * 
+***************
+*** 24,31 ****
+--- 27,36 ----
+  #define SPAT_SCANFIRST 4		/* initial constant not anchored */
+  #define SPAT_SCANALL 8			/* initial constant is whole pat */
+  #define SPAT_SKIPWHITE 16		/* skip leading whitespace for split */
++ #define SPAT_FOLD 32			/* case insensitivity */
+  
+  EXT SPAT *spat_root;		/* list of all spats */
+  EXT SPAT *curspat;		/* what to do \ interps from */
++ EXT SPAT *lastspat;		/* what to use in place of null pattern */
+  
+  #define Nullspat Null(SPAT*)
+ 
+Index: util.c
+Prereq: 1.0.1.3
+*** util.c.old	Sat Feb  6 00:32:14 1988
+--- util.c	Sat Feb  6 00:32:16 1988
+***************
+*** 1,6 ****
+! /* $Header: util.c,v 1.0.1.3 88/02/04 11:17:05 root Exp $
+   *
+   * $Log:	util.c,v $
+   * Revision 1.0.1.3  88/02/04  11:17:05  root
+   * patch18: regularized includes.
+   * 
+--- 1,9 ----
+! /* $Header: util.c,v 1.0.1.4 88/02/06 00:28:14 root Exp $
+   *
+   * $Log:	util.c,v $
++  * Revision 1.0.1.4  88/02/06  00:28:14  root
++  * patch21: added trap in saferealloc() for null pointer on input.
++  * 
+   * Revision 1.0.1.3  88/02/04  11:17:05  root
+   * patch18: regularized includes.
+   * 
+***************
+*** 58,63 ****
+--- 61,68 ----
+      char *ptr;
+      char *realloc();
+  
++     if (!where)
++ 	fatal("Null realloc\n");
+      ptr = realloc(where,size?size:1);	/* realloc(0) is NASTY on our system */
+  #ifdef DEBUGGING
+      if (debug & 128) {

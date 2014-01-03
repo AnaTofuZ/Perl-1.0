@@ -1,0 +1,5 @@
+This directory contains the 39 Usenet articles from which can be reconstituted
+Perl 1.0 patchlevel 29 (1988/03/11).
+
+kits/     Initial release in 10 parts from comp.sources.unix (shar archived)
+patches/  29 official patches from comp.sources.bugs

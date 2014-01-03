@@ -1,0 +1,102 @@
+Path: utzoo!mnetor!uunet!lll-winken!lll-lcc!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #14
+Message-ID: <1210@devvax.JPL.NASA.GOV>
+Date: 2 Feb 88 20:01:23 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 91
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 14
+Priority: HIGH
+Subject: a2p incorrectly translates 'for (a in b)' construct.
+From: jbs@EDDIE.MIT.EDU (Jeff Siegal)
+
+Description:
+	The code a2p creates for the 'for (a in b)' construct ends
+	up assigning the wrong value to the key variable.
+
+Fix:	From rn, say "| patch -p0 -d DIR", where DIR is your perl source
+			      ^^^
+	directory.  Outside of rn, say "cd DIR; patch -p0 <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch.
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 13
+1c1
+< #define PATCHLEVEL 13
+---
+> #define PATCHLEVEL 14
+ 
+Index: x2p/walk.c
+Prereq: 1.0.1.2
+*** x2p/walk.c.old	Tue Feb  2 11:56:10 1988
+--- x2p/walk.c	Tue Feb  2 11:56:13 1988
+***************
+*** 1,6 ****
+! /* $Header: walk.c,v 1.0.1.2 88/02/01 17:34:05 root Exp $
+   *
+   * $Log:	walk.c,v $
+   * Revision 1.0.1.2  88/02/01  17:34:05  root
+   * patch12: made a2p take advantage of new awk-compatible split in perl.
+   * 
+--- 1,9 ----
+! /* $Header: walk.c,v 1.0.1.3 88/02/02 11:54:58 root Exp $
+   *
+   * $Log:	walk.c,v $
++  * Revision 1.0.1.3  88/02/02  11:54:58  root
++  * patch14: got return value of each() backwards in translating 'for (a in b)'.
++  * 
+   * Revision 1.0.1.2  88/02/01  17:34:05  root
+   * patch12: made a2p take advantage of new awk-compatible split in perl.
+   * 
+***************
+*** 962,971 ****
+  	    str_free(fstr);
+  	}
+  	else {
+! 	    str_set(str,"while (($junkkey,$");
+  	    str_scat(str,fstr=walk(1,level,ops[node+1].ival,&numarg));
+  	    str_free(fstr);
+! 	    str_cat(str,") = each(");
+  	    str_scat(str,tmpstr);
+  	    str_cat(str,")) ");
+  	    str_scat(str,fstr=walk(0,level,ops[node+3].ival,&numarg));
+--- 965,974 ----
+  	    str_free(fstr);
+  	}
+  	else {
+! 	    str_set(str,"while (($");
+  	    str_scat(str,fstr=walk(1,level,ops[node+1].ival,&numarg));
+  	    str_free(fstr);
+! 	    str_cat(str,",$junkval) = each(");
+  	    str_scat(str,tmpstr);
+  	    str_cat(str,")) ");
+  	    str_scat(str,fstr=walk(0,level,ops[node+3].ival,&numarg));

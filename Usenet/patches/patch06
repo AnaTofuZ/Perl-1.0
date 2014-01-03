@@ -1,0 +1,107 @@
+Path: bbn.com!bbn!husc6!cmcl2!beta!hc!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #6
+Summary: This is an official patch for perl 1.0.  Please apply it.
+Message-ID: <1156@devvax.JPL.NASA.GOV>
+Date: 26 Jan 88 20:35:04 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 97
+
+System: perl version 1.0
+Patch #: 6
+Priority: LOW
+Subject: printf doesn't finish processing format string when out of args.
+From: isis!aburt (Andrew Burt)
+
+Description:
+	printf "%% %d %%", 1;  produces "% 1 %%", which is counterintuitive.
+
+Fix:	From rn, say "| patch -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch.
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 5
+1c1
+< #define PATCHLEVEL 5
+---
+> #define PATCHLEVEL 6
+ 
+Index: arg.c
+Prereq: 1.0.1.2
+*** arg.c.old	Tue Jan 26 12:31:23 1988
+--- arg.c	Tue Jan 26 12:31:25 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.c,v 1.0.1.2 88/01/24 03:52:34 root Exp $
+   *
+   * $Log:	arg.c,v $
+   * Revision 1.0.1.2  88/01/24  03:52:34  root
+   * patch 2: added STATBLKS dependencies.
+   * 
+--- 1,9 ----
+! /* $Header: arg.c,v 1.0.1.3 88/01/26 12:30:33 root Exp $
+   *
+   * $Log:	arg.c,v $
++  * Revision 1.0.1.3  88/01/26  12:30:33  root
++  * patch 6: sprintf didn't finish processing format string when out of args.
++  * 
+   * Revision 1.0.1.2  88/01/24  03:52:34  root
+   * patch 2: added STATBLKS dependencies.
+   * 
+***************
+*** 646,656 ****
+      register char *t;
+      bool dolong;
+      char ch;
+  
+      str_set(str,"");
+      len--;			/* don't count pattern string */
+      sarg++;
+!     for (s = str_get(*(sarg++)); *sarg && *s && len; len--) {
+  	dolong = FALSE;
+  	for (t = s; *t && *t != '%'; t++) ;
+  	if (!*t)
+--- 649,664 ----
+      register char *t;
+      bool dolong;
+      char ch;
++     static STR *sargnull = &str_no;
+  
+      str_set(str,"");
+      len--;			/* don't count pattern string */
+      sarg++;
+!     for (s = str_get(*(sarg++)); *s; len--) {
+! 	if (len <= 0 || !*sarg) {
+! 	    sarg = &sargnull;
+! 	    len = 0;
+! 	}
+  	dolong = FALSE;
+  	for (t = s; *t && *t != '%'; t++) ;
+  	if (!*t)

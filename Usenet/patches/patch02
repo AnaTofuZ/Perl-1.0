@@ -1,0 +1,593 @@
+Path: bbn.com!bbn!husc6!cmcl2!nrl-cmf!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #2
+Summary: This is an official patch for perl 1.0.  Please apply it.
+Message-ID: <1144@devvax.JPL.NASA.GOV>
+Date: 24 Jan 88 12:21:57 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 583
+
+System: perl version 1.0
+Patch #: 2
+Priority: HIGH
+Subject: Various portability fixes.
+From: Keith Waclena <keith@cerberus.uchicago.edu>
+From: isis!aburt (Andrew Burt)
+
+Description:
+	Some things didn't work right on System V and Pyramids.
+
+Fix:	From rn, say "| patch -p0 -d DIR", where DIR is your perl source
+			      ^^^
+	directory.  Outside of rn, say "cd DIR; patch -p0 <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch.
+
+>>>>>	*** NOTE: YOU MUST USE -p0 WITH PATCH OR IT WON'T WORK RIGHT ***  <<<<<
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 1
+1c1
+< #define PATCHLEVEL 1
+---
+> #define PATCHLEVEL 2
+ 
+Index: Configure
+Prereq: 1.0.1.1
+*** Configure.old	Sun Jan 24 03:57:22 1988
+--- Configure	Sun Jan 24 03:57:24 1988
+***************
+*** 8,14 ****
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.1 88/01/21 21:21:47 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+--- 8,14 ----
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.2 88/01/24 03:51:55 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+***************
+*** 68,77 ****
+--- 68,80 ----
+  contains=''
+  cpp=''
+  cppminus=''
++ d_bcopy=''
+  d_charsprf=''
+  d_index=''
++ d_statblks=''
+  d_stdstdio=''
+  d_strctcpy=''
++ d_tminsys=''
+  d_vfork=''
+  d_voidsig=''
+  libc=''
+***************
+*** 638,643 ****
+--- 641,656 ----
+  fi
+  rm -f testcpp.c testcpp.out
+  
++ : see if bcopy exists
++ echo " "
++ if $contains bcopy libc.list >/dev/null 2>&1; then
++     echo 'bcopy() found.'
++     d_bcopy="$define"
++ else
++     echo 'bcopy() not found.'
++     d_bcopy="$undef"
++ fi
++ 
+  : see if sprintf is declared as int or pointer to char
+  echo " "
+  if $contains 'char.*sprintf' /usr/include/stdio.h >/dev/null 2>&1 ; then
+***************
+*** 671,676 ****
+--- 684,704 ----
+      esac
+  fi
+  
++ : see if stat knows about block sizes
++ echo " "
++ if $contains 'st_blocks;' /usr/include/sys/stat.h >/dev/null 2>&1 ; then
++     if $contains 'st_blksize;' /usr/include/sys/stat.h >/dev/null 2>&1 ; then
++ 	echo "Your stat knows about block sizes."
++ 	d_statblks="$define"
++     else
++ 	echo "Your stat doesn't know about block sizes."
++ 	d_statblks="$undef"
++     fi
++ else
++     echo "Your stat doesn't know about block sizes."
++     d_statblks="$undef"
++ fi
++ 
+  : see if stdio is really std
+  echo " "
+  if $contains 'char.*_ptr;' /usr/include/stdio.h >/dev/null 2>&1 ; then
+***************
+*** 708,713 ****
+--- 736,751 ----
+  fi
+  $rm -f try.*
+  
++ : see if struct tm is defined in sys/time.h
++ echo " "
++ if $contains 'struct tm' /usr/include/time.h >/dev/null 2>&1 ; then
++     echo "You have struct tm defined in <time.h> rather than <sys/time.h>."
++     d_tminsys="$undef"
++ else
++     echo "You have struct tm defined in <sys/time.h> rather than <time.h>."
++     d_tminsys="$define"
++ fi
++ 
+  : see if there is a vfork
+  echo " "
+  if $contains vfork libc.list >/dev/null 2>&1 ; then
+***************
+*** 1260,1269 ****
+--- 1298,1310 ----
+  contains='$contains'
+  cpp='$cpp'
+  cppminus='$cppminus'
++ d_bcopy='$d_bcopy'
+  d_charsprf='$d_charsprf'
+  d_index='$d_index'
++ d_statblks='$d_statblks'
+  d_stdstdio='$d_stdstdio'
+  d_strctcpy='$d_strctcpy'
++ d_tminsys='$d_tminsys'
+  d_vfork='$d_vfork'
+  d_voidsig='$d_voidsig'
+  libc='$libc'
+ 
+Index: Makefile.SH
+Prereq: 1.0
+*** Makefile.SH.old	Sun Jan 24 03:58:02 1988
+--- Makefile.SH	Sun Jan 24 03:58:03 1988
+***************
+*** 14,28 ****
+  esac
+  echo "Extracting Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0 87/12/18 16:11:50 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
+  # Revision 1.0  87/12/18  16:11:50  root
+  # Initial revision
+- # 
+- # Revision 1.0  87/12/18  16:01:07  root
+- # Initial revision
+- # 
+  # 
+  
+  CC = $cc
+--- 14,27 ----
+  esac
+  echo "Extracting Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.1 88/01/24 03:55:18 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
++ # Revision 1.0.1.1  88/01/24  03:55:18  root
++ # patch 2: remove extra Log lines.
++ # 
+  # Revision 1.0  87/12/18  16:11:50  root
+  # Initial revision
+  # 
+  
+  CC = $cc
+ 
+If t/TEST isn't found, you probably didn't say -p0 like I told you to above.
+Just say t/TEST now.  Likewise for t/op.time.
+
+Index: t/TEST
+Prereq: 1.0
+*** t/TEST.old	Sun Jan 24 03:58:07 1988
+--- t/TEST	Sun Jan 24 03:58:08 1988
+***************
+*** 1,6 ****
+  #!./perl
+  
+! # $Header: TEST,v 1.0 87/12/18 13:11:34 root Exp $
+  
+  # This is written in a peculiar style, since we're trying to avoid
+  # most of the constructs we'll be testing for.
+--- 1,6 ----
+  #!./perl
+  
+! # $Header: TEST,v 1.0.1.1 88/01/24 03:55:39 root Exp $
+  
+  # This is written in a peculiar style, since we're trying to avoid
+  # most of the constructs we'll be testing for.
+***************
+*** 14,23 ****
+      @ARGV = split(/[ \n]/,`echo base.* comp.* cmd.* io.* op.*`);
+  }
+  
+  $bad = 0;
+  while ($test = shift) {
+      print "$test...";
+!     open(results,"$test|") || (print "can't run.\n");
+      $ok = 0;
+      while (<results>) {
+  	if ($verbose) {
+--- 14,42 ----
+      @ARGV = split(/[ \n]/,`echo base.* comp.* cmd.* io.* op.*`);
+  }
+  
++ open(config,"../config.sh");
++ while (<config>) {
++     if (/sharpbang='(.*)'/) {
++ 	$sharpbang = ($1 eq '#!');
++ 	last;
++     }
++ }
+  $bad = 0;
+  while ($test = shift) {
+      print "$test...";
+!     if ($sharpbang) {
+! 	open(results,"$test|") || (print "can't run.\n");
+!     } else {
+! 	open(script,"$test") || die "Can't run $test";
+! 	$_ = <script>;
+! 	close(script);
+! 	if (/#!..perl(.*)/) {
+! 	    $switch = $1;
+! 	} else {
+! 	    $switch = '';
+! 	}
+! 	open(results,"./perl$switch $test|") || (print "can't run.\n");
+!     }
+      $ok = 0;
+      while (<results>) {
+  	if ($verbose) {
+ 
+Index: arg.c
+Prereq: 1.0.1.1
+*** arg.c.old	Sun Jan 24 03:57:33 1988
+--- arg.c	Sun Jan 24 03:57:35 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.c,v 1.0.1.1 88/01/21 21:27:10 root Exp $
+   *
+   * $Log:	arg.c,v $
+   * Revision 1.0.1.1  88/01/21  21:27:10  root
+   * Now defines signal return values correctly using VOIDSIG.
+   * 
+--- 1,9 ----
+! /* $Header: arg.c,v 1.0.1.2 88/01/24 03:52:34 root Exp $
+   *
+   * $Log:	arg.c,v $
++  * Revision 1.0.1.2  88/01/24  03:52:34  root
++  * patch 2: added STATBLKS dependencies.
++  * 
+   * Revision 1.0.1.1  88/01/21  21:27:10  root
+   * Now defines signal return values correctly using VOIDSIG.
+   * 
+***************
+*** 542,549 ****
+--- 545,557 ----
+  	    apush(ary,str_nmake((double)statbuf.st_atime));
+  	    apush(ary,str_nmake((double)statbuf.st_mtime));
+  	    apush(ary,str_nmake((double)statbuf.st_ctime));
++ #ifdef STATBLOCKS
+  	    apush(ary,str_nmake((double)statbuf.st_blksize));
+  	    apush(ary,str_nmake((double)statbuf.st_blocks));
++ #else
++ 	    apush(ary,str_make("");
++ 	    apush(ary,str_make("");
++ #endif
+  	}
+  	sarg = (STR**)safemalloc((max+2)*sizeof(STR*));
+  	sarg[0] = Nullstr;
+ 
+Index: malloc.c
+Prereq: 1.0
+*** malloc.c.old	Sun Jan 24 03:57:44 1988
+--- malloc.c	Sun Jan 24 03:57:45 1988
+***************
+*** 1,6 ****
+! /* $Header: malloc.c,v 1.0 87/12/18 13:05:35 root Exp $
+   *
+   * $Log:	malloc.c,v $
+   * Revision 1.0  87/12/18  13:05:35  root
+   * Initial revision
+   * 
+--- 1,9 ----
+! /* $Header: malloc.c,v 1.0.1.1 88/01/24 03:53:23 root Exp $
+   *
+   * $Log:	malloc.c,v $
++  * Revision 1.0.1.1  88/01/24  03:53:23  root
++  * patch 2: made depend on perl.h.
++  * 
+   * Revision 1.0  87/12/18  13:05:35  root
+   * Initial revision
+   * 
+***************
+*** 24,30 ****
+   * but bombs when it runs out. 
+   */
+  
+! #include <sys/types.h>
+  
+  #define	NULL 0
+  
+--- 27,42 ----
+   * but bombs when it runs out. 
+   */
+  
+! #include "EXTERN.h"
+! #include "handy.h"
+! #include "search.h"
+! #include "perl.h"
+! 
+! /* I don't much care whether these are defined in sys/types.h--LAW */
+! 
+! #define u_char unsigned char
+! #define u_int unsigned int
+! #define u_short unsigned short
+  
+  #define	NULL 0
+  
+ 
+Index: t/op.time
+Prereq: 1.0
+*** t/op.time.old	Sun Jan 24 03:58:13 1988
+--- t/op.time	Sun Jan 24 03:58:13 1988
+***************
+*** 1,6 ****
+  #!./perl
+  
+! # $Header: op.time,v 1.0 87/12/18 13:14:33 root Exp $
+  
+  print "1..5\n";
+  
+--- 1,6 ----
+  #!./perl
+  
+! # $Header: op.time,v 1.0.1.1 88/01/24 03:56:09 root Exp $
+  
+  print "1..5\n";
+  
+***************
+*** 24,30 ****
+  ($xsec,$foo) = localtime($now);
+  $localyday = $yday;
+  
+! if ($sec != $xsec && $yday && $wday && $year)
+      {print "ok 3\n";}
+  else
+      {print "not ok 3\n";}
+--- 24,30 ----
+  ($xsec,$foo) = localtime($now);
+  $localyday = $yday;
+  
+! if ($sec != $xsec && $mday && $year)
+      {print "ok 3\n";}
+  else
+      {print "not ok 3\n";}
+***************
+*** 32,38 ****
+  ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime($beg);
+  ($xsec,$foo) = localtime($now);
+  
+! if ($sec != $xsec && $yday && $wday && $year)
+      {print "ok 4\n";}
+  else
+      {print "not ok 4\n";}
+--- 32,38 ----
+  ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime($beg);
+  ($xsec,$foo) = localtime($now);
+  
+! if ($sec != $xsec && $mday && $year)
+      {print "ok 4\n";}
+  else
+      {print "not ok 4\n";}
+ 
+Index: perl.h
+Prereq: 1.0.1.1
+*** perl.h.old	Sun Jan 24 03:57:51 1988
+--- perl.h	Sun Jan 24 03:57:51 1988
+***************
+*** 1,6 ****
+! /* $Header: perl.h,v 1.0.1.1 88/01/21 21:29:23 root Exp $
+   *
+   * $Log:	perl.h,v $
+   * Revision 1.0.1.1  88/01/21  21:29:23  root
+   * No longer defines STDSTDIO--gets it from config.h now.
+   * 
+--- 1,9 ----
+! /* $Header: perl.h,v 1.0.1.2 88/01/24 03:53:47 root Exp $
+   *
+   * $Log:	perl.h,v $
++  * Revision 1.0.1.2  88/01/24  03:53:47  root
++  * patch 2: hid str_peek() in #ifdef DEBUGGING.
++  * 
+   * Revision 1.0.1.1  88/01/21  21:29:23  root
+   * No longer defines STDSTDIO--gets it from config.h now.
+   * 
+***************
+*** 24,30 ****
+--- 27,39 ----
+  #include <setjmp.h>
+  #include <sys/types.h>
+  #include <sys/stat.h>
++ 
++ #ifdef TMINSYS
++ #include <sys/time.h>
++ #else
+  #include <time.h>
++ #endif
++ 
+  #include <sys/times.h>
+  
+  typedef struct arg ARG;
+***************
+*** 46,51 ****
+--- 55,66 ----
+  #include "array.h"
+  #include "hash.h"
+  
++ #ifdef CHARSPRINTF
++     char *sprintf();
++ #else
++     int sprintf();
++ #endif
++ 
+  /* A string is TRUE if not "" or "0". */
+  #define True(val) (tmps = (val), (*tmps && !(*tmps == '0' && !tmps[1])))
+  EXT char *Yes INIT("1");
+***************
+*** 53,59 ****
+--- 68,77 ----
+  
+  #define str_true(str) (Str = (str), (Str->str_pok ? True(Str->str_ptr) : (Str->str_nok ? (Str->str_nval != 0.0) : 0 )))
+  
++ #ifdef DEBUGGING
+  #define str_peek(str) (Str = (str), (Str->str_pok ? Str->str_ptr : (Str->str_nok ? (sprintf(buf,"num(%g)",Str->str_nval),buf) : "" )))
++ #endif
++ 
+  #define str_get(str) (Str = (str), (Str->str_pok ? Str->str_ptr : str_2ptr(Str)))
+  #define str_gnum(str) (Str = (str), (Str->str_nok ? Str->str_nval : str_2num(Str)))
+  EXT STR *Str;
+***************
+*** 184,195 ****
+  double atof();
+  long time();
+  struct tm *gmtime(), *localtime();
+- 
+- #ifdef CHARSPRINTF
+-     char *sprintf();
+- #else
+-     int sprintf();
+- #endif
+  
+  #ifdef EUNICE
+  #define UNLINK(f) while (unlink(f) >= 0)
+--- 202,207 ----
+ 
+Index: perly.c
+Prereq: 1.0.1.1
+*** perly.c.old	Sun Jan 24 03:57:09 1988
+--- perly.c	Sun Jan 24 03:57:12 1988
+***************
+*** 1,6 ****
+! char rcsid[] = "$Header: perly.c,v 1.0.1.1 88/01/21 21:25:57 root Exp $";
+  /*
+   * $Log:	perly.c,v $
+   * Revision 1.0.1.1  88/01/21  21:25:57  root
+   * Now uses CPP and CPPMINUS symbols from config.h.
+   * 
+--- 1,9 ----
+! char rcsid[] = "$Header: perly.c,v 1.0.1.2 88/01/24 00:06:03 root Exp $";
+  /*
+   * $Log:	perly.c,v $
++  * Revision 1.0.1.2  88/01/24  00:06:03  root
++  * patch 2: s/(abc)/\1/ grandfathering didn't work right.
++  * 
+   * Revision 1.0.1.1  88/01/21  21:25:57  root
+   * Now uses CPP and CPPMINUS symbols from config.h.
+   * 
+***************
+*** 1646,1652 ****
+  			    *d <<= 3;
+  			    *d += *s++ - '0';
+  			}
+! 			else if (!index('`"',term)) {	/* oops, a subpattern */
+  			    s--;
+  			    goto defchar;
+  			}
+--- 1649,1655 ----
+  			    *d <<= 3;
+  			    *d += *s++ - '0';
+  			}
+! 			else if (!index("`\"",term)) {	/* oops, a subpattern */
+  			    s--;
+  			    goto defchar;
+  			}
+ 
+Index: search.c
+Prereq: 1.0
+*** search.c.old	Sun Jan 24 03:57:57 1988
+--- search.c	Sun Jan 24 03:57:57 1988
+***************
+*** 1,6 ****
+! /* $Header: search.c,v 1.0 87/12/18 13:05:59 root Exp $
+   *
+   * $Log:	search.c,v $
+   * Revision 1.0  87/12/18  13:05:59  root
+   * Initial revision
+   * 
+--- 1,9 ----
+! /* $Header: search.c,v 1.0.1.1 88/01/24 03:55:05 root Exp $
+   *
+   * $Log:	search.c,v $
++  * Revision 1.0.1.1  88/01/24  03:55:05  root
++  * patch 2: made depend on perl.h.
++  * 
+   * Revision 1.0  87/12/18  13:05:59  root
+   * Initial revision
+   * 
+***************
+*** 8,21 ****
+  
+  /* string search routines */
+   
+- #include <stdio.h>
+- #include <ctype.h>
+- 
+  #include "EXTERN.h"
+  #include "handy.h"
+  #include "util.h"
+  #include "INTERN.h"
+  #include "search.h"
+  
+  #define VERBOSE
+  #define FLUSH
+--- 11,23 ----
+  
+  /* string search routines */
+   
+  #include "EXTERN.h"
+  #include "handy.h"
+  #include "util.h"
+  #include "INTERN.h"
+  #include "search.h"
++ #include "EXTERN.h"
++ #include "perl.h"
+  
+  #define VERBOSE
+  #define FLUSH

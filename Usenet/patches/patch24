@@ -1,0 +1,1748 @@
+Path: utzoo!mnetor!uunet!lll-winken!lll-lcc!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #24
+Message-ID: <1474@devvax.JPL.NASA.GOV>
+Date: 4 Mar 88 04:08:14 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 1737
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 24
+Priority: MEDIUM-RARE
+Subject: added new file test and symlink operators
+Subject: "standard" location of perl changed from /bin to /usr/bin
+Subject: in Makefile.SH, perl.o didn't depend on config.h
+Subject: in x2p/Makefile.SH, a2p.o didn't depend on config.h
+Subject: in Makefile, mv of old version was noisy if it didn't exist
+Subject: add line number to cmd structure for better runtime error messages
+Subject: some Xenix systems clobber errno on every sprintf()
+Subject: return value of times() needed to be ignored on Pyramids
+Subject: added (char*) cast to 0 in execl()
+Subject: division by 0 now gives a reasonable message
+Subject: bad pattern optimization showed up when used with ..
+Subject: files ending in "0" with no newline not treated consistently
+Subject: made some identifiers unique in first 7 chars
+Subject: in perldb, / is treated like operator when it should be match delim
+Subject: some machines don't handle types right in return (a,b,c)
+Subject: "$1text" did not interpolate $1 correctly
+Subject: grandfathering of \digit in substitutions wasn't working
+Subject: ^L is now a valid space character
+Subject: in a2p, some print statements need parens around them
+Subject: in a2p, blank lines were being treated like they had semicolons on them
+Subject: in a2p, warning message now printed when unsure of some translations
+Subject: in s2p, white space wasn't handled between the pattern and the command
+From: all sorts of people
+
+Description:
+	(Note: this is really the first part of patch 24.  Patch 25 must also
+	be applied before recompiling.)
+
+	By popular demand, you now have all the usual file tests: -r, -w, etc.
+	They are simply unary operators.
+
+	I've also added the symlink() function for those systems that can
+	support it.
+
+	The "standard" location of perl has changed from /bin to /usr/bin.
+	The primary motivation for this is the file system reorganization
+	that Sun and Berkeley are working towards, which will eliminate most
+	of what is in /bin.
+
+	In Makefile.SH, perl.o didn't depend on config.h, so perl.c didn't
+	get recompiled when Configure was run.  Likewise for x2p/Makefile.SH.
+	Also, there were some excessively noisy lines in the install section.
+
+	Runtime error messages didn't give much of a clue as to where the
+	error was.  The syntax tree now contains line numbers so that the
+	fatal() routine can print the line number in the perl script that
+	it was executing at the time.  It will also print the value of $.
+	for the input file from which the last input came.
+
+	Some Xenix systems clobber errno on every sprintf().  Since sprintf()
+	is called every time a numeric value is converted to a string value,
+	errno was almost always 25 (ENOTTY).
+
+	The return value of the times() function returns the "real-time" on
+	certain systems.  On Pyramids, the "real-time" changes so rapidly that
+	the check for an error from times() was true part of the time, when
+	there was in fact no error.  Since the only error condition is when
+	you pass in a bad buffer pointer, which I'm not doing, there's no
+	point in checking the error return.
+
+	I pulled of the neophyte's trick of using 0 to terminate the list
+	on an execl().  Fortunately, I caught it myself.  It's now cast to
+	(char*).
+
+	$foo / 0 and $foo % 0 used to produce floating exceptions.  They now
+	give reasonable error messages, both from the compile-time evaluator
+	and the run-time evaluator.
+
+	There was a bad optimization of /foo/ patterns that didn't show up
+	until they were put into a range: /foo/ .. /bar/.
+
+	The manual claims that
+		while (<fh>)
+	is equivalent to
+		while ($_ = <fh>)
+	But in the case of a file ending in "\n0", this was not true.  Has
+	anybody ever seen a file that ends that way?
+
+	There were some identifiers that weren't unique in the first 7
+	characters.
+
+	When running perldb, sometimes you get something that says backslash
+	is an illegal character inside a pattern.  This was because of a
+	misplaced - in a character class that made an unintentional range.
+	This caused / to always be treated as a division operator, when
+	in fact sometimes it is the beginning of a pattern.  Backslash IS
+	an illegal character outside of strings and patterns.
+
+	Some machines don't handle types right in return (a,b,c), such that
+	"c" must be cast to the type it already is.  Sheesh.
+
+	"$1text" did not interpolate $1 correctly.  The problem was that the
+	loop that scanned identifiers in the interpolation routine didn't
+	differentiate identifiers that start with a digit from those that
+	start with a letter.
+
+	Grandfathering of \digit in substitutions wasn't working right.
+	Instead of doing the same as $digit, it just interpolated the digit.
+	(To get an octal interpolation in a substitution replacement, just
+	use more than one digit: \01 rather than \1.)
+
+	^L is now a valid space character, so you can write 30000 line perl
+	scripts.  Ugh.
+
+	In the output of a2p, some print statements following a && need
+	to have parens around them to prevent precedence conflicts.
+
+	In s2p, white space wasn't handled between the pattern and the command:
+	"/x/d" would translate right but "/x/ d" wouldn't.
+
+	In a2p, blank lines were being treated like they had semicolons on them,
+	which prevented you from inserting any blank lines or comments in the
+	middle of an if...else... construct.
+
+	A2p has always put #??? onto lines it wasn't sure were right.  It now
+	prints out a message stating how many lines were so marked.
+
+
+Fix:	From rn, say "| patch -p0 -N -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch -p0 -N <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch (version 2.0, latest patchlevel).
+
+	After patching:
+		DO NOT RECOMPILE!
+		First apply patch 25, which is really the 2nd half of patch 24.
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 23
+1c1
+< #define PATCHLEVEL 23
+---
+> #define PATCHLEVEL 24
+ 
+Index: Makefile.SH
+Prereq: 1.0.1.8
+*** Makefile.SH.old	Wed Mar  2 13:04:08 1988
+--- Makefile.SH	Wed Mar  2 13:04:09 1988
+***************
+*** 20,28 ****
+  
+  echo "Extracting Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.8 88/02/12 10:16:02 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
+  # Revision 1.0.1.8  88/02/12  10:16:02  root
+  # patch22: more glitches on systems without . in path.
+  # 
+--- 20,33 ----
+  
+  echo "Extracting Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.9 88/03/02 11:28:31 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
++ # Revision 1.0.1.9  88/03/02  11:28:31  root
++ # patch24: perl.o didn't depend on config.h
++ # patch24: mv of old version was noisy if it didn't exist
++ # patch24: "standard" location changed to /usr/bin
++ # 
+  # Revision 1.0.1.8  88/02/12  10:16:02  root
+  # patch22: more glitches on systems without . in path.
+  # 
+***************
+*** 115,121 ****
+  	yacc perl.y
+  	mv y.tab.c perl.c
+  
+! perl.o: perl.c perly.c perl.h EXTERN.h search.h util.h INTERN.h handy.h
+  	$(CC) -c $(CFLAGS) $(LARGE) perl.c
+  
+  # if a .h file depends on another .h file...
+--- 120,126 ----
+  	yacc perl.y
+  	mv y.tab.c perl.c
+  
+! perl.o: perl.c perly.c perl.h EXTERN.h search.h util.h INTERN.h handy.h config.h
+  	$(CC) -c $(CFLAGS) $(LARGE) perl.c
+  
+  # if a .h file depends on another .h file...
+***************
+*** 128,141 ****
+  install: perl perl.man
+  # won't work with csh
+  	export PATH || exit 1
+! 	- mv $(bin)/perl $(bin)/perl.old
+  	- if test `pwd` != $(bin); then cp $(public) $(bin); fi
+  	cd $(bin); \
+  for pub in $(public); do \
+  chmod +x `basename $$pub`; \
+  done
+! 	- test $(bin) = /bin || rm -f /bin/perl
+! 	- test $(bin) = /bin || $(SLN) $(bin)/perl /bin || cp $(bin)/perl /bin
+  #	chmod +x makedir
+  #	- makedir `filexp $(lib)`
+  #	- \
+--- 133,146 ----
+  install: perl perl.man
+  # won't work with csh
+  	export PATH || exit 1
+! 	- mv $(bin)/perl $(bin)/perl.old 2>/dev/null
+  	- if test `pwd` != $(bin); then cp $(public) $(bin); fi
+  	cd $(bin); \
+  for pub in $(public); do \
+  chmod +x `basename $$pub`; \
+  done
+! 	- test $(bin) = /usr/bin || rm -f /usr/bin/perl
+! 	- test $(bin) = /usr/bin || $(SLN) $(bin)/perl /usr/bin || cp $(bin)/perl /usr/bin
+  #	chmod +x makedir
+  #	- makedir `filexp $(lib)`
+  #	- \
+ 
+Index: x2p/Makefile.SH
+Prereq: 1.0.1.3
+*** x2p/Makefile.SH.old	Wed Mar  2 13:07:44 1988
+--- x2p/Makefile.SH	Wed Mar  2 13:07:45 1988
+***************
+*** 18,26 ****
+  esac
+  echo "Extracting x2p/Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.3 88/02/12 10:52:32 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
+  # Revision 1.0.1.3  88/02/12  10:52:32  root
+  # patch22: support for systems without . in path
+  # 
+--- 18,30 ----
+  esac
+  echo "Extracting x2p/Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.4 88/03/02 12:58:56 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
++ # Revision 1.0.1.4  88/03/02  12:58:56  root
++ # patch24: a2p.o didn't depend on config.h
++ # patch24: mv of old version was noisy
++ # 
+  # Revision 1.0.1.3  88/02/12  10:52:32  root
+  # patch22: support for systems without . in path
+  # 
+***************
+*** 85,95 ****
+  	$(CC) $(LDFLAGS) $(LARGE) $(obj) a2p.o $(libs) -o a2p
+  
+  a2p.c: a2p.y
+! 	@ echo Expect 107 shift/reduce errors...
+  	yacc a2p.y
+  	mv y.tab.c a2p.c
+  
+! a2p.o: a2p.c a2py.c a2p.h EXTERN.h util.h INTERN.h handy.h
+  	$(CC) -c $(CFLAGS) $(LARGE) a2p.c
+  
+  # if a .h file depends on another .h file...
+--- 89,99 ----
+  	$(CC) $(LDFLAGS) $(LARGE) $(obj) a2p.o $(libs) -o a2p
+  
+  a2p.c: a2p.y
+! 	@ echo Expect 95 shift/reduce errors...
+  	yacc a2p.y
+  	mv y.tab.c a2p.c
+  
+! a2p.o: a2p.c a2py.c a2p.h EXTERN.h util.h INTERN.h handy.h ../config.h
+  	$(CC) -c $(CFLAGS) $(LARGE) a2p.c
+  
+  # if a .h file depends on another .h file...
+***************
+*** 98,104 ****
+  install: a2p s2p
+  # won't work with csh
+  	export PATH || exit 1
+! 	- mv $(bin)/a2p $(bin)/a2p.old
+  	- mv $(bin)/s2p $(bin)/s2p.old
+  	- if test `pwd` != $(bin); then cp $(public) $(bin); fi
+  	cd $(bin); \
+--- 102,108 ----
+  install: a2p s2p
+  # won't work with csh
+  	export PATH || exit 1
+! 	- mv $(bin)/a2p $(bin)/a2p.old 2>/dev/null
+  	- mv $(bin)/s2p $(bin)/s2p.old
+  	- if test `pwd` != $(bin); then cp $(public) $(bin); fi
+  	cd $(bin); \
+***************
+*** 105,111 ****
+  for pub in $(public); do \
+  chmod +x `basename $$pub`; \
+  done
+- 	- test $(bin) = /bin || rm -f /bin/a2p
+  #	chmod +x makedir
+  #	- makedir `filexp $(lib)`
+  #	- \
+--- 109,114 ----
+ 
+Index: x2p/a2p.y
+Prereq: 1.0.1.1
+*** x2p/a2p.y.old	Wed Mar  2 13:07:52 1988
+--- x2p/a2p.y	Wed Mar  2 13:07:53 1988
+***************
+*** 1,7 ****
+  %{
+! /* $Header: a2p.y,v 1.0.1.1 88/02/25 11:54:49 root Exp $
+   *
+   * $Log:	a2p.y,v $
+   * Revision 1.0.1.1  88/02/25  11:54:49  root
+   * patch23: some patterns ended up not enclosed in slashes.
+   * 
+--- 1,10 ----
+  %{
+! /* $Header: a2p.y,v 1.0.1.2 88/03/02 12:59:39 root Exp $
+   *
+   * $Log:	a2p.y,v $
++  * Revision 1.0.1.2  88/03/02  12:59:39  root
++  * patch24: blank lines were being treated like they had semicolons on them
++  * 
+   * Revision 1.0.1.1  88/02/25  11:54:49  root
+   * patch23: some patterns ended up not enclosed in slashes.
+   * 
+***************
+*** 201,214 ****
+  		{ $$ = oper1(OVFLD,$2); }
+  	;
+  
+- maybe	: NEWLINE
+- 		{ $$ = oper0(ONEWLINE); }
+- 	| /* NULL */
+- 		{ $$ = Nullop; }
+- 	| COMMENT
+- 		{ $$ = oper1(OCOMMENT,$1); }
+- 	;
+- 
+  print_list
+  	: expr
+  	| clist
+--- 204,209 ----
+***************
+*** 240,256 ****
+  		{ $$ = oper1(OCOMMENT,$1); }
+  	;
+  
+! separator
+! 	: ';'
+! 		{ $$ = oper0(OSEMICOLON); }
+! 	| SEMINEW
+! 		{ $$ = oper0(OSNEWLINE); }
+! 	| NEWLINE
+! 		{ $$ = oper0(OSNEWLINE); }
+  	| COMMENT
+! 		{ $$ = oper1(OSCOMMENT,$1); }
+  	;
+  
+  states	: states statement
+  		{ $$ = oper2(OSTATES,$1,$2); }
+  	| /* NULL */
+--- 235,263 ----
+  		{ $$ = oper1(OCOMMENT,$1); }
+  	;
+  
+! maybe	: maybe nlstuff
+! 		{ $$ = oper2(OJUNK,$1,$2); }
+! 	| /* NULL */
+! 		{ $$ = Nullop; }
+! 	;
+! 
+! nlstuff : NEWLINE
+! 		{ $$ = oper0(ONEWLINE); }
+  	| COMMENT
+! 		{ $$ = oper1(OCOMMENT,$1); }
+  	;
+  
++ separator
++ 	: ';' maybe
++ 		{ $$ = oper2(OJUNK,oper0(OSEMICOLON),$2); }
++ 	| SEMINEW maybe
++ 		{ $$ = oper2(OJUNK,oper0(OSNEWLINE),$2); }
++ 	| NEWLINE maybe
++ 		{ $$ = oper2(OJUNK,oper0(OSNEWLINE),$2); }
++ 	| COMMENT maybe
++ 		{ $$ = oper2(OJUNK,oper1(OSCOMMENT,$1),$2); }
++ 	;
++ 
+  states	: states statement
+  		{ $$ = oper2(OSTATES,$1,$2); }
+  	| /* NULL */
+***************
+*** 260,268 ****
+--- 267,284 ----
+  statement
+  	: simple separator
+  		{ $$ = oper2(OSTATE,$1,$2); }
++ 	| ';' maybe
++ 		{ $$ = oper2(OSTATE,Nullop,oper2(OJUNK,oper0(OSEMICOLON),$2)); }
++ 	| SEMINEW maybe
++ 		{ $$ = oper2(OSTATE,Nullop,oper2(OJUNK,oper0(OSNEWLINE),$2)); }
+  	| compound
+  	;
+  
++ simpnull: simple
++ 	| /* NULL */
++ 		{ $$ = Nullop; }
++ 	;
++ 
+  simple
+  	: expr
+  	| PRINT print_list redir expr
+***************
+*** 295,302 ****
+  		{ $$ = oper1(OEXIT,$2); }
+  	| CONTINUE
+  		{ $$ = oper0(OCONTINUE); }
+- 	| /* NULL */
+- 		{ $$ = Nullop; }
+  	;
+  
+  redir	: RELOP
+--- 311,316 ----
+***************
+*** 314,322 ****
+  		{ $$ = oper3(OIF,$3,bl($6,$5),bl($9,$8)); }
+  	| WHILE '(' cond ')' maybe statement
+  		{ $$ = oper2(OWHILE,$3,bl($6,$5)); }
+! 	| FOR '(' simple ';' cond ';' simple ')' maybe statement
+  		{ $$ = oper4(OFOR,$3,$5,$7,bl($10,$9)); }
+! 	| FOR '(' simple ';'  ';' simple ')' maybe statement
+  		{ $$ = oper4(OFOR,$3,string("",0),$6,bl($9,$8)); }
+  	| FOR '(' VAR IN VAR ')' maybe statement
+  		{ $$ = oper3(OFORIN,$3,$5,bl($8,$7)); }
+--- 328,336 ----
+  		{ $$ = oper3(OIF,$3,bl($6,$5),bl($9,$8)); }
+  	| WHILE '(' cond ')' maybe statement
+  		{ $$ = oper2(OWHILE,$3,bl($6,$5)); }
+! 	| FOR '(' simpnull ';' cond ';' simpnull ')' maybe statement
+  		{ $$ = oper4(OFOR,$3,$5,$7,bl($10,$9)); }
+! 	| FOR '(' simpnull ';'  ';' simpnull ')' maybe statement
+  		{ $$ = oper4(OFOR,$3,string("",0),$6,bl($9,$8)); }
+  	| FOR '(' VAR IN VAR ')' maybe statement
+  		{ $$ = oper3(OFORIN,$3,$5,bl($8,$7)); }
+ 
+Index: x2p/a2py.c
+Prereq: 1.0.1.4
+*** x2p/a2py.c.old	Wed Mar  2 13:08:00 1988
+--- x2p/a2py.c	Wed Mar  2 13:08:02 1988
+***************
+*** 1,6 ****
+! /* $Header: a2py.c,v 1.0.1.4 88/02/25 11:56:30 root Exp $
+   *
+   * $Log:	a2py.c,v $
+   * Revision 1.0.1.4  88/02/25  11:56:30  root
+   * patch23: added eval kludge for systems that don't grok #!.
+   * 
+--- 1,10 ----
+! /* $Header: a2py.c,v 1.0.1.5 88/03/02 13:01:06 root Exp $
+   *
+   * $Log:	a2py.c,v $
++  * Revision 1.0.1.5  88/03/02  13:01:06  root
++  * patch24: warning message printed when unsure of some translations
++  * patch24: "standard" directory changed from /bin to /usr/bin
++  * 
+   * Revision 1.0.1.4  88/02/25  11:56:30  root
+   * patch23: added eval kludge for systems that don't grok #!.
+   * 
+***************
+*** 23,28 ****
+--- 27,34 ----
+  
+  char *filename;
+  
++ int checkers = 0;
++ 
+  main(argc,argv,env)
+  register int argc;
+  register char **argv;
+***************
+*** 125,131 ****
+      /* second pass to produce new program */
+  
+      tmpstr = walk(0,0,root,&i);
+!     str = str_make("#!/bin/perl\neval \"exec /bin/perl $0 $*\"\n\
+      if $running_under_some_shell;\n\
+  			# this emulates #! processing on NIH machines.\n\
+  			# (remove #! line above if indigestible)\n\n");
+--- 131,137 ----
+      /* second pass to produce new program */
+  
+      tmpstr = walk(0,0,root,&i);
+!     str = str_make("#!/usr/bin/perl\neval \"exec /usr/bin/perl $0 $*\"\n\
+      if $running_under_some_shell;\n\
+  			# this emulates #! processing on NIH machines.\n\
+  			# (remove #! line above if indigestible)\n\n");
+***************
+*** 145,150 ****
+--- 151,163 ----
+  #endif
+      fixup(str);
+      putlines(str);
++     if (checkers) {
++ 	fprintf(stderr,
++ 	  "Please check my work on the %d line%s I've marked with \"#???\".\n",
++ 		checkers, checkers == 1 ? "" : "s" );
++ 	fprintf(stderr,
++ 	  "The operation I've selected may be wrong for the operand types.\n");
++     }
+      exit(0);
+  }
+  
+***************
+*** 862,872 ****
+--- 875,888 ----
+  	if (*t == 127) {
+  	    *t = ' ';
+  	    strcpy(t+strlen(t)-1, "\t#???\n");
++ 	    checkers++;
+  	}
+      }
+      t = tokenbuf;
+      if (*t == '#') {
+  	if (strnEQ(t,"#!/bin/awk",10) || strnEQ(t,"#! /bin/awk",11))
++ 	    return;
++ 	if (strnEQ(t,"#!/usr/bin/awk",14) || strnEQ(t,"#! /usr/bin/awk",15))
+  	    return;
+      }
+      fputs(tokenbuf,stdout);
+ 
+Index: arg.c
+Prereq: 1.0.1.12
+*** arg.c.old	Wed Mar  2 13:04:28 1988
+--- arg.c	Wed Mar  2 13:04:35 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.c,v 1.0.1.12 88/02/25 11:34:59 root Exp $
+   *
+   * $Log:	arg.c,v $
+   * Revision 1.0.1.12  88/02/25  11:34:59  root
+   * patch23: perl inappropriately modifies filename passed to open()
+   * patch23: the -i switch with no backup extension truncates the file
+--- 1,15 ----
+! /* $Header: arg.c,v 1.0.1.13 88/03/02 11:29:29 root Exp $
+   *
+   * $Log:	arg.c,v $
++  * Revision 1.0.1.13  88/03/02  11:29:29  root
++  * patch24: upgraded runtime error messages
++  * patch24: sprintf blasts errno on Xenix
++  * patch24: return value of times() needed to be ignored on Pyramids
++  * patch24: added (char*) cast to 0 in execl()
++  * patch24: added new file test and symlink operators
++  * patch24: division by 0 now gives a reasonable message
++  * patch24: bad pattern optimization showed up when used with ..
++  * 
+   * Revision 1.0.1.12  88/02/25  11:34:59  root
+   * patch23: perl inappropriately modifies filename passed to open()
+   * patch23: the -i switch with no backup extension truncates the file
+***************
+*** 62,69 ****
+      register char *d;
+      register char *t;
+  
+!     if (!spat || !s)
+! 	fatal("panic: do_match\n");
+      if (spat->spat_flags & SPAT_USED) {
+  #ifdef DEBUGGING
+  	if (debug & 8)
+--- 71,80 ----
+      register char *d;
+      register char *t;
+  
+!     if (!spat)
+! 	return TRUE;
+!     if (!s)
+! 	fatal("panic: do_match");
+      if (spat->spat_flags & SPAT_USED) {
+  #ifdef DEBUGGING
+  	if (debug & 8)
+***************
+*** 79,87 ****
+  #endif
+  	if (d = compile(&spat->spat_compex,t,TRUE,
+  	  spat->spat_flags & SPAT_FOLD )) {
+! #ifdef DEBUGGING
+! 	    deb("/%s/: %s\n", t, d);
+! #endif
+  	    return FALSE;
+  	}
+  	if (!*spat->spat_compex.precomp && lastspat)
+--- 90,96 ----
+  #endif
+  	if (d = compile(&spat->spat_compex,t,TRUE,
+  	  spat->spat_flags & SPAT_FOLD )) {
+! 	    fatal("/%s/: %s", t, d);
+  	    return FALSE;
+  	}
+  	if (!*spat->spat_compex.precomp && lastspat)
+***************
+*** 145,151 ****
+      spat = arg[2].arg_ptr.arg_spat;
+      s = str_get(str);
+      if (!spat || !s)
+! 	fatal("panic: do_subst\n");
+      else if (spat->spat_runtime) {
+  	char *d;
+  
+--- 154,160 ----
+      spat = arg[2].arg_ptr.arg_spat;
+      s = str_get(str);
+      if (!spat || !s)
+! 	fatal("panic: do_subst");
+      else if (spat->spat_runtime) {
+  	char *d;
+  
+***************
+*** 152,160 ****
+  	m = str_get(eval(spat->spat_runtime,Null(STR***)));
+  	if (d = compile(&spat->spat_compex,m,TRUE,
+  	  spat->spat_flags & SPAT_FOLD )) {
+! #ifdef DEBUGGING
+! 	    deb("/%s/: %s\n", m, d);
+! #endif
+  	    return 0;
+  	}
+      }
+--- 161,167 ----
+  	m = str_get(eval(spat->spat_runtime,Null(STR***)));
+  	if (d = compile(&spat->spat_compex,m,TRUE,
+  	  spat->spat_flags & SPAT_FOLD )) {
+! 	    fatal("/%s/: %s", m, d);
+  	    return 0;
+  	}
+      }
+***************
+*** 183,189 ****
+  	lastspat = spat;
+  	do {
+  	    if (iters++ > 10000)
+! 		fatal("Substitution loop?\n");
+  	    if (spat->spat_compex.numsubs)
+  		s = spat->spat_compex.subbase;
+  	    str_ncat(dstr,s,m-s);
+--- 190,196 ----
+  	lastspat = spat;
+  	do {
+  	    if (iters++ > 10000)
+! 		fatal("Substitution loop");
+  	    if (spat->spat_compex.numsubs)
+  		s = spat->spat_compex.subbase;
+  	    str_ncat(dstr,s,m-s);
+***************
+*** 213,219 ****
+      tbl = arg[2].arg_ptr.arg_cval;
+      s = str_get(str);
+      if (!tbl || !s)
+! 	fatal("panic: do_trans\n");
+  #ifdef DEBUGGING
+      if (debug & 8) {
+  	deb("2.TBL\n");
+--- 220,226 ----
+      tbl = arg[2].arg_ptr.arg_cval;
+      s = str_get(str);
+      if (!tbl || !s)
+! 	fatal("panic: do_trans");
+  #ifdef DEBUGGING
+      if (debug & 8) {
+  	deb("2.TBL\n");
+***************
+*** 246,252 ****
+      int i;
+  
+      if (!spat || !s)
+! 	fatal("panic: do_split\n");
+      else if (spat->spat_runtime) {
+  	char *d;
+  
+--- 253,259 ----
+      int i;
+  
+      if (!spat || !s)
+! 	fatal("panic: do_split");
+      else if (spat->spat_runtime) {
+  	char *d;
+  
+***************
+*** 262,270 ****
+  	}
+  	if (d = compile(&spat->spat_compex,m,TRUE,
+  	  spat->spat_flags & SPAT_FOLD )) {
+! #ifdef DEBUGGING
+! 	    deb("/%s/: %s\n", m, d);
+! #endif
+  	    return FALSE;
+  	}
+      }
+--- 269,275 ----
+  	}
+  	if (d = compile(&spat->spat_compex,m,TRUE,
+  	  spat->spat_flags & SPAT_FOLD )) {
+! 	    fatal("/%s/: %s", m, d);
+  	    return FALSE;
+  	}
+      }
+***************
+*** 291,297 ****
+  	str_nset(dstr,s,m-s);
+  	astore(ary, iters++, dstr);
+  	if (iters > 10000)
+! 	    fatal("Substitution loop?\n");
+  	s = spat->spat_compex.subend[0];
+      }
+      if (*s) {			/* ignore field after final "whitespace" */
+--- 296,302 ----
+  	str_nset(dstr,s,m-s);
+  	astore(ary, iters++, dstr);
+  	if (iters > 10000)
+! 	    fatal("Substitution loop");
+  	s = spat->spat_compex.subend[0];
+      }
+      if (*s) {			/* ignore field after final "whitespace" */
+***************
+*** 423,428 ****
+--- 428,435 ----
+      return TRUE;
+  }
+  
++ extern int errno;
++ 
+  FILE *
+  nextargv(stab)
+  register STAB *stab;
+***************
+*** 451,456 ****
+--- 458,464 ----
+  		    UNLINK(oldname);
+  		}
+  		sprintf(tokenbuf,">%s",oldname);
++ 		errno = 0;		/* in case sprintf set errno */
+  		do_open(argvoutstab,tokenbuf);
+  		defoutstab = argvoutstab;
+  	    }
+***************
+*** 633,640 ****
+      if (!ary)
+  	myarray = ary = anew();
+      ary->ary_fill = -1;
+!     if (times(&timesbuf) < 0)
+! 	max = 0;
+  
+      if (retary) {
+  	if (max) {
+--- 641,647 ----
+      if (!ary)
+  	myarray = ary = anew();
+      ary->ary_fill = -1;
+!     times(&timesbuf);
+  
+      if (retary) {
+  	if (max) {
+***************
+*** 856,862 ****
+  
+      for (s = cmd; *s; s++) {
+  	if (*s != ' ' && !isalpha(*s) && index("$&*(){}[]'\";\\|?<>~`",*s)) {
+! 	    execl("/bin/sh","sh","-c",cmd,0);
+  	    return FALSE;
+  	}
+      }
+--- 863,869 ----
+  
+      for (s = cmd; *s; s++) {
+  	if (*s != ' ' && !isalpha(*s) && index("$&*(){}[]'\";\\|?<>~`",*s)) {
+! 	    execl("/bin/sh","sh","-c",cmd,(char*)0);
+  	    return FALSE;
+  	}
+      }
+***************
+*** 1245,1250 ****
+--- 1252,1272 ----
+      opargs[O_LINK] =		A(1,1,0);
+      opargs[O_REPEAT] =		A(1,1,0);
+      opargs[O_EVAL] =		A(1,0,0);
++     opargs[O_FTEREAD] =		A(1,0,0);
++     opargs[O_FTEWRITE] =	A(1,0,0);
++     opargs[O_FTEEXEC] =		A(1,0,0);
++     opargs[O_FTEOWNED] =	A(1,0,0);
++     opargs[O_FTRREAD] =		A(1,0,0);
++     opargs[O_FTRWRITE] =	A(1,0,0);
++     opargs[O_FTREXEC] =		A(1,0,0);
++     opargs[O_FTROWNED] =	A(1,0,0);
++     opargs[O_FTIS] =		A(1,0,0);
++     opargs[O_FTZERO] =		A(1,0,0);
++     opargs[O_FTSIZE] =		A(1,0,0);
++     opargs[O_FTFILE] =		A(1,0,0);
++     opargs[O_FTDIR] =		A(1,0,0);
++     opargs[O_FTLINK] =		A(1,0,0);
++     opargs[O_SYMLINK] =		A(1,1,0);
+  }
+  
+  #ifdef VOIDSIG
+***************
+*** 1343,1349 ****
+  #endif
+  	    str = eval(arg[anum].arg_ptr.arg_arg,Null(STR***));
+  	    if (!str)
+! 		fatal("panic: A_LEXPR\n");
+  	    goto do_crement;
+  	case A_LVAL:
+  #ifdef DEBUGGING
+--- 1365,1371 ----
+  #endif
+  	    str = eval(arg[anum].arg_ptr.arg_arg,Null(STR***));
+  	    if (!str)
+! 		fatal("panic: A_LEXPR");
+  	    goto do_crement;
+  	case A_LVAL:
+  #ifdef DEBUGGING
+***************
+*** 1354,1360 ****
+  #endif
+  	    str = STAB_STR(arg[anum].arg_ptr.arg_stab);
+  	    if (!str)
+! 		fatal("panic: A_LVAL\n");
+  	  do_crement:
+  	    assigning = TRUE;
+  	    if (argflags & AF_PRE) {
+--- 1376,1382 ----
+  #endif
+  	    str = STAB_STR(arg[anum].arg_ptr.arg_stab);
+  	    if (!str)
+! 		fatal("panic: A_LVAL");
+  	  do_crement:
+  	    assigning = TRUE;
+  	    if (argflags & AF_PRE) {
+***************
+*** 1545,1556 ****
+  	value *= str_gnum(sarg[2]);
+  	goto donumset;
+      case O_DIVIDE:
+! 	value = str_gnum(sarg[1]);
+! 	value /= str_gnum(sarg[2]);
+  	goto donumset;
+      case O_MODULO:
+  	value = str_gnum(sarg[1]);
+! 	value = (double)(((long)value) % (long)str_gnum(sarg[2]));
+  	goto donumset;
+      case O_ADD:
+  	value = str_gnum(sarg[1]);
+--- 1567,1581 ----
+  	value *= str_gnum(sarg[2]);
+  	goto donumset;
+      case O_DIVIDE:
+!     	if ((value = str_gnum(sarg[2])) == 0.0)
+!     	    fatal("Illegal division by zero");
+! 	value = str_gnum(sarg[1]) / value;
+  	goto donumset;
+      case O_MODULO:
++     	if ((tmplong = (long) str_gnum(sarg[2])) == 0L)
++     	    fatal("Illegal modulus zero");
+  	value = str_gnum(sarg[1]);
+! 	value = (double)(((long)value) % tmplong);
+  	goto donumset;
+      case O_ADD:
+  	value = str_gnum(sarg[1]);
+***************
+*** 1907,1913 ****
+  	tmps = str_get(sarg[1]);
+  	if (!tmps || !*tmps)
+  	    exit(1);
+! 	fatal("%s\n",str_get(sarg[1]));
+  	value = 0.0;
+  	goto donumset;
+      case O_EXIT:
+--- 1932,1938 ----
+  	tmps = str_get(sarg[1]);
+  	if (!tmps || !*tmps)
+  	    exit(1);
+! 	fatal("%s",str_get(sarg[1]));
+  	value = 0.0;
+  	goto donumset;
+      case O_EXIT:
+***************
+*** 1961,1967 ****
+  #endif
+  	}
+  	if (loop_ptr < 0)
+! 	    fatal("Bad label: %s\n", maxarg > 0 ? tmps : "<null>");
+  	longjmp(loop_stack[loop_ptr].loop_env, optype);
+      case O_GOTO:/* shudder */
+  	goto_targ = str_get(sarg[1]);
+--- 1986,1992 ----
+  #endif
+  	}
+  	if (loop_ptr < 0)
+! 	    fatal("Bad label: %s", maxarg > 0 ? tmps : "<null>");
+  	longjmp(loop_stack[loop_ptr].loop_env, optype);
+      case O_GOTO:/* shudder */
+  	goto_targ = str_get(sarg[1]);
+***************
+*** 2169,2174 ****
+--- 2194,2306 ----
+  	    do_eval(arg[1].arg_type != A_NULL ? sarg[1] : defstab->stab_val) );
+  	STABSET(str);
+  	break;
++ 
++     case O_FTRREAD:
++ 	maxarg = 0;
++ 	anum = S_IREAD;
++ 	goto check_perm;
++     case O_FTRWRITE:
++ 	maxarg = 0;
++ 	anum = S_IWRITE;
++ 	goto check_perm;
++     case O_FTREXEC:
++ 	maxarg = 0;
++ 	anum = S_IEXEC;
++ 	goto check_perm;
++     case O_FTEREAD:
++ 	maxarg = 1;
++ 	anum = S_IREAD;
++ 	goto check_perm;
++     case O_FTEWRITE:
++ 	maxarg = 1;
++ 	anum = S_IWRITE;
++ 	goto check_perm;
++     case O_FTEEXEC:
++ 	maxarg = 1;
++ 	anum = S_IEXEC;
++       check_perm:
++ 	if (stat(str_get(sarg[1]),&statbuf) < 0)
++ 	    str = &str_no;
++ 	else if (statbuf.st_mode & anum >> 6)
++ 	    str = &str_yes;	/* ok as "other" */
++ 	else if (statbuf.st_mode & anum &&
++ 	  statbuf.st_uid == (maxarg ? geteuid() : getuid()) )
++ 	    str = &str_yes;	/* ok as "user" */
++ 	else if (statbuf.st_mode & anum >> 3) {
++ 	    if (statbuf.st_gid == (maxarg ? getegid() : getgid()))
++ 		str = &str_yes;	/* ok as "group" */
++ 	    else {
++ #ifdef NGROUPS
++ 		gid_t gary[NGROUPS];
++ 
++ 		str = &str_no;
++ 		anum = getgroups(NGROUPS,gary);
++ 		while (anum >= 0)
++ 		    if (gary[anum--] == statbuf.st_gid)
++ 			str = &str_yes;
++ #else
++ 		str = &str_no;
++ #endif
++ 	    }
++ 	}
++ 	else
++ 	    str = &str_no;
++ 	break;
++ 
++     case O_FTIS:
++ 	if (stat(str_get(sarg[1]),&statbuf) >= 0)
++ 	    str = &str_yes;
++ 	else
++ 	    str = &str_no;
++ 	break;
++     case O_FTEOWNED:
++     case O_FTROWNED:
++ 	if (stat(str_get(sarg[1]),&statbuf) >= 0 &&
++ 	  statbuf.st_uid == (optype == O_FTEOWNED ? geteuid() : getuid()) )
++ 	    str = &str_yes;
++ 	else
++ 	    str = &str_no;
++ 	break;
++     case O_FTZERO:
++ 	if (stat(str_get(sarg[1]),&statbuf) >= 0 && !statbuf.st_size)
++ 	    str = &str_yes;
++ 	else
++ 	    str = &str_no;
++ 	break;
++     case O_FTSIZE:
++ 	if (stat(str_get(sarg[1]),&statbuf) >= 0 && statbuf.st_size)
++ 	    str = &str_yes;
++ 	else
++ 	    str = &str_no;
++ 	break;
++ 
++     case O_FTFILE:
++ 	anum = S_IFREG;
++ 	goto check_file_type;
++     case O_FTDIR:
++ 	anum = S_IFDIR;
++       check_file_type:
++ 	if (stat(str_get(sarg[1]),&statbuf) >= 0 &&
++ 	  (statbuf.st_mode & S_IFMT) == anum )
++ 	    str = &str_yes;
++ 	else
++ 	    str = &str_no;
++ 	break;
++     case O_FTLINK:
++ #ifdef SYMLINK
++ 	if (lstat(str_get(sarg[1]),&statbuf) >= 0 &&
++ 	  (statbuf.st_mode & S_IFMT) == S_IFLNK )
++ 	    str = &str_yes;
++ 	else
++ #endif
++ 	    str = &str_no;
++ 	break;
++ #ifdef SYMLINK
++     case O_SYMLINK:
++ 	tmps = str_get(sarg[1]);
++ 	value = (double)(symlink(tmps,str_get(sarg[2])) >= 0);
++ 	goto donumset;
++ #endif
+      }
+  #ifdef DEBUGGING
+      dlevel--;
+ 
+Index: arg.h
+Prereq: 1.0.1.1
+*** arg.h.old	Wed Mar  2 13:04:46 1988
+--- arg.h	Wed Mar  2 13:04:47 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.h,v 1.0.1.1 88/01/28 10:22:40 root Exp $
+   *
+   * $Log:	arg.h,v $
+   * Revision 1.0.1.1  88/01/28  10:22:40  root
+   * patch8: added eval operator.
+   * 
+--- 1,9 ----
+! /* $Header: arg.h,v 1.0.1.2 88/03/02 11:53:08 root Exp $
+   *
+   * $Log:	arg.h,v $
++  * Revision 1.0.1.2  88/03/02  11:53:08  root
++  * patch24: added new file test and symlink operators
++  * 
+   * Revision 1.0.1.1  88/01/28  10:22:40  root
+   * patch8: added eval operator.
+   * 
+***************
+*** 115,121 ****
+  #define O_LINK 103
+  #define O_REPEAT 104
+  #define O_EVAL 105
+! #define MAXO 106
+  
+  #ifndef DOINIT
+  extern char *opname[];
+--- 118,139 ----
+  #define O_LINK 103
+  #define O_REPEAT 104
+  #define O_EVAL 105
+! #define O_FTEREAD 106
+! #define O_FTEWRITE 107
+! #define O_FTEEXEC 108
+! #define O_FTEOWNED 109
+! #define O_FTRREAD 110
+! #define O_FTRWRITE 111
+! #define O_FTREXEC 112
+! #define O_FTROWNED 113
+! #define O_FTIS 114
+! #define O_FTZERO 115
+! #define O_FTSIZE 116
+! #define O_FTFILE 117
+! #define O_FTDIR 118
+! #define O_FTLINK 119
+! #define O_SYMLINK 120
+! #define MAXO 121
+  
+  #ifndef DOINIT
+  extern char *opname[];
+***************
+*** 227,233 ****
+      "LINK",
+      "REPEAT",
+      "EVAL",
+!     "106"
+  };
+  #endif
+  
+--- 245,266 ----
+      "LINK",
+      "REPEAT",
+      "EVAL",
+!     "FTEREAD",
+!     "FTEWRITE",
+!     "FTEEXEC",
+!     "FTEOWNED",
+!     "FTRREAD",
+!     "FTRWRITE",
+!     "FTREXEC",
+!     "FTROWNED",
+!     "FTIS",
+!     "FTZERO",
+!     "FTSIZE",
+!     "FTFILE",
+!     "FTDIR",
+!     "FTLINK",
+!     "SYMLINK",
+!     "120"
+  };
+  #endif
+  
+ 
+Index: cmd.c
+Prereq: 1.0.1.4
+*** cmd.c.old	Wed Mar  2 13:04:54 1988
+--- cmd.c	Wed Mar  2 13:04:57 1988
+***************
+*** 1,6 ****
+! /* $Header: cmd.c,v 1.0.1.4 88/02/12 10:22:09 root Exp $
+   *
+   * $Log:	cmd.c,v $
+   * Revision 1.0.1.4  88/02/12  10:22:09  root
+   * patch22: a fix for cray, who for some reason takes SVID seriously
+   * 
+--- 1,10 ----
+! /* $Header: cmd.c,v 1.0.1.5 88/03/02 12:05:09 root Exp $
+   *
+   * $Log:	cmd.c,v $
++  * Revision 1.0.1.5  88/03/02  12:05:09  root
++  * patch24: improved runtime error messages
++  * patch24: files ending in "0" with no newline not treated consistently
++  * 
+   * Revision 1.0.1.4  88/02/12  10:22:09  root
+   * patch22: a fix for cray, who for some reason takes SVID seriously
+   * 
+***************
+*** 187,192 ****
+--- 191,200 ----
+      while (tmps_max >= 0)		/* clean up after last eval */
+  	str_free(tmps_list[tmps_max--]);
+  
++     /* Set line number so run-time errors can be located */
++ 
++     line = cmd->c_line;
++ 
+      /* Here is some common optimization */
+  
+      if (cmdflags & CF_COND) {
+***************
+*** 260,267 ****
+  	    fp = last_in_stab->stab_io->fp;
+  	    retstr = defstab->stab_val;
+  	    if (fp && str_gets(retstr, fp)) {
+  		last_in_stab->stab_io->lines++;
+- 		match = TRUE;
+  	    }
+  	    else if (last_in_stab->stab_io->flags & IOF_ARGV)
+  		goto doeval;	/* doesn't necessarily count as EOF yet */
+--- 268,278 ----
+  	    fp = last_in_stab->stab_io->fp;
+  	    retstr = defstab->stab_val;
+  	    if (fp && str_gets(retstr, fp)) {
++ 		if (*retstr->str_ptr == '0' && !retstr->str_ptr[1])
++ 		    match = FALSE;
++ 		else
++ 		    match = TRUE;
+  		last_in_stab->stab_io->lines++;
+  	    }
+  	    else if (last_in_stab->stab_io->flags & IOF_ARGV)
+  		goto doeval;	/* doesn't necessarily count as EOF yet */
+***************
+*** 331,337 ****
+  
+      switch (cmd->c_type) {
+      case C_NULL:
+! 	fatal("panic: cmd_exec\n");
+      case C_EXPR:			/* evaluated for side effects */
+  	if (cmd->ucmd.acmd.ac_expr) {	/* more to do? */
+  	    retstr = eval(cmd->ucmd.acmd.ac_expr,Null(char***));
+--- 342,348 ----
+  
+      switch (cmd->c_type) {
+      case C_NULL:
+! 	fatal("panic: cmd_exec");
+      case C_EXPR:			/* evaluated for side effects */
+  	if (cmd->ucmd.acmd.ac_expr) {	/* more to do? */
+  	    retstr = eval(cmd->ucmd.acmd.ac_expr,Null(char***));
+***************
+*** 429,434 ****
+--- 440,448 ----
+      }
+      if (cmdflags & CF_LOOP) {
+  	cmdflags |= CF_COND;		/* now test the condition */
++ #ifdef DEBUGGING
++ 	dlevel = entdlevel;
++ #endif
+  	goto until_loop;
+      }
+    next_cmd:
+ 
+Index: cmd.h
+Prereq: 1.0.1.1
+*** cmd.h.old	Wed Mar  2 13:05:02 1988
+--- cmd.h	Wed Mar  2 13:05:03 1988
+***************
+*** 1,6 ****
+! /* $Header: cmd.h,v 1.0.1.1 88/01/28 10:23:07 root Exp $
+   *
+   * $Log:	cmd.h,v $
+   * Revision 1.0.1.1  88/01/28  10:23:07  root
+   * patch8: added eval_root for eval operator.
+   * 
+--- 1,9 ----
+! /* $Header: cmd.h,v 1.0.1.2 88/03/02 12:33:15 root Exp $
+   *
+   * $Log:	cmd.h,v $
++  * Revision 1.0.1.2  88/03/02  12:33:15  root
++  * patch24: add line number to cmd structure for better runtime error messages
++  * 
+   * Revision 1.0.1.1  88/01/28  10:23:07  root
+   * patch8: added eval_root for eval operator.
+   * 
+***************
+*** 103,108 ****
+--- 106,112 ----
+      } ucmd;
+      short	c_flen;		/* len of c_first, if not null */
+      short	c_flags;	/* optimization flags--see above */
++     unsigned short c_line;	/* line # of this command */
+      char	c_type;		/* what this command does */
+  };
+  
+ 
+Index: dump.c
+Prereq: 1.0.1.1
+*** dump.c.old	Wed Mar  2 13:05:08 1988
+--- dump.c	Wed Mar  2 13:05:09 1988
+***************
+*** 1,6 ****
+! /* $Header: dump.c,v 1.0.1.1 88/02/04 11:16:02 root Exp $
+   *
+   * $Log:	dump.c,v $
+   * Revision 1.0.1.1  88/02/04  11:16:02  root
+   * patch18: regularized includes.
+   * 
+--- 1,9 ----
+! /* $Header: dump.c,v 1.0.1.2 88/03/02 12:33:51 root Exp $
+   *
+   * $Log:	dump.c,v $
++  * Revision 1.0.1.2  88/03/02  12:33:51  root
++  * patch24: added printout of new line number field
++  * 
+   * Revision 1.0.1.1  88/02/04  11:16:02  root
+   * patch18: regularized includes.
+   * 
+***************
+*** 23,28 ****
+--- 26,33 ----
+      while (cmd) {
+  	dumplvl++;
+  	dump("C_TYPE = %s\n",cmdname[cmd->c_type]);
++ 	if (cmd->c_line)
++ 	    dump("C_LINE = %d\n",cmd->c_line);
+  	if (cmd->c_label)
+  	    dump("C_LABEL = \"%s\"\n",cmd->c_label);
+  	dump("C_OPT = CFT_%s\n",cmdopt[cmd->c_flags & CF_OPTIMIZE]);
+ 
+Index: t/io.fs
+Prereq: 1.0
+*** t/io.fs.old	Wed Mar  2 13:07:22 1988
+--- t/io.fs	Wed Mar  2 13:07:23 1988
+***************
+*** 1,9 ****
+  #!./perl
+  
+! # $Header: io.fs,v 1.0 87/12/18 13:12:48 root Exp $
+  
+! print "1..18\n";
+  
+  chdir '/tmp';
+  `/bin/rm -rf a b c x`;
+  
+--- 1,12 ----
+  #!./perl
+  
+! # $Header: io.fs,v 1.0.1.1 88/03/02 12:57:26 root Exp $
+  
+! print "1..20\n";
+  
++ $wd = `pwd`;
++ chop($wd);
++ 
+  chdir '/tmp';
+  `/bin/rm -rf a b c x`;
+  
+***************
+*** 61,63 ****
+--- 64,78 ----
+      $blksize,$blocks) = stat('b');
+  if ($ino == 0) {print "ok 18\n";} else {print "not ok 18\n";}
+  unlink 'c';
++ 
++ chdir $wd || die "Can't cd back to $wd";
++ 
++ unlink 'c';
++ if (`ls -l perl 2>/dev/null` =~ /^l.*->/) {  # we have symbolic links
++     if (symlink('TEST','c')) {print "ok 19\n";} else {print "not ok 19\n";}
++     $foo = `grep perl c`;
++     if ($foo) {print "ok 20\n";} else {print "not ok 20\n";}
++ }
++ else {
++     print "ok 19\nok 20\n";
++ }
+ 
+Index: malloc.c
+Prereq: 1.0.1.3
+*** malloc.c.old	Wed Mar  2 13:05:15 1988
+--- malloc.c	Wed Mar  2 13:05:16 1988
+***************
+*** 1,6 ****
+! /* $Header: malloc.c,v 1.0.1.3 88/02/12 10:26:09 root Exp $
+   *
+   * $Log:	malloc.c,v $
+   * Revision 1.0.1.3  88/02/12  10:26:09  root
+   * patch22: made yell about bad free()
+   * 
+--- 1,9 ----
+! /* $Header: malloc.c,v 1.0.1.4 88/03/02 12:34:23 root Exp $
+   *
+   * $Log:	malloc.c,v $
++  * Revision 1.0.1.4  88/03/02  12:34:23  root
++  * patch24: shortened a long identifier
++  * 
+   * Revision 1.0.1.3  88/02/12  10:26:09  root
+   * patch22: made yell about bad free()
+   * 
+***************
+*** 250,260 ****
+   * back.  We have to search all the free lists for the block in order
+   * to determine its bucket: 1st we make one pass thru the lists
+   * checking only the first block in each; if that fails we search
+!  * ``realloc_srchlen'' blocks in each list for a match (the variable
+   * is extern so the caller can modify it).  If that fails we just copy
+   * however many bytes was given to realloc() and hope it's not huge.
+   */
+! int realloc_srchlen = 4;	/* 4 should be plenty, -1 =>'s whole list */
+  
+  char *
+  realloc(cp, nbytes)
+--- 253,263 ----
+   * back.  We have to search all the free lists for the block in order
+   * to determine its bucket: 1st we make one pass thru the lists
+   * checking only the first block in each; if that fails we search
+!  * ``reall_srchlen'' blocks in each list for a match (the variable
+   * is extern so the caller can modify it).  If that fails we just copy
+   * however many bytes was given to realloc() and hope it's not huge.
+   */
+! int reall_srchlen = 4;	/* 4 should be plenty, -1 =>'s whole list */
+  
+  char *
+  realloc(cp, nbytes)
+***************
+*** 280,292 ****
+  		 * Search for the old block of memory on the
+  		 * free list.  First, check the most common
+  		 * case (last element free'd), then (this failing)
+! 		 * the last ``realloc_srchlen'' items free'd.
+  		 * If all lookups fail, then assume the size of
+  		 * the memory block being realloc'd is the
+  		 * smallest possible.
+  		 */
+  		if ((i = findbucket(op, 1)) < 0 &&
+! 		    (i = findbucket(op, realloc_srchlen)) < 0)
+  			i = 0;
+  	}
+  	onb = (1 << (i + 3)) - sizeof (*op) - RSLOP;
+--- 283,295 ----
+  		 * Search for the old block of memory on the
+  		 * free list.  First, check the most common
+  		 * case (last element free'd), then (this failing)
+! 		 * the last ``reall_srchlen'' items free'd.
+  		 * If all lookups fail, then assume the size of
+  		 * the memory block being realloc'd is the
+  		 * smallest possible.
+  		 */
+  		if ((i = findbucket(op, 1)) < 0 &&
+! 		    (i = findbucket(op, reall_srchlen)) < 0)
+  			i = 0;
+  	}
+  	onb = (1 << (i + 3)) - sizeof (*op) - RSLOP;
+ 
+Index: t/op.stat
+Prereq: 1.0
+*** t/op.stat.old	Wed Mar  2 13:07:30 1988
+--- t/op.stat	Wed Mar  2 13:07:30 1988
+***************
+*** 1,8 ****
+  #!./perl
+  
+! # $Header: op.stat,v 1.0 87/12/18 13:14:27 root Exp $
+  
+! print "1..4\n";
+  
+  open(foo, ">Op.stat.tmp");
+  
+--- 1,8 ----
+  #!./perl
+  
+! # $Header: op.stat,v 1.0.1.1 88/03/02 12:57:50 root Exp $
+  
+! print "1..28\n";
+  
+  open(foo, ">Op.stat.tmp");
+  
+***************
+*** 26,29 ****
+--- 26,82 ----
+  if ($mtime && $mtime != $ctime) {print "ok 4\n";} else {print "not ok 4\n";}
+  print "#4	:$mtime: != :$ctime:\n";
+  
++ `cp /dev/null Op.stat.tmp`;
++ 
++ if (-z 'Op.stat.tmp') {print "ok 5\n";} else {print "not ok 5\n";}
++ if (! -s 'Op.stat.tmp') {print "ok 6\n";} else {print "not ok 6\n";}
++ 
++ `echo hi >Op.stat.tmp`;
++ if (! -z 'Op.stat.tmp') {print "ok 7\n";} else {print "not ok 7\n";}
++ if (-s 'Op.stat.tmp') {print "ok 8\n";} else {print "not ok 8\n";}
++ 
++ chmod 0,'Op.stat.tmp';
++ if (! -r 'Op.stat.tmp') {print "ok 9\n";} else {print "not ok 9\n";}
++ if (! -w 'Op.stat.tmp') {print "ok 10\n";} else {print "not ok 10\n";}
++ if (! -x 'Op.stat.tmp') {print "ok 11\n";} else {print "not ok 11\n";}
++ 
++ chmod 07,'Op.stat.tmp';
++ if (-r 'Op.stat.tmp') {print "ok 12\n";} else {print "not ok 12\n";}
++ if (-w 'Op.stat.tmp') {print "ok 13\n";} else {print "not ok 13\n";}
++ if (-x 'Op.stat.tmp') {print "ok 14\n";} else {print "not ok 14\n";}
++ 
++ chmod 070,'Op.stat.tmp';
++ if (! -r 'Op.stat.tmp') {	# make silly file belong to our group
++ 				# on systems where group is inherited from .
++     ($group) = split(' ',`groups 2>/dev/null`);
++     chmod 0777,'Op.stat.tmp';
++     `chgrp $group Op.stat.tmp` if $group;  # if this fails, chgrp . by hand
++     chmod 070,'Op.stat.tmp';
++ }
++ if (-r 'Op.stat.tmp') {print "ok 15\n";} else {print "not ok 15\n";}
++ if (-w 'Op.stat.tmp') {print "ok 16\n";} else {print "not ok 16\n";}
++ if (-x 'Op.stat.tmp') {print "ok 17\n";} else {print "not ok 17\n";}
++ 
++ chmod 0700,'Op.stat.tmp';
++ if (-r 'Op.stat.tmp') {print "ok 18\n";} else {print "not ok 18\n";}
++ if (-w 'Op.stat.tmp') {print "ok 19\n";} else {print "not ok 19\n";}
++ if (-x 'Op.stat.tmp') {print "ok 20\n";} else {print "not ok 20\n";}
++ 
++ if (-f 'Op.stat.tmp') {print "ok 21\n";} else {print "not ok 21\n";}
++ if (! -d 'Op.stat.tmp') {print "ok 22\n";} else {print "not ok 22\n";}
++ 
++ if (-d '.') {print "ok 23\n";} else {print "not ok 23\n";}
++ if (! -f '.') {print "ok 24\n";} else {print "not ok 24\n";}
++ 
++ if (`ls -l perl` =~ /^l.*->/) {
++     if (-l 'perl') {print "ok 25\n";} else {print "not ok 25\n";}
++ }
++ else {
++     print "ok 25\n";
++ }
++ 
++ if (-o 'Op.stat.tmp') {print "ok 26\n";} else {print "not ok 26\n";}
++ 
++ if (-e 'Op.stat.tmp') {print "ok 27\n";} else {print "not ok 27\n";}
+  `rm -f Op.stat.tmp Op.stat.tmp2`;
++ if (! -e 'Op.stat.tmp') {print "ok 28\n";} else {print "not ok 28\n";}
+ 
+Index: perl.h
+Prereq: 1.0.1.5
+*** perl.h.old	Wed Mar  2 13:05:23 1988
+--- perl.h	Wed Mar  2 13:05:24 1988
+***************
+*** 1,6 ****
+! /* $Header: perl.h,v 1.0.1.5 88/02/04 11:19:35 root Exp $
+   *
+   * $Log:	perl.h,v $
+   * Revision 1.0.1.5  88/02/04  11:19:35  root
+   * patch18: regularized includes.
+   * 
+--- 1,10 ----
+! /* $Header: perl.h,v 1.0.1.6 88/03/02 12:34:53 root Exp $
+   *
+   * $Log:	perl.h,v $
++  * Revision 1.0.1.6  88/03/02  12:34:53  root
++  * patch24: added include of <sys/param.h>
++  * patch24: made some identifiers unique in first 7 chars
++  * 
+   * Revision 1.0.1.5  88/02/04  11:19:35  root
+   * patch18: regularized includes.
+   * 
+***************
+*** 36,41 ****
+--- 40,46 ----
+  #include <setjmp.h>
+  #include <sys/types.h>
+  #include <sys/stat.h>
++ #include <sys/param.h>
+  
+  #ifdef TMINSYS
+  #include <sys/time.h>
+***************
+*** 101,111 ****
+  CMD *addloop();
+  CMD *wopt();
+  
+! SPAT *stab_to_spat();
+  
+  STAB *stabent();
+  
+! ARG *stab_to_arg();
+  ARG *op_new();
+  ARG *make_op();
+  ARG *make_lval();
+--- 106,116 ----
+  CMD *addloop();
+  CMD *wopt();
+  
+! SPAT *stab2spat();
+  
+  STAB *stabent();
+  
+! ARG *stab2arg();
+  ARG *op_new();
+  ARG *make_op();
+  ARG *make_lval();
+ 
+Index: perl.man.1
+Prereq: 1.0.1.6
+*** perl.man.1.old	Wed Mar  2 13:05:34 1988
+--- perl.man.1	Wed Mar  2 13:05:39 1988
+***************
+*** 1,7 ****
+  .rn '' }`
+! ''' $Header: perl.man.1,v 1.0.1.6 88/02/25 11:42:26 root Exp $
+  ''' 
+  ''' $Log:	perl.man.1,v $
+  ''' Revision 1.0.1.6  88/02/25  11:42:26  root
+  ''' patch23: two typos and an omission.
+  ''' 
+--- 1,10 ----
+  .rn '' }`
+! ''' $Header: perl.man.1,v 1.0.1.7 88/03/02 12:36:18 root Exp $
+  ''' 
+  ''' $Log:	perl.man.1,v $
++ ''' Revision 1.0.1.7  88/03/02  12:36:18  root
++ ''' patch24: documented file tests
++ ''' 
+  ''' Revision 1.0.1.6  88/02/25  11:42:26  root
+  ''' patch23: two typos and an omission.
+  ''' 
+***************
+*** 769,774 ****
+--- 772,812 ----
+      s/^/> / if (/^$/ .. eof());	# quote body
+  
+  .fi
++ .Ip -x 8
++ A file test.
++ This unary operator takes one argument, a filename, and tests the file
++ to see if something is true about it.
++ It returns 1 for true and '' for false.
++ Precedence is higher than logical and relational operators, but lower than
++ arithmetic operators.
++ The operator may be any of:
++ .nf
++ 	-r	File is readable by effective uid.
++ 	-w	File is writeable by effective uid.
++ 	-x	File is executable by effective uid.
++ 	-o	File is owned by effective uid.
++ 	-R	File is readable by real uid.
++ 	-W	File is writeable by real uid.
++ 	-X	File is executable by real uid.
++ 	-O	File is owned by real uid.
++ 	-e	File exists.
++ 	-z	File has zero size.
++ 	-s	File has non-zero size.
++ 	-f	File is a plain file.
++ 	-d	File is a directory.
++ 	-l	File is a symbolic link.
++ 
++ .ne 7
++ Example:
++ 	
++ 	while (<>) {
++ 		chop;
++ 		next unless -f $_;	# ignore specials
++ 		...
++ 	}
++ 
++ .fi
++ Note that -s/a/b/ does not do a negated substitution.
+  .PP
+  Here is what C has that
+  .I perl
+ 
+Index: perl.man.2
+Prereq: 1.0.1.6
+*** perl.man.2.old	Wed Mar  2 13:05:53 1988
+--- perl.man.2	Wed Mar  2 13:05:57 1988
+***************
+*** 1,7 ****
+  ''' Beginning of part 2
+! ''' $Header: perl.man.2,v 1.0.1.6 88/02/25 11:44:09 root Exp $
+  '''
+  ''' $Log:	perl.man.2,v $
+  ''' Revision 1.0.1.6  88/02/25  11:44:09  root
+  ''' patch23: two typos and a clarification.
+  ''' 
+--- 1,10 ----
+  ''' Beginning of part 2
+! ''' $Header: perl.man.2,v 1.0.1.7 88/03/02 12:36:57 root Exp $
+  '''
+  ''' $Log:	perl.man.2,v $
++ ''' Revision 1.0.1.7  88/03/02  12:36:57  root
++ ''' patch24: documented symlink()
++ ''' 
+  ''' Revision 1.0.1.6  88/02/25  11:44:09  root
+  ''' patch23: two typos and a clarification.
+  ''' 
+***************
+*** 416,421 ****
+--- 419,428 ----
+  call.
+  To get the actual exit value divide by 256.
+  See also exec.
++ .Ip "symlink(OLDFILE,NEWFILE)" 8 2
++ Creates a new filename symbolically linked to the old filename.
++ Returns 1 for success, 0 otherwise.
++ On systems that don't support symbolic links, produces a fatal error.
+  .Ip "tell(FILEHANDLE)" 8 6
+  .Ip "tell" 8
+  Returns the current file position for FILEHANDLE.
+ 
+Index: x2p/walk.c
+Prereq: 1.0.1.3
+*** x2p/walk.c.old	Wed Mar  2 13:08:23 1988
+--- x2p/walk.c	Wed Mar  2 13:08:27 1988
+***************
+*** 1,6 ****
+! /* $Header: walk.c,v 1.0.1.3 88/02/02 11:54:58 root Exp $
+   *
+   * $Log:	walk.c,v $
+   * Revision 1.0.1.3  88/02/02  11:54:58  root
+   * patch14: got return value of each() backwards in translating 'for (a in b)'.
+   * 
+--- 1,9 ----
+! /* $Header: walk.c,v 1.0.1.4 88/03/02 13:03:10 root Exp $
+   *
+   * $Log:	walk.c,v $
++  * Revision 1.0.1.4  88/03/02  13:03:10  root
++  * patch24: some print statements need parens around them
++  * 
+   * Revision 1.0.1.3  88/02/02  11:54:58  root
+   * patch14: got return value of each() backwards in translating 'for (a in b)'.
+   * 
+***************
+*** 23,28 ****
+--- 26,33 ----
+  bool exitval = FALSE;
+  bool realexit = FALSE;
+  int maxtmp = 0;
++ char *lparen;
++ char *rparen;
+  
+  STR *
+  walk(useval,level,node,numericptr)
+***************
+*** 683,688 ****
+--- 688,695 ----
+  	break;
+      case OPRINTF:
+      case OPRINT:
++ 	lparen = "";	/* set to parens if necessary */
++ 	rparen = "";
+  	str = str_new(0);
+  	if (len == 3) {		/* output redirection */
+  	    tmpstr = walk(1,level,ops[node+3].ival,&numarg);
+***************
+*** 732,741 ****
+--- 739,751 ----
+  		*tokenbuf = '\0';
+  		str_free(tmpstr);
+  		str_free(tmp2str);
++ 		lparen = "(";
++ 		rparen = ")";
+  	    }
+  	}
+  	else
+  	    strcpy(tokenbuf,"stdout");
++ 	str_cat(str,lparen);	/* may be null */
+  	if (type == OPRINTF)
+  	    str_cat(str,"printf");
+  	else
+***************
+*** 774,779 ****
+--- 784,790 ----
+  	else {
+  	    str_cat(str," $_");
+  	}
++ 	str_cat(str,rparen);	/* may be null */
+  	str_free(tmpstr);
+  	break;
+      case OLENGTH:
+ 
+Index: perlsh
+*** perlsh.old	Wed Mar  2 13:06:23 1988
+--- perlsh	Wed Mar  2 13:06:24 1988
+***************
+*** 1,4 ****
+! #!/bin/perl
+  
+  # Poor man's perl shell.
+  
+--- 1,4 ----
+! #!/usr/bin/perl
+  
+  # Poor man's perl shell.
+  

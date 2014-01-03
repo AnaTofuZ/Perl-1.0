@@ -1,0 +1,1447 @@
+Path: bbn.com!bbn!uwmcsd1!ig!agate!pasteur!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #8
+Summary: This is an official patch for perl 1.0.  Please apply it.
+Message-ID: <1174@devvax.JPL.NASA.GOV>
+Date: 28 Jan 88 19:44:05 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 1437
+
+System: perl version 1.0
+Patch #: 8
+Priority: ENHANCEMENT
+Subject: perl needed an eval operator and a symbolic debugger
+From: lwall@jpl-devvax.jpl.nasa.gov (Larry Wall)
+
+Description:
+	I didn't add an eval operator to the original perl because
+	I hadn't thought of any good uses for it.  Recently I thought
+	of some.  Along with creating the eval operator, this patch
+	introduces a symbolic debugger for perl scripts, which makes
+	use of eval to interpret some debugging commands.  Having eval
+	also lets me emulate awk's FOO=bar command line behavior with
+	a line such as the one a2p now inserts at the beginning of
+	translated scripts.
+
+Fix:	From rn, say "| patch -p0 -d DIR", where DIR is your perl source
+			      ^^^
+	directory.  Outside of rn, say "cd DIR; patch -p0 <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch.
+
+>>>>	YOU MUST USE THE -p0 SWITCH ABOVE OR PATCH WON'T WORK RIGHT.   <<<<
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 7
+1c1
+< #define PATCHLEVEL 7
+---
+> #define PATCHLEVEL 8
+ 
+Index: Makefile.SH
+Prereq: 1.0.1.3
+*** Makefile.SH.old	Thu Jan 28 11:08:32 1988
+--- Makefile.SH	Thu Jan 28 11:08:33 1988
+***************
+*** 14,22 ****
+  esac
+  echo "Extracting Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.3 88/01/26 14:14:52 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
+  # Revision 1.0.1.3  88/01/26  14:14:52  root
+  # Added mallocsrc stuff.
+  # 
+--- 14,25 ----
+  esac
+  echo "Extracting Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.4 88/01/28 10:17:59 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
++ # Revision 1.0.1.4  88/01/28  10:17:59  root
++ # patch8: added perldb.man
++ # 
+  # Revision 1.0.1.3  88/01/26  14:14:52  root
+  # Added mallocsrc stuff.
+  # 
+***************
+*** 47,57 ****
+  
+  cat >>Makefile <<'!NO!SUBS!'
+  
+! public = perl
+  
+  private = 
+  
+! manpages = perl.man
+  
+  util =
+  
+--- 50,60 ----
+  
+  cat >>Makefile <<'!NO!SUBS!'
+  
+! public = perl perldb
+  
+  private = 
+  
+! manpages = perl.man perldb.man
+  
+  util =
+  
+If you are sitting there wondering why patch didn't find x2p/a2py.c, perhaps
+it is because you didn't say -p0 to patch.  If so, abort patch now and run
+it again as you did, but add the following switches: -p0 -N
+
+Index: x2p/a2py.c
+Prereq: 1.0
+*** x2p/a2py.c.old	Thu Jan 28 11:18:17 1988
+--- x2p/a2py.c	Thu Jan 28 11:18:18 1988
+***************
+*** 1,6 ****
+! /* $Header: a2py.c,v 1.0 87/12/18 17:50:33 root Exp $
+   *
+   * $Log:	a2py.c,v $
+   * Revision 1.0  87/12/18  17:50:33  root
+   * Initial revision
+   * 
+--- 1,9 ----
+! /* $Header: a2py.c,v 1.0.1.1 88/01/28 11:07:08 root Exp $
+   *
+   * $Log:	a2py.c,v $
++  * Revision 1.0.1.1  88/01/28  11:07:08  root
++  * patch8: added support for FOO=bar switches using eval.
++  * 
+   * Revision 1.0  87/12/18  17:50:33  root
+   * Initial revision
+   * 
+***************
+*** 114,119 ****
+--- 117,126 ----
+  
+      tmpstr = walk(0,0,root,&i);
+      str = str_make("#!/bin/perl\n\n");
++     str_cat(str,
++       "eval '$'.$1.'$2;' while $ARGV[0] =~ /^([A-Za-z_]+=)(.*)/ && shift;\n");
++     str_cat(str,
++       "			# process any FOO=bar switches\n\n");
+      if (do_opens && opens) {
+  	str_scat(str,opens);
+  	str_free(opens);
+ 
+Index: arg.c
+Prereq: 1.0.1.3
+*** arg.c.old	Thu Jan 28 11:08:43 1988
+--- arg.c	Thu Jan 28 11:08:46 1988
+***************
+*** 1,8 ****
+! /* $Header: arg.c,v 1.0.1.3 88/01/26 12:30:33 root Exp $
+   *
+   * $Log:	arg.c,v $
+!  * Revision 1.0.1.3  88/01/26  12:30:33  root
+!  * patch 6: sprintf didn't finish processing format string when out of args.
+   * 
+   * Revision 1.0.1.2  88/01/24  03:52:34  root
+   * patch 2: added STATBLKS dependencies.
+--- 1,8 ----
+! /* $Header: arg.c,v 1.0.1.4 88/01/28 10:22:06 root Exp $
+   *
+   * $Log:	arg.c,v $
+!  * Revision 1.0.1.4  88/01/28  10:22:06  root
+!  * patch8: added eval operator.
+   * 
+   * Revision 1.0.1.2  88/01/24  03:52:34  root
+   * patch 2: added STATBLKS dependencies.
+***************
+*** 1190,1195 ****
+--- 1190,1196 ----
+      opargs[O_UNSHIFT] =		A(1,0,0);
+      opargs[O_LINK] =		A(1,1,0);
+      opargs[O_REPEAT] =		A(1,1,0);
++     opargs[O_EVAL] =		A(1,0,0);
+  }
+  
+  #ifdef VOIDSIG
+***************
+*** 2091,2096 ****
+--- 2092,2102 ----
+  	    astore(ary,0,str);
+  	}
+  	value = (double)(ary->ary_fill + 1);
++ 	break;
++     case O_EVAL:
++ 	str_sset(str,
++ 	    do_eval(arg[1].arg_type != A_NULL ? sarg[1] : defstab->stab_val) );
++ 	STABSET(str);
+  	break;
+      }
+  #ifdef DEBUGGING
+ 
+Index: arg.h
+Prereq: 1.0
+*** arg.h.old	Thu Jan 28 11:08:59 1988
+--- arg.h	Thu Jan 28 11:09:00 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.h,v 1.0 87/12/18 13:04:39 root Exp $
+   *
+   * $Log:	arg.h,v $
+   * Revision 1.0  87/12/18  13:04:39  root
+   * Initial revision
+   * 
+--- 1,9 ----
+! /* $Header: arg.h,v 1.0.1.1 88/01/28 10:22:40 root Exp $
+   *
+   * $Log:	arg.h,v $
++  * Revision 1.0.1.1  88/01/28  10:22:40  root
++  * patch8: added eval operator.
++  * 
+   * Revision 1.0  87/12/18  13:04:39  root
+   * Initial revision
+   * 
+***************
+*** 111,117 ****
+  #define O_UNSHIFT 102
+  #define O_LINK 103
+  #define O_REPEAT 104
+! #define MAXO 105
+  
+  #ifndef DOINIT
+  extern char *opname[];
+--- 114,121 ----
+  #define O_UNSHIFT 102
+  #define O_LINK 103
+  #define O_REPEAT 104
+! #define O_EVAL 105
+! #define MAXO 106
+  
+  #ifndef DOINIT
+  extern char *opname[];
+***************
+*** 222,228 ****
+      "UNSHIFT",
+      "LINK",
+      "REPEAT",
+!     "105"
+  };
+  #endif
+  
+--- 226,233 ----
+      "UNSHIFT",
+      "LINK",
+      "REPEAT",
+!     "EVAL",
+!     "106"
+  };
+  #endif
+  
+ 
+Index: t/base.lex
+Prereq: 1.0
+*** t/base.lex.old	Thu Jan 28 11:17:55 1988
+--- t/base.lex	Thu Jan 28 11:17:56 1988
+***************
+*** 1,8 ****
+  #!./perl
+  
+! # $Header: base.lex,v 1.0 87/12/18 13:11:51 root Exp $
+  
+! print "1..4\n";
+  
+  $ # this is the register <space>
+  = 'x';
+--- 1,8 ----
+  #!./perl
+  
+! # $Header: base.lex,v 1.0.1.1 88/01/28 10:37:00 root Exp $
+  
+! print "1..6\n";
+  
+  $ # this is the register <space>
+  = 'x';
+***************
+*** 21,23 ****
+--- 21,32 ----
+  $x = '\\'; # ';
+  
+  if (length($x) == 1) {print "ok 4\n";} else {print "not ok 4\n";}
++ 
++ eval 'while (0) {
++     print "foo\n";
++ }
++ /^/ && (print "ok 5\n");
++ ';
++ 
++ eval '$foo{1} / 1;';
++ if (!$@) {print "ok 6\n";} else {print "not ok 6\n";}
+ 
+Index: cmd.h
+Prereq: 1.0
+*** cmd.h.old	Thu Jan 28 11:09:05 1988
+--- cmd.h	Thu Jan 28 11:09:06 1988
+***************
+*** 1,6 ****
+! /* $Header: cmd.h,v 1.0 87/12/18 13:04:59 root Exp $
+   *
+   * $Log:	cmd.h,v $
+   * Revision 1.0  87/12/18  13:04:59  root
+   * Initial revision
+   * 
+--- 1,9 ----
+! /* $Header: cmd.h,v 1.0.1.1 88/01/28 10:23:07 root Exp $
+   *
+   * $Log:	cmd.h,v $
++  * Revision 1.0.1.1  88/01/28  10:23:07  root
++  * patch8: added eval_root for eval operator.
++  * 
+   * Revision 1.0  87/12/18  13:04:59  root
+   * Initial revision
+   * 
+***************
+*** 106,111 ****
+--- 109,115 ----
+  #define Nullcmd Null(CMD*)
+  
+  EXT CMD *main_root INIT(Nullcmd);
++ EXT CMD *eval_root INIT(Nullcmd);
+  
+  EXT struct compcmd {
+      CMD *comp_true;
+ 
+Index: t/op.eval
+*** t/op.eval.old	Thu Jan 28 11:18:04 1988
+--- t/op.eval	Thu Jan 28 11:18:04 1988
+***************
+*** 0 ****
+--- 1,20 ----
++ #!./perl
++ 
++ print "1..6\n";
++ 
++ eval 'print "ok 1\n";';
++ 
++ if ($@ eq '') {print "ok 2\n";} else {print "not ok 2\n";}
++ 
++ eval "\$foo\n    = # this is a comment\n'ok 3';";
++ print $foo,"\n";
++ 
++ eval "\$foo\n    = # this is a comment\n'ok 4\n';";
++ print $foo;
++ 
++ eval '
++ $foo =';		# this tests for a call through yyerror()
++ if ($@ =~ /line 2/) {print "ok 5\n";} else {print "not ok 5\n";}
++ 
++ eval '$foo = /';	# this tests for a call through fatal()
++ if ($@ =~ /Search/) {print "ok 6\n";} else {print "not ok 6\n";}
+ 
+Index: perl.h
+Prereq: 1.0.1.2
+*** perl.h.old	Thu Jan 28 11:09:13 1988
+--- perl.h	Thu Jan 28 11:09:14 1988
+***************
+*** 1,6 ****
+! /* $Header: perl.h,v 1.0.1.2 88/01/24 03:53:47 root Exp $
+   *
+   * $Log:	perl.h,v $
+   * Revision 1.0.1.2  88/01/24  03:53:47  root
+   * patch 2: hid str_peek() in #ifdef DEBUGGING.
+   * 
+--- 1,9 ----
+! /* $Header: perl.h,v 1.0.1.3 88/01/28 10:24:17 root Exp $
+   *
+   * $Log:	perl.h,v $
++  * Revision 1.0.1.3  88/01/28  10:24:17  root
++  * patch8: added eval operator.
++  * 
+   * Revision 1.0.1.2  88/01/24  03:53:47  root
+   * patch 2: hid str_peek() in #ifdef DEBUGGING.
+   * 
+***************
+*** 103,109 ****
+  STR *arg_to_str();
+  STR *str_new();
+  STR *stab_str();
+! STR *eval();
+  
+  FCMD *load_format();
+  
+--- 106,113 ----
+  STR *arg_to_str();
+  STR *str_new();
+  STR *stab_str();
+! STR *eval();		/* this evaluates expressions */
+! STR *do_eval();		/* this evaluates eval operator */
+  
+  FCMD *load_format();
+  
+***************
+*** 164,169 ****
+--- 168,174 ----
+  EXT char tokenbuf[256];
+  EXT int expectterm INIT(TRUE);
+  EXT int lex_newlines INIT(FALSE);
++ EXT int in_eval INIT(FALSE);
+  
+  FILE *popen();
+  /* char *str_get(); */
+***************
+*** 196,201 ****
+--- 201,207 ----
+  EXT int loop_ptr INIT(-1);
+  
+  EXT jmp_buf top_env;
++ EXT jmp_buf eval_env;
+  
+  EXT char *goto_targ INIT(Nullch);	/* cmd_exec gets strange when set */
+  
+ 
+Index: perl.y
+Prereq: 1.0
+*** perl.y.old	Thu Jan 28 11:09:22 1988
+--- perl.y	Thu Jan 28 11:09:24 1988
+***************
+*** 1,6 ****
+! /* $Header: perl.y,v 1.0 87/12/18 15:48:59 root Exp $
+   *
+   * $Log:	perl.y,v $
+   * Revision 1.0  87/12/18  15:48:59  root
+   * Initial revision
+   * 
+--- 1,9 ----
+! /* $Header: perl.y,v 1.0.1.1 88/01/28 10:25:31 root Exp $
+   *
+   * $Log:	perl.y,v $
++  * Revision 1.0.1.1  88/01/28  10:25:31  root
++  * patch8: added eval operator.
++  * 
+   * Revision 1.0  87/12/18  15:48:59  root
+   * Initial revision
+   * 
+***************
+*** 97,103 ****
+  %% /* RULES */
+  
+  prog	:	lineseq
+! 			{ main_root = block_head($1); }
+  	;
+  
+  compblock:	block CONTINUE block
+--- 100,109 ----
+  %% /* RULES */
+  
+  prog	:	lineseq
+! 			{ if (in_eval)
+! 				eval_root = block_head($1);
+! 			    else
+! 				main_root = block_head($1); }
+  	;
+  
+  compblock:	block CONTINUE block
+ 
+Index: perldb
+*** perldb.old	Thu Jan 28 11:17:03 1988
+--- perldb	Thu Jan 28 11:17:04 1988
+***************
+*** 0 ****
+--- 1,296 ----
++ #!/bin/perl
++ 
++ # $Header: perldb,v 1.0.1.1 88/01/28 10:27:16 root Exp $
++ #
++ # $Log:	perldb,v $
++ # Revision 1.0.1.1  88/01/28  10:27:16  root
++ # patch8: created this file.
++ # 
++ #
++ 
++ $tmp = "/tmp/pdb$$";		# default temporary file, -o overrides.
++ 
++ # parse any switches
++ 
++ while ($ARGV[0] =~ /^-/) {
++     $_ = shift;
++     /^-o$/ && ($tmp = shift,next);
++     die "Unrecognized switch: $_";
++ }
++ 
++ $filename = shift;
++ die "Usage: perldb [-o output] scriptname arguments" unless $filename;
++ 
++ open(script,$filename) || die "Can't find $filename";
++ 
++ open(tmp, ">$tmp") || die "Can't make temp script";
++ 
++ $perl = '/bin/perl';
++ $init = 1;
++ $state = 'statement';
++ 
++ # now translate script to contain DB calls at the appropriate places
++ 
++ while (<script>) {
++     chop;
++     if ($. == 1) {
++ 	if (/^#! *([^ \t]*) (-[^ \t]*)/) {
++ 	    $perl = $1;
++ 	    $switch = $2;
++ 	}
++ 	elsif (/^#! *([^ \t]*)/) {
++ 	    $perl = $1;
++ 	}
++     }
++     s/ *$//;
++     push(@script,$_);		# remember line for DBinit
++     $line = $_;
++     next if /^$/;		# blank lines are uninteresting
++     next if /^[ \t]*#/;		# likewise comment lines
++     if ($init) {
++ 	print tmp "do DBinit($.);"; $init = '';
++     }
++     if ($inform) {		# skip formats
++ 	if (/^\.$/) {
++ 	    $inform = '';
++ 	    $state = 'statement';
++ 	}
++ 	next;
++     }
++     if (/^[ \t]*format /) {
++ 	$inform++;
++ 	next;
++     }
++     if ($state eq 'statement' && !/^[ \t]*}/) {
++ 	if (s/^([ \t]*[A-Za-z_0-9]+:)//) {
++ 	    $label = $1;
++ 	}
++ 	else {
++ 	    $label = '';
++ 	}
++ 	$line = $label . "do DB($.); " . $_;	# all that work for this line
++     }
++     else {
++ 	$script[$#script - 1] .= ' ';	# mark line as having continuation
++     }
++     do parse();				# set $state to correct eol value
++ }
++ continue {
++     print tmp $line,"\n";
++ }
++ 
++ # now put out our debugging subroutines.  First the one that's called all over.
++ 
++ print tmp '
++ sub DB {
++     push(@DB,$. ,$@, $!, $[, $,, $/, $\ );
++     $[ = 0; $, = ""; $/ = "\n"; $\ = "";
++     $DBline=pop(@_);
++     if ($DBsingle || $DBstop[$DBline] || $DBtrace) {
++ 	print "$DBline:\t",$DBline[$DBline],"\n";
++ 	for ($DBi = $DBline; $DBline[$DBi++] =~ / $/; ) {
++ 	    print "$DBi:\t",$DBline[$DBi],"\n";
++ 	}
++     }
++     if ($DBaction[$DBline]) {
++ 	eval $DBaction[$DBline];  print $@;
++     }
++     if ($DBstop[$DBline] || $DBsingle) {
++ 	for (;;) {
++ 	    print "perldb> ";
++ 	    $DBcmd = <stdin>;
++ 	    last if $DBcmd =~ /^$/;
++ 	    if ($DBcmd =~ /^q$/) {
++ 		exit 0;
++ 	    }
++ 	    if ($DBcmd =~ /^h$/) {
++ 		print "
++ s		Single step.
++ c		Continue.
++ <CR>		Repeat last s or c.
++ l min-max	List lines.
++ l line		List line.
++ l		List the whole program.
++ L		List breakpoints.
++ t		Toggle trace mode.
++ b line		Set breakpoint.
++ d line		Delete breakpoint.
++ d		Delete breakpoint at this line.
++ a line command	Set an action for this line.
++ q		Quit.
++ command		Execute as a perl statement.
++ 
++ ";
++ 		next;
++ 	    }
++ 	    if ($DBcmd =~ /^t$/) {
++ 		$DBtrace = !$DBtrace;
++ 		print "Trace = $DBtrace\n";
++ 		next;
++ 	    }
++ 	    if ($DBcmd =~ /^l (.*)[-,](.*)/) {
++ 		for ($DBi = $1; $DBi <= $2; $DBi++) {
++ 		    print "$DBi:\t", $DBline[$DBi], "\n";
++ 		}
++ 		next;
++ 	    }
++ 	    if ($DBcmd =~ /^l (.*)/) {
++ 		print "$1:\t", $DBline[$1], "\n";
++ 		next;
++ 	    }
++ 	    if ($DBcmd =~ /^l$/) {
++ 		for ($DBi = 1; $DBi <= $DBmax ; $DBi++) {
++ 		    print "$DBi:\t", $DBline[$DBi], "\n";
++ 		}
++ 		next;
++ 	    }
++ 	    if ($DBcmd =~ /^L$/) {
++ 		for ($DBi = 1; $DBi <= $DBmax ; $DBi++) {
++ 		    print "$DBi:\t", $DBline[$DBi], "\n" if $DBstop[$DBi];
++ 		}
++ 		next;
++ 	    }
++ 	    if ($DBcmd =~ /^b (.*)/) {
++ 		$DBi = $1;
++ 		if ($DBline[$DBi-1] =~ / $/) {
++ 		    print "Line $DBi not breakable.\n";
++ 		}
++ 		else {
++ 		    $DBstop[$DBi] = 1;
++ 		}
++ 		next;
++ 	    }
++ 	    if ($DBcmd =~ /^d (.*)/) {
++ 		$DBstop[$1] = 0;
++ 		next;
++ 	    }
++ 	    if ($DBcmd =~ /^d$/) {
++ 		$DBstop[$DBline] = 0;
++ 		next;
++ 	    }
++ 	    if ($DBcmd =~ /^a ([0-9]+)[ \t]+(.*)/) {
++ 		$DBi = $1;
++ 		$DBaction = $2;
++ 		$DBaction .= ";" unless $DBaction =~ /[;}]$/;
++ 		$DBaction[$DBi] = $DBaction;
++ 		next;
++ 	    }
++ 	    if ($DBcmd =~ /^s$/) {
++ 		$DBsingle = 1;
++ 		last;
++ 	    }
++ 	    if ($DBcmd =~ /^c$/) {
++ 		$DBsingle = 0;
++ 		last;
++ 	    }
++ 	    chop($DBcmd);
++ 	    $DBcmd .= ";" unless $DBcmd =~ /[;}]$/;
++ 	    eval $DBcmd;
++ 	    print $@,"\n";
++ 	}
++     }
++     $\ = pop(@DB);
++     $/ = pop(@DB);
++     $, = pop(@DB);
++     $[ = pop(@DB);
++     $! = pop(@DB);
++     $@ = pop(@DB);
++     $. = pop(@DB);
++ }
++ 
++ sub DBinit {
++     $DBstop[$_[0]] = 1;
++ ';
++ print tmp "    \$0 = '$script';\n";
++ print tmp "    \$DBmax = $.;\n";
++ print tmp "    unlink '/tmp/pdb$$';\n";		# expected to fail on -o.
++ for ($i = 1; $#script >= 0; $i++) {
++     $_ = shift(@script);
++     s/'/\\'/g;
++     print tmp "    \$DBline[$i] = '$_';\n";
++ }
++ print tmp '}
++ ';
++ 
++ close tmp;
++ 
++ # prepare to run the new script
++ 
++ unshift(@ARGV,$tmp);
++ unshift(@ARGV,$switch) if $switch;
++ unshift(@ARGV,$perl);
++ exec @ARGV;
++ 
++ # This routine tokenizes one perl line good enough to tell what state we are
++ # in by the end of the line, so we can tell if the next line should contain
++ # a call to DB or not.
++ 
++ sub parse {
++     until ($_ eq '') {
++ 	$ord = ord($_);
++ 	if ($quoting) {
++ 	    if ($quote == $ord) {
++ 		$quoting--;
++ 	    }
++ 	    s/^.//			if /^[\\]/;
++ 	    s/^.//;
++ 	    last if $_ eq "\n";
++ 	    $state = 'term'		unless $quoting;
++ 	    next;
++ 	}
++ 	if ($ord > 64) {
++ 	    do quote(ord($1),1), next	if s/^m\b(.)//;
++ 	    do quote(ord($1),2), next	if s/^s\b(.)//;
++ 	    do quote(ord($1),2), next	if s/^y\b(.)//;
++ 	    do quote(ord($1),2), next	if s/^tr\b(.)//;
++ 	    next			if s/^[A-Za-z_][A-Za-z_0-9]*://;
++ 	    $state = 'term', next	if s/^eof\b//;
++ 	    $state = 'term', next	if s/^shift\b//;
++ 	    $state = 'term', next	if s/^split\b//;
++ 	    $state = 'term', next	if s/^tell\b//;
++ 	    $state = 'term', next	if s/^write\b//;
++ 	    $state = 'operator', next	if s/^[A-Za-z_][A-Za-z_0-9]*//;
++ 	    $state = 'operator', next	if s/^[~^|]+//;
++ 	    $state = 'statement', next	if s/^{//;
++ 	    $state = 'statement', next	if s/^}[ \t]*$//;
++ 	    $state = 'statement', next	if s/^}[ \t]*#/#/;
++ 	    $state = 'term', next	if s/^}//;
++ 	    $state = 'operator', next	if s/^\[//;
++ 	    $state = 'term', next	if s/^]//;
++ 	    die "Illegal character $_";
++ 	}
++ 	elsif ($ord < 33) {
++ 	    next if s/[ \t\n]+//;
++ 	    die "Illegal character $_";
++ 	}
++ 	else {
++ 	    $state = 'statement', next	if s/^;//;
++ 	    $state = 'term', next	if s/^\.[0-9eE]+//;
++ 	    $state = 'term', next	if s/^[0-9][0-9xaAbBcCddeEfF.]*//;
++ 	    $state = 'term', next	if s/^\$[A-Za-z_][A-Za-z_0-9]*//;
++ 	    $state = 'term', next	if s/^\$.//;
++ 	    $state = 'term', next	if s/^@[A-Za-z_][A-Za-z_0-9]*//;
++ 	    $state = 'term', next	if s/^@.//;
++ 	    $state = 'term', next	if s/^<[A-Za-z_0-9]*>//;
++ 	    next			if s/^\+\+//;
++ 	    next			if s/^--//;
++ 	    $state = 'operator', next	if s/^[(!%&*-=+:,.<>]//;
++ 	    $state = 'term', next	if s/^\)+//;
++ 	    do quote($ord,1), next	if s/^'//;
++ 	    do quote($ord,1), next	if s/^"//;
++ 	    if (s|^[/?]||) {
++ 		if ($state =~ /stat|oper/) {
++ 		    $state = 'term';
++ 		    do quote($ord,1), next;
++ 		}
++ 		$state = 'operator', next;
++ 	    }
++ 	    next			if s/^#.*//;
++ 	}
++     }
++ }
++ 
++ sub quote {
++     ($quote,$quoting) = @_;
++     $state = 'quote';
++ }
+ 
+Index: perldb.man
+*** perldb.man.old	Thu Jan 28 11:17:11 1988
+--- perldb.man	Thu Jan 28 11:17:12 1988
+***************
+*** 0 ****
+--- 1,119 ----
++ .rn '' }`
++ ''' $Header: perldb.man,v 1.0.1.1 88/01/28 10:28:19 root Exp $
++ ''' 
++ ''' $Log:	perldb.man,v $
++ ''' Revision 1.0.1.1  88/01/28  10:28:19  root
++ ''' patch8: created this file.
++ ''' 
++ ''' 
++ .de Sh
++ .br
++ .ne 5
++ .PP
++ \fB\\$1\fR
++ .PP
++ ..
++ .de Sp
++ .if t .sp .5v
++ .if n .sp
++ ..
++ .de Ip
++ .br
++ .ie \\n.$>=3 .ne \\$3
++ .el .ne 3
++ .IP "\\$1" \\$2
++ ..
++ '''
++ '''     Set up \*(-- to give an unbreakable dash;
++ '''     string Tr holds user defined translation string.
++ '''     Bell System Logo is used as a dummy character.
++ '''
++ .tr \(bs-|\(bv\*(Tr
++ .ie n \{\
++ .ds -- \(bs-
++ .if (\n(.H=4u)&(1m=24u) .ds -- \(bs\h'-12u'\(bs\h'-12u'-\" diablo 10 pitch
++ .if (\n(.H=4u)&(1m=20u) .ds -- \(bs\h'-12u'\(bs\h'-8u'-\" diablo 12 pitch
++ .ds L" ""
++ .ds R" ""
++ .ds L' '
++ .ds R' '
++ 'br\}
++ .el\{\
++ .ds -- \(em\|
++ .tr \*(Tr
++ .ds L" ``
++ .ds R" ''
++ .ds L' `
++ .ds R' '
++ 'br\}
++ .TH PERLDB 1 LOCAL
++ .SH NAME
++ perldb - Perl Debugger
++ .SH SYNOPSIS
++ .B perldb [-o output] perlscript arguments
++ .SH DESCRIPTION
++ .I Perldb
++ is a symbolic debugger for
++ .I perl
++ scripts.
++ Run your script just as you normally would, only prepend \*(L"perldb\*(R" to
++ the command.
++ (On systems where #! doesn't work, put any perl switches into the #! line
++ anyway\*(--perldb will pass them off to perl when it runs the script.)
++ Perldb copies your script to a temporary file, instrumenting it in the process
++ and adding a debugging monitor.
++ It then executes the instrumented script for
++ you and stops at the first statement so you can set any breakpoints or actions
++ you desire.
++ .PP
++ There is only one switch: \-o, which tells perldb to put its temporary file
++ in the filename you specify, and to refrain from deleting the file.
++ Use this switch if you intend to rerun the instrumented script, or want to
++ look at it for some reason.
++ .PP
++ These are the debugging commands:
++ .Ip s 8
++ Single step.
++ Subsequent carriage returns will single step.
++ .Ip c 8
++ Continue.
++ Turns off single step mode and runs till the next break point.
++ Subsequent carriage returns will continue.
++ .Ip <CR> 8
++ Repeat last s or c.
++ .Ip "l min-max" 8
++ List lines in the indicated range.
++ .Ip "l line" 8
++ List indicated line.
++ .Ip l 8
++ List the whole program.
++ .Ip L 8
++ List breakpoints.
++ .Ip t 8
++ Toggle trace mode.
++ .Ip "b line" 8
++ Set breakpoint at indicated line.
++ .Ip "d line" 8
++ Delete breakpoint at indicated line.
++ .Ip d 8
++ Delete breakpoint at this line.
++ .Ip "a line command" 8
++ Set an action for indicated line.
++ The command must be a valid perl command, except that a missing trailing ;
++ will be supplied.
++ .Ip q 8
++ Quit.
++ .Ip command 8
++ Execute command as a perl statement.
++ A missing trailing ; will be supplied if necessary.
++ .SH ENVIRONMENT
++ No environment variables are used by perldb.
++ .SH AUTHOR
++ Larry Wall <lwall@jpl-devvax.Jpl.Nasa.Gov>
++ .SH FILES
++ /tmp/pdb$$	temporary file for instrumented script
++ .SH SEE ALSO
++ perl	
++ .SH DIAGNOSTICS
++ .SH BUGS
++ .rn }` ''
+ 
+Index: perly.c
+Prereq: 1.0.1.2
+*** perly.c.old	Thu Jan 28 11:17:22 1988
+--- perly.c	Thu Jan 28 11:17:25 1988
+***************
+*** 1,6 ****
+! char rcsid[] = "$Header: perly.c,v 1.0.1.2 88/01/24 00:06:03 root Exp $";
+  /*
+   * $Log:	perly.c,v $
+   * Revision 1.0.1.2  88/01/24  00:06:03  root
+   * patch 2: s/(abc)/\1/ grandfathering didn't work right.
+   * 
+--- 1,9 ----
+! char rcsid[] = "$Header: perly.c,v 1.0.1.3 88/01/28 10:28:31 root Exp $";
+  /*
+   * $Log:	perly.c,v $
++  * Revision 1.0.1.3  88/01/28  10:28:31  root
++  * patch8: added eval operator.  Also fixed expectterm following right curly.
++  * 
+   * Revision 1.0.1.2  88/01/24  00:06:03  root
+   * patch 2: s/(abc)/\1/ grandfathering didn't work right.
+   * 
+***************
+*** 16,21 ****
+--- 19,25 ----
+  bool assume_n = FALSE;
+  bool assume_p = FALSE;
+  bool doswitches = FALSE;
++ bool allstabs = FALSE;		/* init all customary symbols in symbol table?*/
+  char *filename;
+  char *e_tmpname = "/tmp/perl-eXXXXXX";
+  FILE *e_fp = Nullfp;
+***************
+*** 161,172 ****
+  	    str_numset(stabent(argv[0]+1,TRUE)->stab_val,(double)1.0);
+  	}
+      }
+!     if (argvstab = stabent("ARGV",FALSE)) {
+  	for (; argc > 0; argc--,argv++) {
+  	    apush(argvstab->stab_array,str_make(argv[0]));
+  	}
+      }
+!     if (envstab = stabent("ENV",FALSE)) {
+  	for (; *env; env++) {
+  	    if (!(s = index(*env,'=')))
+  		continue;
+--- 165,176 ----
+  	    str_numset(stabent(argv[0]+1,TRUE)->stab_val,(double)1.0);
+  	}
+      }
+!     if (argvstab = stabent("ARGV",allstabs)) {
+  	for (; argc > 0; argc--,argv++) {
+  	    apush(argvstab->stab_array,str_make(argv[0]));
+  	}
+      }
+!     if (envstab = stabent("ENV",allstabs)) {
+  	for (; *env; env++) {
+  	    if (!(s = index(*env,'=')))
+  		continue;
+***************
+*** 177,188 ****
+  	    *--s = '=';
+  	}
+      }
+!     sigstab = stabent("SIG",FALSE);
+  
+      magicalize("!#?^~=-%0123456789.+&*(),\\/[|");
+  
+!     (tmpstab = stabent("0",FALSE)) && str_set(STAB_STR(tmpstab),filename);
+!     (tmpstab = stabent("$",FALSE)) &&
+  	str_numset(STAB_STR(tmpstab),(double)getpid());
+  
+      tmpstab = stabent("stdin",TRUE);
+--- 181,192 ----
+  	    *--s = '=';
+  	}
+      }
+!     sigstab = stabent("SIG",allstabs);
+  
+      magicalize("!#?^~=-%0123456789.+&*(),\\/[|");
+  
+!     (tmpstab = stabent("0",allstabs)) && str_set(STAB_STR(tmpstab),filename);
+!     (tmpstab = stabent("$",allstabs)) &&
+  	str_numset(STAB_STR(tmpstab),(double)getpid());
+  
+      tmpstab = stabent("stdin",TRUE);
+***************
+*** 198,203 ****
+--- 202,209 ----
+      tmpstab = stabent("stderr",TRUE);
+      tmpstab->stab_io = stio_new();
+      tmpstab->stab_io->fp = stderr;
++     safefree(filename);
++     filename = "(eval)";
+  
+      setjmp(top_env);	/* sets goto_targ on longjump */
+  
+***************
+*** 225,231 ****
+  
+      sym[1] = '\0';
+      while (*sym = *list++) {
+! 	if (stab = stabent(sym,FALSE)) {
+  	    stab->stab_flags = SF_VMAGIC;
+  	    stab->stab_val->str_link.str_magic = stab;
+  	}
+--- 231,237 ----
+  
+      sym[1] = '\0';
+      while (*sym = *list++) {
+! 	if (stab = stabent(sym,allstabs)) {
+  	    stab->stab_flags = SF_VMAGIC;
+  	    stab->stab_val->str_link.str_magic = stab;
+  	}
+***************
+*** 322,328 ****
+  	    filename = savestr(s);
+  	    s = str_get(linestr);
+  	}
+! 	*s = '\0';
+  	if (lex_newlines)
+  	    RETURN('\n');
+  	goto retry;
+--- 328,342 ----
+  	    filename = savestr(s);
+  	    s = str_get(linestr);
+  	}
+! 	if (in_eval) {
+! 	    while (*s && *s != '\n')
+! 		s++;
+! 	    if (*s)
+! 		s++;
+! 	    line++;
+! 	}
+! 	else
+! 	    *s = '\0';
+  	if (lex_newlines)
+  	    RETURN('\n');
+  	goto retry;
+***************
+*** 350,358 ****
+  	OPERATOR(tmp);
+      case ')':
+      case ']':
+-     case '}':
+  	tmp = *s++;
+  	TERM(tmp);
+      case '&':
+  	s++;
+  	tmp = *s++;
+--- 364,378 ----
+  	OPERATOR(tmp);
+      case ')':
+      case ']':
+  	tmp = *s++;
+  	TERM(tmp);
++     case '}':
++ 	tmp = *s++;
++ 	for (d = s; *d == ' ' || *d == '\t'; d++) ;
++ 	if (*d == '\n' || *d == '#')
++ 	    OPERATOR(tmp);		/* block end */
++ 	else
++ 	    TERM(tmp);			/* associative array end */
+      case '&':
+  	s++;
+  	tmp = *s++;
+***************
+*** 508,513 ****
+--- 528,537 ----
+  	    OPERATOR(SEQ);
+  	if (strEQ(d,"exit"))
+  	    UNI(O_EXIT);
++ 	if (strEQ(d,"eval")) {
++ 	    allstabs = TRUE;		/* must initialize everything since */
++ 	    UNI(O_EVAL);		/* we don't know what will be used */
++ 	}
+  	if (strEQ(d,"eof"))
+  	    TERM(FEOF);
+  	if (strEQ(d,"exp"))
+***************
+*** 1480,1487 ****
+  	strcpy(tname,"^?");
+      else
+  	sprintf(tname,"%c",yychar);
+!     printf("%s in file %s at line %d, next token \"%s\"\n",
+        s,filename,line,tname);
+  }
+  
+  char *
+--- 1504,1515 ----
+  	strcpy(tname,"^?");
+      else
+  	sprintf(tname,"%c",yychar);
+!     sprintf(tokenbuf, "%s in file %s at line %d, next token \"%s\"\n",
+        s,filename,line,tname);
++     if (in_eval)
++ 	str_set(stabent("@",TRUE)->stab_val,tokenbuf);
++     else
++ 	fputs(tokenbuf,stderr);
+  }
+  
+  char *
+***************
+*** 1964,1970 ****
+  	    str_numset(str, (double)str_len(s1));
+  	    break;
+  	case O_SUBSTR:
+! 	    if (arg[3].arg_type != A_SINGLE || stabent("[",FALSE)) {
+  		str_free(str);		/* making the fallacious assumption */
+  		str = Nullstr;		/* that any $[ occurs before substr()*/
+  	    }
+--- 1992,1998 ----
+  	    str_numset(str, (double)str_len(s1));
+  	    break;
+  	case O_SUBSTR:
+! 	    if (arg[3].arg_type != A_SINGLE || stabent("[",allstabs)) {
+  		str_free(str);		/* making the fallacious assumption */
+  		str = Nullstr;		/* that any $[ occurs before substr()*/
+  	    }
+***************
+*** 2463,2466 ****
+--- 2491,2619 ----
+      bufptr = str_get(linestr);
+      yyerror("Format not terminated");
+      return froot.f_next;
++ }
++ 
++ STR *
++ do_eval(str)
++ STR *str;
++ {
++     int retval;
++     CMD *myroot;
++ 
++     in_eval++;
++     str_set(stabent("@",TRUE)->stab_val,"");
++     line = 1;
++     str_sset(linestr,str);
++     bufptr = str_get(linestr);
++     if (setjmp(eval_env))
++ 	retval = 1;
++     else
++ 	retval = yyparse();
++     myroot = eval_root;		/* in case cmd_exec does another eval! */
++     if (retval)
++ 	str = &str_no;
++     else {
++ 	str = cmd_exec(eval_root);
++ 	cmd_free(myroot);	/* can't free on error, for some reason */
++     }
++     in_eval--;
++     return str;
++ }
++ 
++ cmd_free(cmd)
++ register CMD *cmd;
++ {
++     register CMD *tofree;
++     register CMD *head = cmd;
++ 
++     while (cmd) {
++ 	if (cmd->c_label)
++ 	    safefree(cmd->c_label);
++ 	if (cmd->c_first)
++ 	    str_free(cmd->c_first);
++ 	if (cmd->c_spat)
++ 	    spat_free(cmd->c_spat);
++ 	if (cmd->c_expr)
++ 	    arg_free(cmd->c_expr);
++ 	switch (cmd->c_type) {
++ 	case C_WHILE:
++ 	case C_BLOCK:
++ 	case C_IF:
++ 	    if (cmd->ucmd.ccmd.cc_true)
++ 		cmd_free(cmd->ucmd.ccmd.cc_true);
++ 	    if (cmd->c_type == C_IF && cmd->ucmd.ccmd.cc_alt)
++ 		cmd_free(cmd->ucmd.ccmd.cc_alt,Nullcmd);
++ 	    break;
++ 	case C_EXPR:
++ 	    if (cmd->ucmd.acmd.ac_stab)
++ 		arg_free(cmd->ucmd.acmd.ac_stab);
++ 	    if (cmd->ucmd.acmd.ac_expr)
++ 		arg_free(cmd->ucmd.acmd.ac_expr);
++ 	    break;
++ 	}
++ 	tofree = cmd;
++ 	cmd = cmd->c_next;
++ 	safefree((char*)tofree);
++ 	if (cmd && cmd == head)		/* reached end of while loop */
++ 	    break;
++     }
++ }
++ 
++ arg_free(arg)
++ register ARG *arg;
++ {
++     register int i;
++ 
++     for (i = 1; i <= arg->arg_len; i++) {
++ 	switch (arg[i].arg_type) {
++ 	case A_NULL:
++ 	    break;
++ 	case A_LEXPR:
++ 	case A_EXPR:
++ 	    arg_free(arg[i].arg_ptr.arg_arg);
++ 	    break;
++ 	case A_CMD:
++ 	    cmd_free(arg[i].arg_ptr.arg_cmd);
++ 	    break;
++ 	case A_STAB:
++ 	case A_LVAL:
++ 	case A_READ:
++ 	case A_ARYLEN:
++ 	    break;
++ 	case A_SINGLE:
++ 	case A_DOUBLE:
++ 	case A_BACKTICK:
++ 	    str_free(arg[i].arg_ptr.arg_str);
++ 	    break;
++ 	case A_SPAT:
++ 	    spat_free(arg[i].arg_ptr.arg_spat);
++ 	    break;
++ 	case A_NUMBER:
++ 	    break;
++ 	}
++     }
++     free_arg(arg);
++ }
++ 
++ spat_free(spat)
++ register SPAT *spat;
++ {
++     register SPAT *sp;
++ 
++     if (spat->spat_runtime)
++ 	arg_free(spat->spat_runtime);
++     if (spat->spat_repl) {
++ 	arg_free(spat->spat_repl);
++     }
++     free_compex(&spat->spat_compex);
++ 
++     /* now unlink from spat list */
++     if (spat_root == spat)
++ 	spat_root = spat->spat_next;
++     else {
++ 	for (sp = spat_root; sp->spat_next != spat; sp = sp->spat_next) ;
++ 	sp->spat_next = spat->spat_next;
++     }
++ 
++     safefree((char*)spat);
+  }
+ 
+Index: search.c
+Prereq: 1.0.1.1
+*** search.c.old	Thu Jan 28 11:17:36 1988
+--- search.c	Thu Jan 28 11:17:37 1988
+***************
+*** 1,6 ****
+! /* $Header: search.c,v 1.0.1.1 88/01/24 03:55:05 root Exp $
+   *
+   * $Log:	search.c,v $
+   * Revision 1.0.1.1  88/01/24  03:55:05  root
+   * patch 2: made depend on perl.h.
+   * 
+--- 1,9 ----
+! /* $Header: search.c,v 1.0.1.2 88/01/28 10:30:46 root Exp $
+   *
+   * $Log:	search.c,v $
++  * Revision 1.0.1.2  88/01/28  10:30:46  root
++  * patch8: uncommented free_compex for use with eval operator.
++  * 
+   * Revision 1.0.1.1  88/01/24  03:55:05  root
+   * patch 2: made depend on perl.h.
+   * 
+***************
+*** 107,113 ****
+      compex->subbase = Nullch;
+  }
+  
+- #ifdef NOTUSED
+  void
+  free_compex(compex)
+  register COMPEX *compex;
+--- 110,115 ----
+***************
+*** 121,127 ****
+  	compex->subbase = Nullch;
+      }
+  }
+- #endif
+  
+  static char *gbr_str = Nullch;
+  static int gbr_siz = 0;
+--- 123,128 ----
+ 
+Index: stab.c
+Prereq: 1.0
+*** stab.c.old	Thu Jan 28 11:17:44 1988
+--- stab.c	Thu Jan 28 11:17:45 1988
+***************
+*** 1,6 ****
+! /* $Header: stab.c,v 1.0 87/12/18 13:06:14 root Exp $
+   *
+   * $Log:	stab.c,v $
+   * Revision 1.0  87/12/18  13:06:14  root
+   * Initial revision
+   * 
+--- 1,9 ----
+! /* $Header: stab.c,v 1.0.1.1 88/01/28 10:35:17 root Exp $
+   *
+   * $Log:	stab.c,v $
++  * Revision 1.0.1.1  88/01/28  10:35:17  root
++  * patch8: changed some stabents to support eval operator.
++  * 
+   * Revision 1.0  87/12/18  13:06:14  root
+   * Initial revision
+   * 
+***************
+*** 169,180 ****
+  	case '^':
+  	    safefree(curoutstab->stab_io->top_name);
+  	    curoutstab->stab_io->top_name = str_get(str);
+! 	    curoutstab->stab_io->top_stab = stabent(str_get(str),FALSE);
+  	    break;
+  	case '~':
+  	    safefree(curoutstab->stab_io->fmt_name);
+  	    curoutstab->stab_io->fmt_name = str_get(str);
+! 	    curoutstab->stab_io->fmt_stab = stabent(str_get(str),FALSE);
+  	    break;
+  	case '=':
+  	    curoutstab->stab_io->page_len = (long)str_gnum(str);
+--- 172,183 ----
+  	case '^':
+  	    safefree(curoutstab->stab_io->top_name);
+  	    curoutstab->stab_io->top_name = str_get(str);
+! 	    curoutstab->stab_io->top_stab = stabent(str_get(str),TRUE);
+  	    break;
+  	case '~':
+  	    safefree(curoutstab->stab_io->fmt_name);
+  	    curoutstab->stab_io->fmt_name = str_get(str);
+! 	    curoutstab->stab_io->fmt_stab = stabent(str_get(str),TRUE);
+  	    break;
+  	case '=':
+  	    curoutstab->stab_io->page_len = (long)str_gnum(str);
+***************
+*** 274,280 ****
+      ARRAY *savearray;
+      STR *str;
+  
+!     stab = stabent(str_get(hfetch(sigstab->stab_hash,sig_name[sig])),FALSE);
+      savearray = defstab->stab_array;
+      defstab->stab_array = anew();
+      str = str_new(0);
+--- 277,283 ----
+      ARRAY *savearray;
+      STR *str;
+  
+!     stab = stabent(str_get(hfetch(sigstab->stab_hash,sig_name[sig])),TRUE);
+      savearray = defstab->stab_array;
+      defstab->stab_array = anew();
+      str = str_new(0);
+ 
+Index: util.c
+Prereq: 1.0
+*** util.c.old	Thu Jan 28 11:18:10 1988
+--- util.c	Thu Jan 28 11:18:10 1988
+***************
+*** 1,6 ****
+! /* $Header: util.c,v 1.0 87/12/18 13:06:30 root Exp $
+   *
+   * $Log:	util.c,v $
+   * Revision 1.0  87/12/18  13:06:30  root
+   * Initial revision
+   * 
+--- 1,9 ----
+! /* $Header: util.c,v 1.0.1.1 88/01/28 11:06:35 root Exp $
+   *
+   * $Log:	util.c,v $
++  * Revision 1.0.1.1  88/01/28  11:06:35  root
++  * patch8: changed fatal() to support eval operator with exiting.
++  * 
+   * Revision 1.0  87/12/18  13:06:30  root
+   * Initial revision
+   * 
+***************
+*** 205,210 ****
+--- 208,218 ----
+      extern FILE *e_fp;
+      extern char *e_tmpname;
+  
++     if (in_eval) {
++ 	sprintf(tokenbuf,pat,a1,a2,a3,a4);
++ 	str_set(stabent("@",TRUE)->stab_val,tokenbuf);
++ 	longjmp(eval_env,1);
++     }
+      fprintf(stderr,pat,a1,a2,a3,a4);
+      if (e_fp)
+  	UNLINK(e_tmpname);
+ 
+Index: x2p/walk.c
+Prereq: 1.0
+*** x2p/walk.c.old	Thu Jan 28 11:18:25 1988
+--- x2p/walk.c	Thu Jan 28 11:18:26 1988
+***************
+*** 1,6 ****
+! /* $Header: walk.c,v 1.0 87/12/18 13:07:40 root Exp $
+   *
+   * $Log:	walk.c,v $
+   * Revision 1.0  87/12/18  13:07:40  root
+   * Initial revision
+   * 
+--- 1,9 ----
+! /* $Header: walk.c,v 1.0.1.1 88/01/28 11:07:56 root Exp $
+   *
+   * $Log:	walk.c,v $
++  * Revision 1.0.1.1  88/01/28  11:07:56  root
++  * patch8: changed some misleading comments.
++  * 
+   * Revision 1.0  87/12/18  13:07:40  root
+   * Initial revision
+   * 
+***************
+*** 68,80 ****
+  	    str_cat(str,"';\t\t# field separator from -F switch\n");
+  	}
+  	else if (saw_FS && !const_FS) {
+! 	    str_cat(str,"$FS = '[ \\t\\n]+';\t\t# default field separator\n");
+  	}
+  	if (saw_OFS) {
+! 	    str_cat(str,"$, = ' ';\t\t# default output field separator\n");
+  	}
+  	if (saw_ORS) {
+! 	    str_cat(str,"$\\ = \"\\n\";\t\t# default output record separator\n");
+  	}
+  	if (str->str_cur > 20)
+  	    str_cat(str,"\n");
+--- 71,83 ----
+  	    str_cat(str,"';\t\t# field separator from -F switch\n");
+  	}
+  	else if (saw_FS && !const_FS) {
+! 	    str_cat(str,"$FS = '[ \\t\\n]+';\t\t# set field separator\n");
+  	}
+  	if (saw_OFS) {
+! 	    str_cat(str,"$, = ' ';\t\t# set output field separator\n");
+  	}
+  	if (saw_ORS) {
+! 	    str_cat(str,"$\\ = \"\\n\";\t\t# set output record separator\n");
+  	}
+  	if (str->str_cur > 20)
+  	    str_cat(str,"\n");

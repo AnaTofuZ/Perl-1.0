@@ -1,0 +1,283 @@
+Path: bbn.com!bbn!uwmcsd1!ig!agate!pasteur!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #7
+Summary: This is an official patch for perl 1.0.  Please apply it.
+Message-ID: <1158@devvax.JPL.NASA.GOV>
+Date: 26 Jan 88 23:04:26 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 273
+
+System: perl version 1.0
+Patch #: 7
+Priority: HIGH if malloc.c doesn't compile
+Subject: use of included malloc.c should be optional
+From: gatech!skeeve!arnold (Arnold D. Robbins)
+
+Description:
+	The version of malloc.c that comes with perl was not really intended
+	to be used everywhere--it was included mostly for debugging purposes.
+	It's a nice little package, however, so I'm making it optional (via
+	Configure) as to whether you want it or not.
+
+Fix:	From rn, say "| patch -p0 -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch -p0 <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch.
+
+>>> You must say -p0 to patch, or it will try to patch ./Makefile.SH twice,
+>>> instead of patching both ./Makefile.SH and x2p/Makefile.SH.
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 6
+1c1
+< #define PATCHLEVEL 6
+---
+> #define PATCHLEVEL 7
+ 
+Index: Configure
+Prereq: 1.0.1.2
+*** Configure.old	Tue Jan 26 14:16:00 1988
+--- Configure	Tue Jan 26 14:16:05 1988
+***************
+*** 8,14 ****
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.2 88/01/24 03:51:55 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+--- 8,14 ----
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.3 88/01/26 14:14:14 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+***************
+*** 79,84 ****
+--- 79,87 ----
+  d_voidsig=''
+  libc=''
+  libnm=''
++ mallocsrc=''
++ mallocobj=''
++ usemymalloc=''
+  mansrc=''
+  manext=''
+  models=''
+***************
+*** 1249,1255 ****
+--- 1252,1283 ----
+      esac
+  fi
+  
++ : determine which malloc to compile in
+  echo " "
++ case "$usemymalloc" in
++ '')
++     if bsd || v7; then
++ 	dflt='y'
++     else
++ 	dflt='n'
++     fi
++     ;;
++ *)  dflt="$usemymalloc"
++     ;;
++ esac
++ rp="Do you wish to attempt to use the malloc that comes with $package? [$dflt]"
++ $echo $n "$rp $c"
++ . myread
++ case "$ans" in
++ '') ans=$dflt;;
++ esac
++ usemymalloc="$ans"
++ case "$ans" in
++ y*) mallocsrc='malloc.c'; mallocobj='malloc.o';;
++ *) mallocsrc=''; mallocobj='';;
++ esac
++ 
++ echo " "
+  echo "End of configuration questions."
+  echo " "
+  
+***************
+*** 1309,1314 ****
+--- 1337,1345 ----
+  d_voidsig='$d_voidsig'
+  libc='$libc'
+  libnm='$libnm'
++ mallocsrc='$mallocsrc'
++ mallocobj='$mallocobj'
++ usemymalloc='$usemymalloc'
+  mansrc='$mansrc'
+  manext='$manext'
+  models='$models'
+ 
+Index: Makefile.SH
+Prereq: 1.0.1.2
+*** Makefile.SH.old	Tue Jan 26 14:55:03 1988
+--- Makefile.SH	Tue Jan 26 14:15:06 1988
+***************
+*** 14,22 ****
+  esac
+  echo "Extracting Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.2 88/01/26 08:46:04 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
+  # Revision 1.0.1.2  88/01/26  08:46:04  root
+  # patch 4: make depend didn't work right if . wasn't in PATH.
+  # 
+--- 14,25 ----
+  esac
+  echo "Extracting Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.3 88/01/26 14:14:52 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
++ # Revision 1.0.1.3  88/01/26  14:14:52  root
++ # Added mallocsrc stuff.
++ # 
+  # Revision 1.0.1.2  88/01/26  08:46:04  root
+  # patch 4: make depend didn't work right if . wasn't in PATH.
+  # 
+***************
+*** 36,41 ****
+--- 39,46 ----
+  LDFLAGS = $ldflags
+  SMALL = $small
+  LARGE = $large $split
++ mallocsrc = $mallocsrc
++ mallocobj = $mallocobj
+  
+  libs = $libnm -lm
+  !GROK!THIS!
+***************
+*** 57,68 ****
+  
+  h = $(h1) $(h2)
+  
+! c1 = arg.c array.c cmd.c dump.c form.c hash.c malloc.c
+  c2 = search.c stab.c str.c util.c version.c
+  
+  c = $(c1) $(c2)
+  
+! obj1 = arg.o array.o cmd.o dump.o form.o hash.o malloc.o
+  obj2 = search.o stab.o str.o util.o version.o
+  
+  obj = $(obj1) $(obj2)
+--- 62,73 ----
+  
+  h = $(h1) $(h2)
+  
+! c1 = arg.c array.c cmd.c dump.c form.c hash.c $(mallocsrc)
+  c2 = search.c stab.c str.c util.c version.c
+  
+  c = $(c1) $(c2)
+  
+! obj1 = arg.o array.o cmd.o dump.o form.o hash.o $(mallocobj)
+  obj2 = search.o stab.o str.o util.o version.o
+  
+  obj = $(obj1) $(obj2)
+
+If this complains below, perhaps you neglected to say patch -p0.
+If so, patch is trying to apply this patch to ./Makefile.SH instead
+of x2p/Makefile.SH.  Abort this patch and reapply as you did before
+only this time add both -p0 and -N, e.g.
+    patch -p0 -N -d DIR < thisarticle
+
+Index: x2p/Makefile.SH
+Prereq: 1.0
+*** x2p/Makefile.SH.old	Tue Jan 26 14:16:41 1988
+--- x2p/Makefile.SH	Tue Jan 26 14:17:13 1988
+***************
+*** 12,22 ****
+  case "$0" in
+  */*) cd `expr X$0 : 'X\(.*\)/'` ;;
+  esac
+  echo "Extracting x2p/Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0 87/12/18 17:50:17 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
+  # Revision 1.0  87/12/18  17:50:17  root
+  # Initial revision
+  # 
+--- 12,29 ----
+  case "$0" in
+  */*) cd `expr X$0 : 'X\(.*\)/'` ;;
+  esac
++ case "$mallocsrc" in
++ '') ;;
++ *) mallocsrc="../$mallocsrc";;
++ esac
+  echo "Extracting x2p/Makefile (with variable substitutions)"
+  cat >Makefile <<!GROK!THIS!
+! # $Header: Makefile.SH,v 1.0.1.1 88/01/26 14:15:24 root Exp $
+  #
+  # $Log:	Makefile.SH,v $
++ # Revision 1.0.1.1  88/01/26  14:15:24  root
++ # Added mallocsrc stuff.
++ # 
+  # Revision 1.0  87/12/18  17:50:17  root
+  # Initial revision
+  # 
+***************
+*** 31,36 ****
+--- 38,45 ----
+  LDFLAGS = $ldflags
+  SMALL = $small
+  LARGE = $large $split
++ mallocsrc = $mallocsrc
++ mallocobj = $mallocobj
+  
+  libs = $libnm -lm
+  !GROK!THIS!
+***************
+*** 49,57 ****
+  
+  h = EXTERN.h INTERN.h config.h handy.h hash.h a2p.h str.h util.h
+  
+! c = hash.c ../malloc.c str.c util.c walk.c
+  
+! obj = hash.o malloc.o str.o util.o walk.o
+  
+  lintflags = -phbvxac
+  
+--- 58,66 ----
+  
+  h = EXTERN.h INTERN.h config.h handy.h hash.h a2p.h str.h util.h
+  
+! c = hash.c $(mallocsrc) str.c util.c walk.c
+  
+! obj = hash.o $(mallocobj) str.o util.o walk.o
+  
+  lintflags = -phbvxac
+  

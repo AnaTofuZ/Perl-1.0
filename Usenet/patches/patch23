@@ -1,0 +1,1165 @@
+Path: utzoo!mnetor!uunet!seismo!sundc!pitstop!sun!decwrl!labrea!aurora!eos!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #23
+Message-ID: <1396@devvax.JPL.NASA.GOV>
+Date: 26 Feb 88 00:10:15 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 1151
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 23
+Priority: HIGH in spots
+Subject: str_gets() can stomp malloc arena under certain circumstances.
+Subject: unshift can wipe out malloc arena on some machines
+Subject: label on null statement can cause core dump.
+Subject: perl inappropriately modifies filename passed to open()
+Subject: the -i switch with no backup extension truncates the file
+Subject: Configure couldn't find cpp in /usr/lib
+Subject: Configure didn't set RENAME like it should
+Subject: four typos and two clarifications in the manual
+Subject: extra argument to cmd_free() in perly.c
+Subject: optimization incorrectly allowed ?pat? to match more than once
+Subject: (.*) in pattern wouldn't match null string.
+Subject: in a2p, some patterns ended up not enclosed in slashes.
+Subject: in a2p, added eval kludge for systems that don't grok #!.
+Subject: perlsh shouldn't use $_ and should restore $/ properly
+Subject: perldb doesn't correctly handle "else" and "continue".
+From: lotsa good people whom I haven't the time to acknowledge properly
+
+Description:
+	The routine that does <> processing, str_gets(), can occasionally
+	overwrite the end of an malloced string, depending on the size
+	of your stdio buffer and the length of the line of input.
+	Interestingly enough, this showed up first in TEST where it tries
+	to collect all the filenames of all the tests to run.  After patching,
+	there were enough *.orig files on some systems to reveal the bug
+	on systems with small (512 byte) stdio buffers.  To the person
+	who asked if I run TEST before sending out patches, the answer is
+	"yes".  But my environment isn't the same as your environment.
+
+	The unshift function can overwrite the end of an malloced string,
+	resulting in looping or dumps on some systems, depending on how
+	your malloc works.
+
+	Putting a label on a null statement, as in:
+		foo: ;
+	can sometimes cause a core dump.  There was a missing argument to
+	add_label() in perl.y, so your result depended on stack garbage,
+	which isn't very portable.  :-)
+
+	The filename passed to open() gets modified if it ends in a '|'.
+	There are enough side-effects in the language without this one.
+
+	The -i switch, which causes files specified on the command line
+	to be edited in place, could cause those files to be truncated
+	down to nothing if no backup extension was specified.  Furthermore,
+	no backup would be made.  Ouch!  If it's any comfort, I got bit
+	by this one myself, and wiped out the /.rhosts files on all my systems.
+	Consider me chastised.
+
+	Configure didn't set up the RENAME symbol like it was supposed to.
+	It also couldn't find cpp in /usr/lib on systems that have it there.
+
+	The manual has some typos and such.
+
+	There's an extra argument to cmd_free in perly.c.  It doesn't hurt
+	anything, but think of all the processor power wasted to push that
+	extra argument onto the stack.  :-)
+
+	The ?pat? construct is supposed to match only once between calls
+	to reset.  Depending on the pattern and the context, an incorrect
+	optimizaton could cause ?pat? to be treated like /pat/.
+
+	If you used (.*) in a pattern, it couldn't match the null string.
+	Among other things this prevented the "FOO=bar" processing in
+	translated awk scripts from working if bar happened to be null,
+	i.e. "FOO=".
+
+	The a2p program didn't translate "expr ~ /pattern/" correctly in
+	some situations, leaving the slashes off the result.
+
+	The perl scripts produced by a2p wanted to have the following lines
+	to ensure correct startup on machines that don't interpret #!:
+		eval "exec /bin/perl $0 $*"
+			if $running_under_some_shell;
+
+	(NB: the "standard" location of perl is probably going to change from
+	/bin to /usr/bin, since it has been pointed out to me that /bin is
+	going away in the proposed filesystem reorganization that Sun and
+	Berkeley are conspiring upon.  This may make some of you happy for
+	various reasons.)
+
+	The perlsh script made use of $_ and $/ in a way that prevented their
+	use in any perl code being evaluated by perlsh.
+
+	The perldb script incorrectly inserted calls to the debugging monitor
+	before the keywords "else" and "continue", resulting in syntax errors.
+
+Fix:	From rn, say "| patch -p -N -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch -p -N <thisarticle".
+	If you don't have the patch program, apply the following by hand (heh!),
+	or get patch (version 2.0, latest patchlevel (9)).
+
+	After patching:
+		Configure
+		make depend
+		make
+		make test
+		make install
+		cd x2p
+		make depend
+		make
+		make install
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 22
+1c1
+< #define PATCHLEVEL 22
+---
+> #define PATCHLEVEL 23
+ 
+Index: Configure
+Prereq: 1.0.1.7
+*** Configure.old	Thu Feb 25 11:57:45 1988
+--- Configure	Thu Feb 25 11:57:51 1988
+***************
+*** 8,14 ****
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.7 88/02/12 10:14:22 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+--- 8,14 ----
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.8 88/02/25 11:29:46 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+***************
+*** 61,77 ****
+  vi=''
+  mailx=''
+  mail=''
+  Log=''
+  Header=''
+  bin=''
+  cc=''
+  contains=''
+! cpp=''
+  cppminus=''
+  d_bcopy=''
+  d_charsprf=''
+  d_crypt=''
+  d_index=''
+  d_statblks=''
+  d_stdstdio=''
+  d_strctcpy=''
+--- 61,79 ----
+  vi=''
+  mailx=''
+  mail=''
++ cpp=''
+  Log=''
+  Header=''
+  bin=''
+  cc=''
+  contains=''
+! cppstdin=''
+  cppminus=''
+  d_bcopy=''
+  d_charsprf=''
+  d_crypt=''
+  d_index=''
++ d_rename=''
+  d_statblks=''
+  d_stdstdio=''
+  d_strctcpy=''
+***************
+*** 123,129 ****
+  attrlist="mc68000 sun gcos unix ibm gimpel interdata tss os mert pyr"
+  attrlist="$attrlist vax pdp11 i8086 z8000 u3b2 u3b5 u3b20 u3b200"
+  attrlist="$attrlist ns32000 ns16000 iAPX286 mc300 mc500 mc700 sparc"
+! pth="/usr/ucb /bin /usr/bin /usr/local /usr/local/bin /usr/lbin /etc /usr/lib"
+  defvoidused=7
+  
+  : some greps do not return status, grrr.
+--- 125,131 ----
+  attrlist="mc68000 sun gcos unix ibm gimpel interdata tss os mert pyr"
+  attrlist="$attrlist vax pdp11 i8086 z8000 u3b2 u3b5 u3b20 u3b200"
+  attrlist="$attrlist ns32000 ns16000 iAPX286 mc300 mc500 mc700 sparc"
+! pth="/usr/ucb /bin /usr/bin /usr/local /usr/local/bin /usr/lbin /etc /usr/lib /lib" : find out where common programs are
+  defvoidused=7
+  
+  : some greps do not return status, grrr.
+***************
+*** 249,255 ****
+      esac
+  fi
+  
+- : find out where common programs are
+  echo " "
+  echo "Locating common programs..."
+  cat <<EOSC >loc
+--- 251,256 ----
+***************
+*** 300,305 ****
+--- 301,307 ----
+  test
+  egrep
+  Mcc
++ cpp
+  "
+  for file in $loclist; do
+      xxx=`loc $file $file $pth`
+***************
+*** 569,586 ****
+  #define XYZ xyz
+  ABC.XYZ
+  EOT
+! echo 'Maybe "/lib/cpp" will work...'
+! /lib/cpp <testcpp.c >testcpp.out 2>&1
+  if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+      echo "Yup, it does."
+!     cpp='/lib/cpp'
+      cppminus='';
+  else
+!     echo 'Nope, maybe "/lib/cpp -" will work...'
+!     /lib/cpp - <testcpp.c >testcpp.out 2>&1
+      if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+  	echo "Yup, it does."
+! 	cpp='/lib/cpp'
+  	cppminus='-';
+      else
+  	echo 'No such luck...maybe "cc -E" will work...'
+--- 571,588 ----
+  #define XYZ xyz
+  ABC.XYZ
+  EOT
+! echo 'Maybe "'$cpp'" will work...'
+! $cpp <testcpp.c >testcpp.out 2>&1
+  if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+      echo "Yup, it does."
+!     cppstdin="$cpp"
+      cppminus='';
+  else
+!     echo 'Nope, maybe "'$cpp' -" will work...'
+!     $cpp - <testcpp.c >testcpp.out 2>&1
+      if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+  	echo "Yup, it does."
+! 	cppstdin="$cpp"
+  	cppminus='-';
+      else
+  	echo 'No such luck...maybe "cc -E" will work...'
+***************
+*** 587,593 ****
+  	cc -E <testcpp.c >testcpp.out 2>&1
+  	if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+  	    echo "It works!"
+! 	    cpp='cc -E'
+  	    cppminus='';
+  	else
+  	    echo 'Nixed again...maybe "cc -E -" will work...'
+--- 589,595 ----
+  	cc -E <testcpp.c >testcpp.out 2>&1
+  	if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+  	    echo "It works!"
+! 	    cppstdin='cc -E'
+  	    cppminus='';
+  	else
+  	    echo 'Nixed again...maybe "cc -E -" will work...'
+***************
+*** 594,600 ****
+  	    cc -E - <testcpp.c >testcpp.out 2>&1
+  	    if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+  		echo "Hooray, it works!  I was beginning to wonder."
+! 		cpp='cc -E'
+  		cppminus='-';
+  	    else
+  		echo 'Nope...maybe "cc -P" will work...'
+--- 596,602 ----
+  	    cc -E - <testcpp.c >testcpp.out 2>&1
+  	    if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+  		echo "Hooray, it works!  I was beginning to wonder."
+! 		cppstdin='cc -E'
+  		cppminus='-';
+  	    else
+  		echo 'Nope...maybe "cc -P" will work...'
+***************
+*** 601,607 ****
+  		cc -P <testcpp.c >testcpp.out 2>&1
+  		if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+  		    echo "Yup, that does."
+! 		    cpp='cc -P'
+  		    cppminus='';
+  		else
+  		    echo 'Nope...maybe "cc -P -" will work...'
+--- 603,609 ----
+  		cc -P <testcpp.c >testcpp.out 2>&1
+  		if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+  		    echo "Yup, that does."
+! 		    cppstdin='cc -P'
+  		    cppminus='';
+  		else
+  		    echo 'Nope...maybe "cc -P -" will work...'
+***************
+*** 608,620 ****
+  		    cc -P - <testcpp.c >testcpp.out 2>&1
+  		    if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+  			echo "Yup, that does."
+! 			cpp='cc -P'
+  			cppminus='-';
+  		    else
+  			echo 'Hmm...perhaps you already told me...'
+! 			case "$cpp" in
+  			'') ;;
+! 			*) $cpp $cppminus <testcpp.c >testcpp.out 2>&1;;
+  			esac
+  			if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+  			    echo "Hooray, you did!  I was beginning to wonder."
+--- 610,622 ----
+  		    cc -P - <testcpp.c >testcpp.out 2>&1
+  		    if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+  			echo "Yup, that does."
+! 			cppstdin='cc -P'
+  			cppminus='-';
+  		    else
+  			echo 'Hmm...perhaps you already told me...'
+! 			case "$cppstdin" in
+  			'') ;;
+! 			*) $cppstdin $cppminus <testcpp.c >testcpp.out 2>&1;;
+  			esac
+  			if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+  			    echo "Hooray, you did!  I was beginning to wonder."
+***************
+*** 621,629 ****
+  			else
+  			    echo 'Uh-uh.  Time to get fancy...'
+  			    echo 'Trying (cat >/tmp/$$.c; cc -E /tmp/$$.c; rm /tmp/$$.c)'
+! 			    cpp='(cat >/tmp/$$.c; cc -E /tmp/$$.c; rm /tmp/$$.c)'
+  			    cppminus='';
+! 			    $cpp <testcpp.c >testcpp.out 2>&1
+  			    if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+  				echo "Eureka!."
+  			    else
+--- 623,631 ----
+  			else
+  			    echo 'Uh-uh.  Time to get fancy...'
+  			    echo 'Trying (cat >/tmp/$$.c; cc -E /tmp/$$.c; rm /tmp/$$.c)'
+! 			    cppstdin='(cat >/tmp/$$.c; cc -E /tmp/$$.c; rm /tmp/$$.c)'
+  			    cppminus='';
+! 			    $cppstdin <testcpp.c >testcpp.out 2>&1
+  			    if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+  				echo "Eureka!."
+  			    else
+***************
+*** 631,638 ****
+  				$echo $n "No dice.  I can't find a C preprocessor.  Name one: $c"
+  				rp='Name a C preprocessor:'
+  				. myread
+! 				cpp="$ans"
+! 				$cpp <testcpp.c >testcpp.out 2>&1
+  				if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+  				    echo "OK, that will do."
+  				else
+--- 633,640 ----
+  				$echo $n "No dice.  I can't find a C preprocessor.  Name one: $c"
+  				rp='Name a C preprocessor:'
+  				. myread
+! 				cppstdin="$ans"
+! 				$cppstdin <testcpp.c >testcpp.out 2>&1
+  				if $contains 'abc.xyz' testcpp.out >/dev/null 2>&1 ; then
+  				    echo "OK, that will do."
+  				else
+***************
+*** 706,711 ****
+--- 708,723 ----
+      fi
+  fi
+  
++ : see if rename exists
++ echo " "
++ if $contains rename libc.list >/dev/null 2>&1; then
++     echo 'rename() found.'
++     d_rename="$define"
++ else
++     echo 'rename() not found.'
++     d_rename="$undef"
++ fi
++ 
+  : see if stat knows about block sizes
+  echo " "
+  if $contains 'st_blocks;' /usr/include/sys/stat.h >/dev/null 2>&1 ; then
+***************
+*** 1015,1021 ****
+  #endif\\
+  /' >/tmp/Cppsym\$\$
+  echo exit 1 >>/tmp/Cppsym\$\$
+! $cpp $cppminus </tmp/Cppsym\$\$ >/tmp/Cppsym2\$\$
+  case "\$list" in
+  true) awk 'NF > 5 {print substr(\$6,2,100)}' </tmp/Cppsym2\$\$ ;;
+  *)
+--- 1027,1033 ----
+  #endif\\
+  /' >/tmp/Cppsym\$\$
+  echo exit 1 >>/tmp/Cppsym\$\$
+! $cppstdin $cppminus </tmp/Cppsym\$\$ >/tmp/Cppsym2\$\$
+  case "\$list" in
+  true) awk 'NF > 5 {print substr(\$6,2,100)}' </tmp/Cppsym2\$\$ ;;
+  *)
+***************
+*** 1348,1364 ****
+  vi='$vi'
+  mailx='$mailx'
+  mail='$mail'
+  Log='$Log'
+  Header='$Header'
+  bin='$bin'
+  cc='$cc'
+  contains='$contains'
+! cpp='$cpp'
+  cppminus='$cppminus'
+  d_bcopy='$d_bcopy'
+  d_charsprf='$d_charsprf'
+  d_crypt='$d_crypt'
+  d_index='$d_index'
+  d_statblks='$d_statblks'
+  d_stdstdio='$d_stdstdio'
+  d_strctcpy='$d_strctcpy'
+--- 1360,1378 ----
+  vi='$vi'
+  mailx='$mailx'
+  mail='$mail'
++ cpp='$cpp'
+  Log='$Log'
+  Header='$Header'
+  bin='$bin'
+  cc='$cc'
+  contains='$contains'
+! cppstdin='$cppstdin'
+  cppminus='$cppminus'
+  d_bcopy='$d_bcopy'
+  d_charsprf='$d_charsprf'
+  d_crypt='$d_crypt'
+  d_index='$d_index'
++ d_rename='$d_rename'
+  d_statblks='$d_statblks'
+  d_stdstdio='$d_stdstdio'
+  d_strctcpy='$d_strctcpy'
+ 
+Index: x2p/a2p.y
+Prereq: 1.0
+*** x2p/a2p.y.old	Thu Feb 25 12:10:55 1988
+--- x2p/a2p.y	Thu Feb 25 12:10:57 1988
+***************
+*** 1,7 ****
+  %{
+! /* $Header: a2p.y,v 1.0 87/12/18 13:07:05 root Exp $
+   *
+   * $Log:	a2p.y,v $
+   * Revision 1.0  87/12/18  13:07:05  root
+   * Initial revision
+   * 
+--- 1,10 ----
+  %{
+! /* $Header: a2p.y,v 1.0.1.1 88/02/25 11:54:49 root Exp $
+   *
+   * $Log:	a2p.y,v $
++  * Revision 1.0.1.1  88/02/25  11:54:49  root
++  * patch23: some patterns ended up not enclosed in slashes.
++  * 
+   * Revision 1.0  87/12/18  13:07:05  root
+   * Initial revision
+   * 
+***************
+*** 118,124 ****
+  	;
+  
+  match	: expr MATCHOP REGEX
+! 		{ $$ = oper3(OMATCHOP,$2,$1,$3); }
+  	| '(' match ')'
+  		{ $$ = oper1(OMPAREN,$2); }
+  	;
+--- 121,127 ----
+  	;
+  
+  match	: expr MATCHOP REGEX
+! 		{ $$ = oper3(OMATCHOP,$2,$1,oper1(OREGEX,$3)); }
+  	| '(' match ')'
+  		{ $$ = oper1(OMPAREN,$2); }
+  	;
+ 
+Index: x2p/a2py.c
+Prereq: 1.0.1.3
+*** x2p/a2py.c.old	Thu Feb 25 12:11:09 1988
+--- x2p/a2py.c	Thu Feb 25 12:11:11 1988
+***************
+*** 1,6 ****
+! /* $Header: a2py.c,v 1.0.1.3 88/02/12 10:53:13 root Exp $
+   *
+   * $Log:	a2py.c,v $
+   * Revision 1.0.1.3  88/02/12  10:53:13  root
+   * patch22: tokener wasn't creating proper value for "~" or lexing numbers right
+   * 
+--- 1,9 ----
+! /* $Header: a2py.c,v 1.0.1.4 88/02/25 11:56:30 root Exp $
+   *
+   * $Log:	a2py.c,v $
++  * Revision 1.0.1.4  88/02/25  11:56:30  root
++  * patch23: added eval kludge for systems that don't grok #!.
++  * 
+   * Revision 1.0.1.3  88/02/12  10:53:13  root
+   * patch22: tokener wasn't creating proper value for "~" or lexing numbers right
+   * 
+***************
+*** 122,128 ****
+      /* second pass to produce new program */
+  
+      tmpstr = walk(0,0,root,&i);
+!     str = str_make("#!/bin/perl\n\n");
+      str_cat(str,
+        "eval '$'.$1.'$2;' while $ARGV[0] =~ /^([A-Za-z_]+=)(.*)/ && shift;\n");
+      str_cat(str,
+--- 125,134 ----
+      /* second pass to produce new program */
+  
+      tmpstr = walk(0,0,root,&i);
+!     str = str_make("#!/bin/perl\neval \"exec /bin/perl $0 $*\"\n\
+!     if $running_under_some_shell;\n\
+! 			# this emulates #! processing on NIH machines.\n\
+! 			# (remove #! line above if indigestible)\n\n");
+      str_cat(str,
+        "eval '$'.$1.'$2;' while $ARGV[0] =~ /^([A-Za-z_]+=)(.*)/ && shift;\n");
+      str_cat(str,
+ 
+Index: arg.c
+Prereq: 1.0.1.11
+*** arg.c.old	Thu Feb 25 11:58:16 1988
+--- arg.c	Thu Feb 25 11:58:24 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.c,v 1.0.1.11 88/02/12 10:46:30 root Exp $
+   *
+   * $Log:	arg.c,v $
+   * Revision 1.0.1.11  88/02/12  10:46:30  root
+   * patch22: fixed double free() problem, null ptr dereference, unwanted
+   * 	sign extension on return status from wait().
+--- 1,10 ----
+! /* $Header: arg.c,v 1.0.1.12 88/02/25 11:34:59 root Exp $
+   *
+   * $Log:	arg.c,v $
++  * Revision 1.0.1.12  88/02/25  11:34:59  root
++  * patch23: perl inappropriately modifies filename passed to open()
++  * patch23: the -i switch with no backup extension truncates the file
++  * 
+   * Revision 1.0.1.11  88/02/12  10:46:30  root
+   * patch22: fixed double free() problem, null ptr dereference, unwanted
+   * 	sign extension on return status from wait().
+***************
+*** 340,346 ****
+--- 344,352 ----
+      FILE *fp;
+      int len = strlen(name);
+      register STIO *stio = stab->stab_io;
++     char *myname = savestr(name);
+  
++     name = myname;
+      while (len && isspace(name[len-1]))
+  	name[--len] = '\0';
+      if (!stio)
+***************
+*** 399,404 ****
+--- 405,411 ----
+  		fp = fopen(name,"r");
+  	}
+      }
++     safefree(myname);
+      if (!fp)
+  	return FALSE;
+      if (stio->type != '|' && stio->type != '-') {
+***************
+*** 439,444 ****
+--- 446,454 ----
+  		    link(oldname,str->str_ptr);
+  		    UNLINK(oldname);
+  #endif
++ 		}
++ 		else {
++ 		    UNLINK(oldname);
+  		}
+  		sprintf(tokenbuf,">%s",oldname);
+  		do_open(argvoutstab,tokenbuf);
+ 
+Index: array.c
+Prereq: 1.0.1.1
+*** array.c.old	Thu Feb 25 11:58:39 1988
+--- array.c	Thu Feb 25 11:58:41 1988
+***************
+*** 1,6 ****
+! /* $Header: array.c,v 1.0.1.1 88/02/04 11:15:54 root Exp $
+   *
+   * $Log:	array.c,v $
+   * Revision 1.0.1.1  88/02/04  11:15:54  root
+   * patch18: regularized includes.
+   * 
+--- 1,9 ----
+! /* $Header: array.c,v 1.0.1.2 88/02/25 11:38:33 root Exp $
+   *
+   * $Log:	array.c,v $
++  * Revision 1.0.1.2  88/02/25  11:38:33  root
++  * patch23: unshift can wipe out malloc arena on some machines
++  * 
+   * Revision 1.0.1.1  88/02/04  11:15:54  root
+   * patch18: regularized includes.
+   * 
+***************
+*** 122,129 ****
+      if (num <= 0)
+  	return;
+      astore(ar,ar->ary_fill+num,(STR*)0);	/* maybe extend array */
+!     sstr = ar->ary_array + ar->ary_fill;
+!     dstr = sstr + num;
+      for (i = ar->ary_fill; i >= 0; i--) {
+  	*dstr-- = *sstr--;
+      }
+--- 125,132 ----
+      if (num <= 0)
+  	return;
+      astore(ar,ar->ary_fill+num,(STR*)0);	/* maybe extend array */
+!     dstr = ar->ary_array + ar->ary_fill;
+!     sstr = dstr - num;
+      for (i = ar->ary_fill; i >= 0; i--) {
+  	*dstr-- = *sstr--;
+      }
+ 
+Index: config.h.SH
+*** config.h.SH.old	Thu Feb 25 11:58:48 1988
+--- config.h.SH	Thu Feb 25 11:58:49 1988
+***************
+*** 37,43 ****
+  #$d_eunice	EUNICE		/**/
+  #$d_eunice	VMS		/**/
+  
+! /* CPP:
+   *	This symbol contains the first part of the string which will invoke
+   *	the C preprocessor on the standard input and produce to standard
+   *	output.	 Typical value of "cc -E" or "/lib/cpp".
+--- 37,43 ----
+  #$d_eunice	EUNICE		/**/
+  #$d_eunice	VMS		/**/
+  
+! /* CPPSTDIN:
+   *	This symbol contains the first part of the string which will invoke
+   *	the C preprocessor on the standard input and produce to standard
+   *	output.	 Typical value of "cc -E" or "/lib/cpp".
+***************
+*** 45,54 ****
+  /* CPPMINUS:
+   *	This symbol contains the second part of the string which will invoke
+   *	the C preprocessor on the standard input and produce to standard
+!  *	output.  This symbol will have the value "-" if CPP needs a minus
+   *	to specify standard input, otherwise the value is "".
+   */
+! #define CPP "$cpp"
+  #define CPPMINUS "$cppminus"
+  
+  /* BCOPY:
+--- 45,54 ----
+  /* CPPMINUS:
+   *	This symbol contains the second part of the string which will invoke
+   *	the C preprocessor on the standard input and produce to standard
+!  *	output.  This symbol will have the value "-" if CPPSTDIN needs a minus
+   *	to specify standard input, otherwise the value is "".
+   */
+! #define CPPSTDIN "$cppstdin"
+  #define CPPMINUS "$cppminus"
+  
+  /* BCOPY:
+***************
+*** 81,86 ****
+--- 81,93 ----
+   */
+  #$d_index	index strchr	/* cultural */
+  #$d_index	rindex strrchr	/*  differences? */
++ 
++ /* RENAME:
++  *	This symbol, if defined, indicates that the rename routine is available
++  *	to rename files.  Otherwise you should do the unlink(), link(), unlink()
++  *	trick.
++  */
++ #$d_rename	RENAME		/**/
+  
+  /* STATBLOCKS:
+   *	This symbol is defined if this system has a stat structure declaring
+ 
+Index: makedepend.SH
+Prereq: 1.0.1.3
+*** makedepend.SH.old	Thu Feb 25 11:58:56 1988
+--- makedepend.SH	Thu Feb 25 11:58:57 1988
+***************
+*** 15,23 ****
+  echo "Extracting makedepend (with variable substitutions)"
+  $spitshell >makedepend <<!GROK!THIS!
+  $startsh
+! # $Header: makedepend.SH,v 1.0.1.3 88/02/12 10:25:22 root Exp $
+  #
+  # $Log:	makedepend.SH,v $
+  # Revision 1.0.1.3  88/02/12  10:25:22  root
+  # patch22: fix for systems without . in path
+  # 
+--- 15,26 ----
+  echo "Extracting makedepend (with variable substitutions)"
+  $spitshell >makedepend <<!GROK!THIS!
+  $startsh
+! # $Header: makedepend.SH,v 1.0.1.4 88/02/25 11:41:46 root Exp $
+  #
+  # $Log:	makedepend.SH,v $
++ # Revision 1.0.1.4  88/02/25  11:41:46  root
++ # patch23: changed cpp to cppstdin
++ # 
+  # Revision 1.0.1.3  88/02/12  10:25:22  root
+  # patch22: fix for systems without . in path
+  # 
+***************
+*** 36,42 ****
+  
+  cat='$cat'
+  cp='$cp'
+! cpp='$cpp'
+  echo='$echo'
+  egrep='$egrep'
+  expr='$expr'
+--- 39,45 ----
+  
+  cat='$cat'
+  cp='$cp'
+! cpp='$cppstdin'
+  echo='$echo'
+  egrep='$egrep'
+  expr='$expr'
+ 
+Index: perl.man.1
+Prereq: 1.0.1.5
+*** perl.man.1.old	Thu Feb 25 11:59:09 1988
+--- perl.man.1	Thu Feb 25 11:59:11 1988
+***************
+*** 1,7 ****
+  .rn '' }`
+! ''' $Header: perl.man.1,v 1.0.1.5 88/02/12 10:26:35 root Exp $
+  ''' 
+  ''' $Log:	perl.man.1,v $
+  ''' Revision 1.0.1.5  88/02/12  10:26:35  root
+  ''' patch22: some systems don't have \(bs
+  ''' 
+--- 1,10 ----
+  .rn '' }`
+! ''' $Header: perl.man.1,v 1.0.1.6 88/02/25 11:42:26 root Exp $
+  ''' 
+  ''' $Log:	perl.man.1,v $
++ ''' Revision 1.0.1.6  88/02/25  11:42:26  root
++ ''' patch23: two typos and an omission.
++ ''' 
+  ''' Revision 1.0.1.5  88/02/12  10:26:35  root
+  ''' patch22: some systems don't have \(bs
+  ''' 
+***************
+*** 439,445 ****
+  Line numbers ($.) continue as if the input was one big happy file.
+  .PP
+  .ne 5
+! If you want to set @ARGV to you own list of files, go right ahead.
+  If you want to pass switches into your script, you can
+  put a loop on the front like this:
+  .nf
+--- 442,448 ----
+  Line numbers ($.) continue as if the input was one big happy file.
+  .PP
+  .ne 5
+! If you want to set @ARGV to your own list of files, go right ahead.
+  If you want to pass switches into your script, you can
+  put a loop on the front like this:
+  .nf
+***************
+*** 826,832 ****
+  This is a useful optimization when you only want to see the first occurence of
+  something in each of a set of files, for instance.
+  .Ip "chdir EXPR" 8 2
+! Changes the working director to EXPR, if possible.
+  Returns 1 upon success, 0 otherwise.
+  See example under die().
+  .Ip "chmod LIST" 8 2
+--- 829,835 ----
+  This is a useful optimization when you only want to see the first occurence of
+  something in each of a set of files, for instance.
+  .Ip "chdir EXPR" 8 2
+! Changes the working directory to EXPR, if possible.
+  Returns 1 upon success, 0 otherwise.
+  See example under die().
+  .Ip "chmod LIST" 8 2
+***************
+*** 996,1001 ****
+--- 999,1005 ----
+  If there is a syntax error or runtime error, a null string is returned by
+  eval, and $@ is set to the error message.
+  If there was no error, $@ is null.
++ If EXPR is omitted, evaluates $_.
+  .Ip "exec LIST" 8 6
+  If there is more than one argument in LIST,
+  calls execvp() with the arguments in LIST.
+ 
+Index: perl.man.2
+Prereq: 1.0.1.5
+*** perl.man.2.old	Thu Feb 25 11:59:24 1988
+--- perl.man.2	Thu Feb 25 11:59:28 1988
+***************
+*** 1,7 ****
+  ''' Beginning of part 2
+! ''' $Header: perl.man.2,v 1.0.1.5 88/02/06 00:22:26 root Exp $
+  '''
+  ''' $Log:	perl.man.2,v $
+  ''' Revision 1.0.1.5  88/02/06  00:22:26  root
+  ''' patch21: documented s/foo/bar/i.
+  ''' 
+--- 1,10 ----
+  ''' Beginning of part 2
+! ''' $Header: perl.man.2,v 1.0.1.6 88/02/25 11:44:09 root Exp $
+  '''
+  ''' $Log:	perl.man.2,v $
++ ''' Revision 1.0.1.6  88/02/25  11:44:09  root
++ ''' patch23: two typos and a clarification.
++ ''' 
+  ''' Revision 1.0.1.5  88/02/06  00:22:26  root
+  ''' patch21: documented s/foo/bar/i.
+  ''' 
+***************
+*** 62,68 ****
+  	@keys = keys(ENV);
+  	@values = values(ENV);
+  	while ($#keys >= 0) {
+! 		print pop(keys),'=',pop(values),"\n";
+  	}
+  
+  .fi
+--- 65,71 ----
+  	@keys = keys(ENV);
+  	@values = values(ENV);
+  	while ($#keys >= 0) {
+! 		print pop(keys),'=',pop(values),"\en";
+  	}
+  
+  .fi
+***************
+*** 270,276 ****
+  of the pattern are to be replaced.
+  The \*(L"i\*(R" is also optional, and if present, indicates that matching
+  is to be done in a case-insensitive manner.
+- of the pattern are to be replaced.
+  Any delimiter may replace the slashes; if single quotes are used, no
+  interpretation is done on the replacement string.
+  If no string is specified via the =~ or !~ operator,
+--- 273,278 ----
+***************
+*** 324,331 ****
+  .Ip "shift(ARRAY)" 8 6
+  .Ip "shift ARRAY" 8
+  .Ip "shift" 8
+! Shifts the first value of the array off, shortening the array by 1 and
+! moving everything down.
+  If ARRAY is omitted, shifts the ARGV array.
+  See also unshift(), push() and pop().
+  Shift() and unshift() do the same thing to the left end of an array that push()
+--- 326,333 ----
+  .Ip "shift(ARRAY)" 8 6
+  .Ip "shift ARRAY" 8
+  .Ip "shift" 8
+! Shifts the first value of the array off and returns it,
+! shortening the array by 1 and moving everything down.
+  If ARRAY is omitted, shifts the ARGV array.
+  See also unshift(), push() and pop().
+  Shift() and unshift() do the same thing to the left end of an array that push()
+ 
+Index: perl.y
+Prereq: 1.0.1.2
+*** perl.y.old	Thu Feb 25 11:59:42 1988
+--- perl.y	Thu Feb 25 11:59:44 1988
+***************
+*** 1,6 ****
+! /* $Header: perl.y,v 1.0.1.2 88/02/04 11:17:12 root Exp $
+   *
+   * $Log:	perl.y,v $
+   * Revision 1.0.1.2  88/02/04  11:17:12  root
+   * patch18: regularized includes.
+   * 
+--- 1,9 ----
+! /* $Header: perl.y,v 1.0.1.3 88/02/25 11:45:20 root Exp $
+   *
+   * $Log:	perl.y,v $
++  * Revision 1.0.1.3  88/02/25  11:45:20  root
++  * patch23: label on null statement can cause core dump.
++  * 
+   * Revision 1.0.1.2  88/02/04  11:17:12  root
+   * patch18: regularized includes.
+   * 
+***************
+*** 137,143 ****
+  	|	loop	/* loops add their own labels */
+  	|	label ';'
+  			{ if ($1 != Nullch) {
+! 			      $$ = add_label(make_acmd(C_EXPR, Nullstab,
+  				  Nullarg, Nullarg) );
+  			    } else
+  			      $$ = Nullcmd; }
+--- 140,146 ----
+  	|	loop	/* loops add their own labels */
+  	|	label ';'
+  			{ if ($1 != Nullch) {
+! 			      $$ = add_label($1, make_acmd(C_EXPR, Nullstab,
+  				  Nullarg, Nullarg) );
+  			    } else
+  			      $$ = Nullcmd; }
+ 
+Index: perldb
+Prereq: 1.0.1.3
+*** perldb.old	Thu Feb 25 11:59:53 1988
+--- perldb	Thu Feb 25 11:59:54 1988
+***************
+*** 1,8 ****
+  #!/bin/perl
+  
+! # $Header: perldb,v 1.0.1.3 88/02/04 00:24:05 root Exp $
+  #
+  # $Log:	perldb,v $
+  # Revision 1.0.1.3  88/02/04  00:24:05  root
+  # dummy checkin to get around RCS bug.
+  # 
+--- 1,11 ----
+  #!/bin/perl
+  
+! # $Header: perldb,v 1.0.1.4 88/02/25 11:46:57 root Exp $
+  #
+  # $Log:	perldb,v $
++ # Revision 1.0.1.4  88/02/25  11:46:57  root
++ # patch23: perldb doesn't correctly handle "else" and "continue".
++ # 
+  # Revision 1.0.1.3  88/02/04  00:24:05  root
+  # dummy checkin to get around RCS bug.
+  # 
+***************
+*** 67,73 ****
+  	$inform++;
+  	next;
+      }
+!     if ($state eq 'statement' && !/^[ \t]*}/) {
+  	if (s/^([ \t]*[A-Za-z_0-9]+:)//) {
+  	    $label = $1;
+  	}
+--- 70,76 ----
+  	$inform++;
+  	next;
+      }
+!     if ($state eq 'statement' && !/^[ \t]*}|^[ \t]*else|^[ \t]*continue/) {
+  	if (s/^([ \t]*[A-Za-z_0-9]+:)//) {
+  	    $label = $1;
+  	}
+ 
+Index: perlsh
+*** perlsh.old	Thu Feb 25 12:10:08 1988
+--- perlsh	Thu Feb 25 12:10:09 1988
+***************
+*** 7,12 ****
+  #  carriage return in the middle of a loop.
+  
+  $/ = '';	# set paragraph mode
+! while (<>) {
+!     eval; print $@ || "\n";
+  }
+--- 7,15 ----
+  #  carriage return in the middle of a loop.
+  
+  $/ = '';	# set paragraph mode
+! $SHlinesep = "\n";
+! while ($SHcmd = <>) {
+!     $/ = $SHlinesep;
+!     eval $SHcmd; print $@ || "\n";
+!     $SHlinesep = $/; $/ = '';
+  }
+ 
+Index: perly.c
+Prereq: 1.0.1.6
+*** perly.c.old	Thu Feb 25 12:02:07 1988
+--- perly.c	Thu Feb 25 12:02:14 1988
+***************
+*** 1,6 ****
+! char rcsid[] = "$Header: perly.c,v 1.0.1.6 88/02/12 10:27:36 root Exp $";
+  /*
+   * $Log:	perly.c,v $
+   * Revision 1.0.1.6  88/02/12  10:27:36  root
+   * patch22: fixed a null pointer problem on strings that run to EOF
+   * 	fixed some expressions that blew up some SysV compilers
+--- 1,11 ----
+! char rcsid[] = "$Header: perly.c,v 1.0.1.7 88/02/25 11:48:55 root Exp $";
+  /*
+   * $Log:	perly.c,v $
++  * Revision 1.0.1.7  88/02/25  11:48:55  root
++  * patch23: changed CPP to CPPSTDIN.
++  * patch23: extra argument to cmd_free()
++  * patch23: optimization allowed ?pat? to match more than once
++  * 
+   * Revision 1.0.1.6  88/02/12  10:27:36  root
+   * patch22: fixed a null pointer problem on strings that run to EOF
+   * 	fixed some expressions that blew up some SysV compilers
+***************
+*** 140,146 ****
+   -e '/^#[ 	]*endif/b' \
+   -e 's/^#.*//' \
+   %s | %s -C %s%s",
+! 	  argv[0], CPP, str_get(str), CPPMINUS);
+  	rsfp = popen(buf,"r");
+      }
+      else if (!*argv[0])
+--- 145,151 ----
+   -e '/^#[ 	]*endif/b' \
+   -e 's/^#.*//' \
+   %s | %s -C %s%s",
+! 	  argv[0], CPPSTDIN, str_get(str), CPPMINUS);
+  	rsfp = popen(buf,"r");
+      }
+      else if (!*argv[0])
+***************
+*** 1283,1288 ****
+--- 1288,1294 ----
+  	    cmd->c_first = arg[2].arg_ptr.arg_spat->spat_first;
+  	    cmd->c_flen  = arg[2].arg_ptr.arg_spat->spat_flen;
+  	    if (arg[2].arg_ptr.arg_spat->spat_flags & SPAT_SCANALL &&
++ 	        !(arg[2].arg_ptr.arg_spat->spat_flags & SPAT_USE_ONCE) &&
+  		(arg->arg_type == O_MATCH || arg->arg_type == O_NMATCH) )
+  		sure |= CF_EQSURE;		/* (SUBST must be forced even */
+  						/* if we know it will work.) */
+***************
+*** 2590,2596 ****
+  	    if (cmd->ucmd.ccmd.cc_true)
+  		cmd_free(cmd->ucmd.ccmd.cc_true);
+  	    if (cmd->c_type == C_IF && cmd->ucmd.ccmd.cc_alt)
+! 		cmd_free(cmd->ucmd.ccmd.cc_alt,Nullcmd);
+  	    break;
+  	case C_EXPR:
+  	    if (cmd->ucmd.acmd.ac_stab)
+--- 2596,2602 ----
+  	    if (cmd->ucmd.ccmd.cc_true)
+  		cmd_free(cmd->ucmd.ccmd.cc_true);
+  	    if (cmd->c_type == C_IF && cmd->ucmd.ccmd.cc_alt)
+! 		cmd_free(cmd->ucmd.ccmd.cc_alt);
+  	    break;
+  	case C_EXPR:
+  	    if (cmd->ucmd.acmd.ac_stab)
+ 
+Index: search.c
+Prereq: 1.0.1.3
+*** search.c.old	Thu Feb 25 12:10:34 1988
+--- search.c	Thu Feb 25 12:10:36 1988
+***************
+*** 1,6 ****
+! /* $Header: search.c,v 1.0.1.3 88/02/04 11:16:48 root Exp $
+   *
+   * $Log:	search.c,v $
+   * Revision 1.0.1.3  88/02/04  11:16:48  root
+   * patch18: regularized includes.
+   * 
+--- 1,9 ----
+! /* $Header: search.c,v 1.0.1.4 88/02/25 11:52:17 root Exp $
+   *
+   * $Log:	search.c,v $
++  * Revision 1.0.1.4  88/02/25  11:52:17  root
++  * patch23: (.*) in pattern wouldn't match null string.
++  * 
+   * Revision 1.0.1.3  88/02/04  11:16:48  root
+   * patch18: regularized includes.
+   * 
+***************
+*** 574,580 ****
+      register int backlen;
+      register int code;
+   
+!     while (*sp || (*cp & MAXINF) || *cp == BEG || *cp == RPAR ||
+  	*cp == WBOUND || *cp == NWBOUND) {
+  	switch ((code = *cp++) & CODEMASK) {
+   
+--- 577,583 ----
+      register int backlen;
+      register int code;
+   
+!     while (*sp || (*cp & MAXINF) || *cp == BEG || *cp == RPAR || *cp == LPAR ||
+  	*cp == WBOUND || *cp == NWBOUND) {
+  	switch ((code = *cp++) & CODEMASK) {
+   
+ 
+Index: str.c
+Prereq: 1.0.1.2
+*** str.c.old	Thu Feb 25 12:10:44 1988
+--- str.c	Thu Feb 25 12:10:45 1988
+***************
+*** 1,6 ****
+! /* $Header: str.c,v 1.0.1.2 88/02/04 11:17:02 root Exp $
+   *
+   * $Log:	str.c,v $
+   * Revision 1.0.1.2  88/02/04  11:17:02  root
+   * patch18: regularized includes.
+   * 
+--- 1,9 ----
+! /* $Header: str.c,v 1.0.1.3 88/02/25 11:53:48 root Exp $
+   *
+   * $Log:	str.c,v $
++  * Revision 1.0.1.3  88/02/25  11:53:48  root
++  * patch23: str_gets() can stomp malloc arena under certain circumstances.
++  * 
+   * Revision 1.0.1.2  88/02/04  11:17:02  root
+   * patch18: regularized includes.
+   * 
+***************
+*** 356,362 ****
+  	bpx = bp - str->str_ptr;	/* prepare for possible relocation */
+  	if (get_paragraph && oldbp)
+  	    obpx = oldbp - str->str_ptr;
+! 	GROWSTR(&(str->str_ptr), &(str->str_len), str->str_cur + cnt + 1);
+  	bp = str->str_ptr + bpx;	/* reconstitute our pointer */
+  	if (get_paragraph && oldbp)
+  	    oldbp = str->str_ptr + obpx;
+--- 359,365 ----
+  	bpx = bp - str->str_ptr;	/* prepare for possible relocation */
+  	if (get_paragraph && oldbp)
+  	    obpx = oldbp - str->str_ptr;
+! 	GROWSTR(&(str->str_ptr), &(str->str_len), bpx + cnt + 2);
+  	bp = str->str_ptr + bpx;	/* reconstitute our pointer */
+  	if (get_paragraph && oldbp)
+  	    oldbp = str->str_ptr + obpx;
+
+End of patch file

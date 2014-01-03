@@ -1,0 +1,1788 @@
+Path: utzoo!mnetor!uunet!lll-winken!lll-lcc!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #25
+Message-ID: <1475@devvax.JPL.NASA.GOV>
+Date: 4 Mar 88 04:08:19 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 1777
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 25
+Priority: MEDIUM
+Subject: Patch 24 continued
+
+Description:
+	Patch 24 was too long to ship in one piece, so here's the rest of it.
+
+Fix:	From rn, say "| patch -p0 -N -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch -p0 -N <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch (version 2.0, latest patchlevel).
+
+	After patching:
+		I just discovered another problem having to do with type
+		of group ids.  If you compile at this time you may get "gid_t"
+		undefined.  Patch 26 fixes this, so maybe you want to wait
+		for patch 26 before recompiling (I'm sending out 26 along with
+		this patch, so you shouldn't have to wait long).
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 24
+1c1
+< #define PATCHLEVEL 24
+---
+> #define PATCHLEVEL 25
+ 
+ 
+Index: perl.y
+Prereq: 1.0.1.3
+*** perl.y.old	Wed Mar  2 13:06:07 1988
+--- perl.y	Wed Mar  2 13:06:09 1988
+***************
+*** 1,6 ****
+! /* $Header: perl.y,v 1.0.1.3 88/02/25 11:45:20 root Exp $
+   *
+   * $Log:	perl.y,v $
+   * Revision 1.0.1.3  88/02/25  11:45:20  root
+   * patch23: label on null statement can cause core dump.
+   * 
+--- 1,11 ----
+! /* $Header: perl.y,v 1.0.1.4 88/03/02 12:37:25 root Exp $
+   *
+   * $Log:	perl.y,v $
++  * Revision 1.0.1.4  88/03/02  12:37:25  root
++  * patch24: made stab_to_* unique in 7 chars
++  * patch24: added file tests
++  * patch24: added line numbers for runtime errors
++  * 
+   * Revision 1.0.1.3  88/02/25  11:45:20  root
+   * patch23: label on null statement can cause core dump.
+   * 
+***************
+*** 27,33 ****
+  "while","until","if","unless","else","elsif","continue","split","sprintf",
+  "for", "eof", "tell", "seek", "stat",
+  "function(no args)","function(1 arg)","function(2 args)","function(3 args)","array function",
+! "join", "sub",
+  "format lines",
+  "register","array_length", "array",
+  "s","pattern",
+--- 32,38 ----
+  "while","until","if","unless","else","elsif","continue","split","sprintf",
+  "for", "eof", "tell", "seek", "stat",
+  "function(no args)","function(1 arg)","function(2 args)","function(3 args)","array function",
+! "join", "sub", "file test",
+  "format lines",
+  "register","array_length", "array",
+  "s","pattern",
+***************
+*** 65,71 ****
+  %token <ival> WHILE UNTIL IF UNLESS ELSE ELSIF CONTINUE SPLIT SPRINTF
+  %token <ival> FOR FEOF TELL SEEK STAT 
+  %token <ival> FUNC0 FUNC1 FUNC2 FUNC3 STABFUN
+! %token <ival> JOIN SUB
+  %token <formval> FORMLIST
+  %token <stabval> REG ARYLEN ARY
+  %token <arg> SUBST PATTERN
+--- 70,76 ----
+  %token <ival> WHILE UNTIL IF UNLESS ELSE ELSIF CONTINUE SPLIT SPRINTF
+  %token <ival> FOR FEOF TELL SEEK STAT 
+  %token <ival> FUNC0 FUNC1 FUNC2 FUNC3 STABFUN
+! %token <ival> JOIN SUB FILETEST
+  %token <formval> FORMLIST
+  %token <stabval> REG ARYLEN ARY
+  %token <arg> SUBST PATTERN
+***************
+*** 92,97 ****
+--- 97,103 ----
+  %left '&'
+  %nonassoc EQ NE SEQ SNE
+  %nonassoc '<' '>' LE GE SLT SGT SLE SGE
++ %nonassoc FILETEST
+  %left LS RS
+  %left '+' '-' '.'
+  %left '*' '/' '%' 'x'
+***************
+*** 120,126 ****
+  	|	ELSE block
+  			{ $$ = $2; }
+  	|	ELSIF '(' expr ')' compblock
+! 			{ $$ = make_ccmd(C_IF,$3,$5); }
+  	;
+  
+  block	:	'{' lineseq '}'
+--- 126,133 ----
+  	|	ELSE block
+  			{ $$ = $2; }
+  	|	ELSIF '(' expr ')' compblock
+! 			{ cmdline = $1;
+! 			    $$ = make_ccmd(C_IF,$3,$5); }
+  	;
+  
+  block	:	'{' lineseq '}'
+***************
+*** 159,189 ****
+  	;
+  
+  cond	:	IF '(' expr ')' compblock
+! 			{ $$ = make_ccmd(C_IF,$3,$5); }
+  	|	UNLESS '(' expr ')' compblock
+! 			{ $$ = invert(make_ccmd(C_IF,$3,$5)); }
+  	|	IF block compblock
+! 			{ $$ = make_ccmd(C_IF,cmd_to_arg($2),$3); }
+  	|	UNLESS block compblock
+! 			{ $$ = invert(make_ccmd(C_IF,cmd_to_arg($2),$3)); }
+  	;
+  
+  loop	:	label WHILE '(' texpr ')' compblock
+! 			{ $$ = wopt(add_label($1,
+  			    make_ccmd(C_WHILE,$4,$6) )); }
+  	|	label UNTIL '(' expr ')' compblock
+! 			{ $$ = wopt(add_label($1,
+  			    invert(make_ccmd(C_WHILE,$4,$6)) )); }
+  	|	label WHILE block compblock
+! 			{ $$ = wopt(add_label($1,
+  			    make_ccmd(C_WHILE, cmd_to_arg($3),$4) )); }
+  	|	label UNTIL block compblock
+! 			{ $$ = wopt(add_label($1,
+  			    invert(make_ccmd(C_WHILE, cmd_to_arg($3),$4)) )); }
+  	|	label FOR '(' nexpr ';' texpr ';' nexpr ')' block
+  			/* basically fake up an initialize-while lineseq */
+  			{   yyval.compval.comp_true = $10;
+  			    yyval.compval.comp_alt = $8;
+  			    $$ = append_line($4,wopt(add_label($1,
+  				make_ccmd(C_WHILE,$6,yyval.compval) ))); }
+  	|	label compblock	/* a block is a loop that happens once */
+--- 166,205 ----
+  	;
+  
+  cond	:	IF '(' expr ')' compblock
+! 			{ cmdline = $1;
+! 			    $$ = make_ccmd(C_IF,$3,$5); }
+  	|	UNLESS '(' expr ')' compblock
+! 			{ cmdline = $1;
+! 			    $$ = invert(make_ccmd(C_IF,$3,$5)); }
+  	|	IF block compblock
+! 			{ cmdline = $1;
+! 			    $$ = make_ccmd(C_IF,cmd_to_arg($2),$3); }
+  	|	UNLESS block compblock
+! 			{ cmdline = $1;
+! 			    $$ = invert(make_ccmd(C_IF,cmd_to_arg($2),$3)); }
+  	;
+  
+  loop	:	label WHILE '(' texpr ')' compblock
+! 			{ cmdline = $2;
+! 			    $$ = wopt(add_label($1,
+  			    make_ccmd(C_WHILE,$4,$6) )); }
+  	|	label UNTIL '(' expr ')' compblock
+! 			{ cmdline = $2;
+! 			    $$ = wopt(add_label($1,
+  			    invert(make_ccmd(C_WHILE,$4,$6)) )); }
+  	|	label WHILE block compblock
+! 			{ cmdline = $2;
+! 			    $$ = wopt(add_label($1,
+  			    make_ccmd(C_WHILE, cmd_to_arg($3),$4) )); }
+  	|	label UNTIL block compblock
+! 			{ cmdline = $2;
+! 			    $$ = wopt(add_label($1,
+  			    invert(make_ccmd(C_WHILE, cmd_to_arg($3),$4)) )); }
+  	|	label FOR '(' nexpr ';' texpr ';' nexpr ')' block
+  			/* basically fake up an initialize-while lineseq */
+  			{   yyval.compval.comp_true = $10;
+  			    yyval.compval.comp_alt = $8;
++ 			    cmdline = $2;
+  			    $$ = append_line($4,wopt(add_label($1,
+  				make_ccmd(C_WHILE,$6,yyval.compval) ))); }
+  	|	label compblock	/* a block is a loop that happens once */
+***************
+*** 358,363 ****
+--- 374,381 ----
+  			{ $$ = make_op(O_NOT, 1, $2, Nullarg, Nullarg,0); }
+  	|	'~' term
+  			{ $$ = make_op(O_COMPLEMENT, 1, $2, Nullarg, Nullarg,0);}
++ 	|	FILETEST sexpr
++ 			{ $$ = make_op($1, 1, $2, Nullarg, Nullarg,0); }
+  	|	'(' expr ')'
+  			{ $$ = make_list(hide_ary($2)); }
+  	|	'(' ')'
+***************
+*** 365,383 ****
+  	|	DO block	%prec '('
+  			{ $$ = cmd_to_arg($2); }
+  	|	REG	%prec '('
+! 			{ $$ = stab_to_arg(A_STAB,$1); }
+  	|	REG '[' expr ']'	%prec '('
+  			{ $$ = make_op(O_ARRAY, 2,
+! 				$3, stab_to_arg(A_STAB,aadd($1)), Nullarg,0); }
+  	|	ARY 	%prec '('
+  			{ $$ = make_op(O_ARRAY, 1,
+! 				stab_to_arg(A_STAB,$1),
+  				Nullarg, Nullarg, 1); }
+  	|	REG '{' expr '}'	%prec '('
+  			{ $$ = make_op(O_HASH, 2,
+! 				$3, stab_to_arg(A_STAB,hadd($1)), Nullarg,0); }
+  	|	ARYLEN	%prec '('
+! 			{ $$ = stab_to_arg(A_ARYLEN,$1); }
+  	|	RSTRING	%prec '('
+  			{ $$ = $1; }
+  	|	PATTERN	%prec '('
+--- 383,401 ----
+  	|	DO block	%prec '('
+  			{ $$ = cmd_to_arg($2); }
+  	|	REG	%prec '('
+! 			{ $$ = stab2arg(A_STAB,$1); }
+  	|	REG '[' expr ']'	%prec '('
+  			{ $$ = make_op(O_ARRAY, 2,
+! 				$3, stab2arg(A_STAB,aadd($1)), Nullarg,0); }
+  	|	ARY 	%prec '('
+  			{ $$ = make_op(O_ARRAY, 1,
+! 				stab2arg(A_STAB,$1),
+  				Nullarg, Nullarg, 1); }
+  	|	REG '{' expr '}'	%prec '('
+  			{ $$ = make_op(O_HASH, 2,
+! 				$3, stab2arg(A_STAB,hadd($1)), Nullarg,0); }
+  	|	ARYLEN	%prec '('
+! 			{ $$ = stab2arg(A_ARYLEN,$1); }
+  	|	RSTRING	%prec '('
+  			{ $$ = $1; }
+  	|	PATTERN	%prec '('
+***************
+*** 389,400 ****
+  	|	DO WORD '(' expr ')'
+  			{ $$ = make_op(O_SUBR, 2,
+  				make_list($4),
+! 				stab_to_arg(A_STAB,stabent($2,TRUE)),
+  				Nullarg,1); }
+  	|	DO WORD '(' ')'
+  			{ $$ = make_op(O_SUBR, 2,
+  				make_list(Nullarg),
+! 				stab_to_arg(A_STAB,stabent($2,TRUE)),
+  				Nullarg,1); }
+  	|	LOOPEX
+  			{ $$ = make_op($1,0,Nullarg,Nullarg,Nullarg,0); }
+--- 407,418 ----
+  	|	DO WORD '(' expr ')'
+  			{ $$ = make_op(O_SUBR, 2,
+  				make_list($4),
+! 				stab2arg(A_STAB,stabent($2,TRUE)),
+  				Nullarg,1); }
+  	|	DO WORD '(' ')'
+  			{ $$ = make_op(O_SUBR, 2,
+  				make_list(Nullarg),
+! 				stab2arg(A_STAB,stabent($2,TRUE)),
+  				Nullarg,1); }
+  	|	LOOPEX
+  			{ $$ = make_op($1,0,Nullarg,Nullarg,Nullarg,0); }
+***************
+*** 413,457 ****
+  			    Nullarg, Nullarg, Nullarg,0); }
+  	|	WRITE '(' WORD ')'
+  			{ $$ = l(make_op(O_WRITE, 1,
+! 			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+  			    Nullarg, Nullarg,0)); safefree($3); }
+  	|	WRITE '(' expr ')'
+  			{ $$ = make_op(O_WRITE, 1, $3, Nullarg, Nullarg,0); }
+  	|	SELECT '(' WORD ')'
+  			{ $$ = l(make_op(O_SELECT, 1,
+! 			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+  			    Nullarg, Nullarg,0)); safefree($3); }
+  	|	SELECT '(' expr ')'
+  			{ $$ = make_op(O_SELECT, 1, $3, Nullarg, Nullarg,0); }
+  	|	OPEN WORD	%prec '('
+  			{ $$ = make_op(O_OPEN, 2,
+! 			    stab_to_arg(A_STAB,stabent($2,TRUE)),
+! 			    stab_to_arg(A_STAB,stabent($2,TRUE)),
+  			    Nullarg,0); }
+  	|	OPEN '(' WORD ')'
+  			{ $$ = make_op(O_OPEN, 2,
+! 			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+! 			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+  			    Nullarg,0); }
+  	|	OPEN '(' WORD ',' expr ')'
+  			{ $$ = make_op(O_OPEN, 2,
+! 			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+  			    $5, Nullarg,0); }
+  	|	CLOSE '(' WORD ')'
+  			{ $$ = make_op(O_CLOSE, 1,
+! 			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+  			    Nullarg, Nullarg,0); }
+  	|	CLOSE WORD	%prec '('
+  			{ $$ = make_op(O_CLOSE, 1,
+! 			    stab_to_arg(A_STAB,stabent($2,TRUE)),
+  			    Nullarg, Nullarg,0); }
+  	|	FEOF '(' WORD ')'
+  			{ $$ = make_op(O_EOF, 1,
+! 			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+  			    Nullarg, Nullarg,0); }
+  	|	FEOF '(' ')'
+  			{ $$ = make_op(O_EOF, 0,
+! 			    stab_to_arg(A_STAB,stabent("ARGV",TRUE)),
+  			    Nullarg, Nullarg,0); }
+  	|	FEOF
+  			{ $$ = make_op(O_EOF, 0,
+--- 431,475 ----
+  			    Nullarg, Nullarg, Nullarg,0); }
+  	|	WRITE '(' WORD ')'
+  			{ $$ = l(make_op(O_WRITE, 1,
+! 			    stab2arg(A_STAB,stabent($3,TRUE)),
+  			    Nullarg, Nullarg,0)); safefree($3); }
+  	|	WRITE '(' expr ')'
+  			{ $$ = make_op(O_WRITE, 1, $3, Nullarg, Nullarg,0); }
+  	|	SELECT '(' WORD ')'
+  			{ $$ = l(make_op(O_SELECT, 1,
+! 			    stab2arg(A_STAB,stabent($3,TRUE)),
+  			    Nullarg, Nullarg,0)); safefree($3); }
+  	|	SELECT '(' expr ')'
+  			{ $$ = make_op(O_SELECT, 1, $3, Nullarg, Nullarg,0); }
+  	|	OPEN WORD	%prec '('
+  			{ $$ = make_op(O_OPEN, 2,
+! 			    stab2arg(A_STAB,stabent($2,TRUE)),
+! 			    stab2arg(A_STAB,stabent($2,TRUE)),
+  			    Nullarg,0); }
+  	|	OPEN '(' WORD ')'
+  			{ $$ = make_op(O_OPEN, 2,
+! 			    stab2arg(A_STAB,stabent($3,TRUE)),
+! 			    stab2arg(A_STAB,stabent($3,TRUE)),
+  			    Nullarg,0); }
+  	|	OPEN '(' WORD ',' expr ')'
+  			{ $$ = make_op(O_OPEN, 2,
+! 			    stab2arg(A_STAB,stabent($3,TRUE)),
+  			    $5, Nullarg,0); }
+  	|	CLOSE '(' WORD ')'
+  			{ $$ = make_op(O_CLOSE, 1,
+! 			    stab2arg(A_STAB,stabent($3,TRUE)),
+  			    Nullarg, Nullarg,0); }
+  	|	CLOSE WORD	%prec '('
+  			{ $$ = make_op(O_CLOSE, 1,
+! 			    stab2arg(A_STAB,stabent($2,TRUE)),
+  			    Nullarg, Nullarg,0); }
+  	|	FEOF '(' WORD ')'
+  			{ $$ = make_op(O_EOF, 1,
+! 			    stab2arg(A_STAB,stabent($3,TRUE)),
+  			    Nullarg, Nullarg,0); }
+  	|	FEOF '(' ')'
+  			{ $$ = make_op(O_EOF, 0,
+! 			    stab2arg(A_STAB,stabent("ARGV",TRUE)),
+  			    Nullarg, Nullarg,0); }
+  	|	FEOF
+  			{ $$ = make_op(O_EOF, 0,
+***************
+*** 458,464 ****
+  			    Nullarg, Nullarg, Nullarg,0); }
+  	|	TELL '(' WORD ')'
+  			{ $$ = make_op(O_TELL, 1,
+! 			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+  			    Nullarg, Nullarg,0); }
+  	|	TELL
+  			{ $$ = make_op(O_TELL, 0,
+--- 476,482 ----
+  			    Nullarg, Nullarg, Nullarg,0); }
+  	|	TELL '(' WORD ')'
+  			{ $$ = make_op(O_TELL, 1,
+! 			    stab2arg(A_STAB,stabent($3,TRUE)),
+  			    Nullarg, Nullarg,0); }
+  	|	TELL
+  			{ $$ = make_op(O_TELL, 0,
+***************
+*** 465,519 ****
+  			    Nullarg, Nullarg, Nullarg,0); }
+  	|	SEEK '(' WORD ',' sexpr ',' expr ')'
+  			{ $$ = make_op(O_SEEK, 3,
+! 			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+  			    $5, $7,1); }
+  	|	PUSH '(' WORD ',' expr ')'
+  			{ $$ = make_op($1, 2,
+  			    make_list($5),
+! 			    stab_to_arg(A_STAB,aadd(stabent($3,TRUE))),
+  			    Nullarg,1); }
+  	|	PUSH '(' ARY ',' expr ')'
+  			{ $$ = make_op($1, 2,
+  			    make_list($5),
+! 			    stab_to_arg(A_STAB,$3),
+  			    Nullarg,1); }
+  	|	POP WORD	%prec '('
+  			{ $$ = make_op(O_POP, 1,
+! 			    stab_to_arg(A_STAB,aadd(stabent($2,TRUE))),
+  			    Nullarg, Nullarg,0); }
+  	|	POP '(' WORD ')'
+  			{ $$ = make_op(O_POP, 1,
+! 			    stab_to_arg(A_STAB,aadd(stabent($3,TRUE))),
+  			    Nullarg, Nullarg,0); }
+  	|	POP ARY	%prec '('
+  			{ $$ = make_op(O_POP, 1,
+! 			    stab_to_arg(A_STAB,$2),
+  			    Nullarg,
+  			    Nullarg,
+  			    0); }
+  	|	POP '(' ARY ')'
+  			{ $$ = make_op(O_POP, 1,
+! 			    stab_to_arg(A_STAB,$3),
+  			    Nullarg,
+  			    Nullarg,
+  			    0); }
+  	|	SHIFT WORD	%prec '('
+  			{ $$ = make_op(O_SHIFT, 1,
+! 			    stab_to_arg(A_STAB,aadd(stabent($2,TRUE))),
+  			    Nullarg, Nullarg,0); }
+  	|	SHIFT '(' WORD ')'
+  			{ $$ = make_op(O_SHIFT, 1,
+! 			    stab_to_arg(A_STAB,aadd(stabent($3,TRUE))),
+  			    Nullarg, Nullarg,0); }
+  	|	SHIFT ARY	%prec '('
+  			{ $$ = make_op(O_SHIFT, 1,
+! 			    stab_to_arg(A_STAB,$2), Nullarg, Nullarg,0); }
+  	|	SHIFT '(' ARY ')'
+  			{ $$ = make_op(O_SHIFT, 1,
+! 			    stab_to_arg(A_STAB,$3), Nullarg, Nullarg,0); }
+  	|	SHIFT	%prec '('
+  			{ $$ = make_op(O_SHIFT, 1,
+! 			    stab_to_arg(A_STAB,aadd(stabent("ARGV",TRUE))),
+  			    Nullarg, Nullarg,0); }
+  	|	SPLIT	%prec '('
+  			{ scanpat("/[ \t\n]+/");
+--- 483,537 ----
+  			    Nullarg, Nullarg, Nullarg,0); }
+  	|	SEEK '(' WORD ',' sexpr ',' expr ')'
+  			{ $$ = make_op(O_SEEK, 3,
+! 			    stab2arg(A_STAB,stabent($3,TRUE)),
+  			    $5, $7,1); }
+  	|	PUSH '(' WORD ',' expr ')'
+  			{ $$ = make_op($1, 2,
+  			    make_list($5),
+! 			    stab2arg(A_STAB,aadd(stabent($3,TRUE))),
+  			    Nullarg,1); }
+  	|	PUSH '(' ARY ',' expr ')'
+  			{ $$ = make_op($1, 2,
+  			    make_list($5),
+! 			    stab2arg(A_STAB,$3),
+  			    Nullarg,1); }
+  	|	POP WORD	%prec '('
+  			{ $$ = make_op(O_POP, 1,
+! 			    stab2arg(A_STAB,aadd(stabent($2,TRUE))),
+  			    Nullarg, Nullarg,0); }
+  	|	POP '(' WORD ')'
+  			{ $$ = make_op(O_POP, 1,
+! 			    stab2arg(A_STAB,aadd(stabent($3,TRUE))),
+  			    Nullarg, Nullarg,0); }
+  	|	POP ARY	%prec '('
+  			{ $$ = make_op(O_POP, 1,
+! 			    stab2arg(A_STAB,$2),
+  			    Nullarg,
+  			    Nullarg,
+  			    0); }
+  	|	POP '(' ARY ')'
+  			{ $$ = make_op(O_POP, 1,
+! 			    stab2arg(A_STAB,$3),
+  			    Nullarg,
+  			    Nullarg,
+  			    0); }
+  	|	SHIFT WORD	%prec '('
+  			{ $$ = make_op(O_SHIFT, 1,
+! 			    stab2arg(A_STAB,aadd(stabent($2,TRUE))),
+  			    Nullarg, Nullarg,0); }
+  	|	SHIFT '(' WORD ')'
+  			{ $$ = make_op(O_SHIFT, 1,
+! 			    stab2arg(A_STAB,aadd(stabent($3,TRUE))),
+  			    Nullarg, Nullarg,0); }
+  	|	SHIFT ARY	%prec '('
+  			{ $$ = make_op(O_SHIFT, 1,
+! 			    stab2arg(A_STAB,$2), Nullarg, Nullarg,0); }
+  	|	SHIFT '(' ARY ')'
+  			{ $$ = make_op(O_SHIFT, 1,
+! 			    stab2arg(A_STAB,$3), Nullarg, Nullarg,0); }
+  	|	SHIFT	%prec '('
+  			{ $$ = make_op(O_SHIFT, 1,
+! 			    stab2arg(A_STAB,aadd(stabent("ARGV",TRUE))),
+  			    Nullarg, Nullarg,0); }
+  	|	SPLIT	%prec '('
+  			{ scanpat("/[ \t\n]+/");
+***************
+*** 531,542 ****
+  			{ $$ = mod_match(O_MATCH, $5, make_split(defstab,$3) ); }
+  	|	SPLIT '(' sexpr ')'
+  			{ $$ = mod_match(O_MATCH,
+! 			    stab_to_arg(A_STAB,defstab),
+  			    make_split(defstab,$3) ); }
+  	|	JOIN '(' WORD ',' expr ')'
+  			{ $$ = make_op(O_JOIN, 2,
+  			    $5,
+! 			    stab_to_arg(A_STAB,aadd(stabent($3,TRUE))),
+  			    Nullarg,0); }
+  	|	JOIN '(' sexpr ',' expr ')'
+  			{ $$ = make_op(O_JOIN, 2,
+--- 549,560 ----
+  			{ $$ = mod_match(O_MATCH, $5, make_split(defstab,$3) ); }
+  	|	SPLIT '(' sexpr ')'
+  			{ $$ = mod_match(O_MATCH,
+! 			    stab2arg(A_STAB,defstab),
+  			    make_split(defstab,$3) ); }
+  	|	JOIN '(' WORD ',' expr ')'
+  			{ $$ = make_op(O_JOIN, 2,
+  			    $5,
+! 			    stab2arg(A_STAB,aadd(stabent($3,TRUE))),
+  			    Nullarg,0); }
+  	|	JOIN '(' sexpr ',' expr ')'
+  			{ $$ = make_op(O_JOIN, 2,
+***************
+*** 550,562 ****
+  			    Nullarg,1); }
+  	|	STAT '(' WORD ')'
+  			{ $$ = l(make_op(O_STAT, 1,
+! 			    stab_to_arg(A_STAB,stabent($3,TRUE)),
+  			    Nullarg, Nullarg,0)); }
+  	|	STAT '(' expr ')'
+  			{ $$ = make_op(O_STAT, 1, $3, Nullarg, Nullarg,0); }
+  	|	CHOP
+  			{ $$ = l(make_op(O_CHOP, 1,
+! 			    stab_to_arg(A_STAB,defstab),
+  			    Nullarg, Nullarg,0)); }
+  	|	CHOP '(' expr ')'
+  			{ $$ = l(make_op(O_CHOP, 1, $3, Nullarg, Nullarg,0)); }
+--- 568,580 ----
+  			    Nullarg,1); }
+  	|	STAT '(' WORD ')'
+  			{ $$ = l(make_op(O_STAT, 1,
+! 			    stab2arg(A_STAB,stabent($3,TRUE)),
+  			    Nullarg, Nullarg,0)); }
+  	|	STAT '(' expr ')'
+  			{ $$ = make_op(O_STAT, 1, $3, Nullarg, Nullarg,0); }
+  	|	CHOP
+  			{ $$ = l(make_op(O_CHOP, 1,
+! 			    stab2arg(A_STAB,defstab),
+  			    Nullarg, Nullarg,0)); }
+  	|	CHOP '(' expr ')'
+  			{ $$ = l(make_op(O_CHOP, 1, $3, Nullarg, Nullarg,0)); }
+***************
+*** 570,576 ****
+  			{ $$ = make_op($1, 3, $3, $5, $7, 0); }
+  	|	STABFUN '(' WORD ')'
+  			{ $$ = make_op($1, 1,
+! 				stab_to_arg(A_STAB,hadd(stabent($3,TRUE))),
+  				Nullarg,
+  				Nullarg, 0); }
+  	;
+--- 588,594 ----
+  			{ $$ = make_op($1, 3, $3, $5, $7, 0); }
+  	|	STABFUN '(' WORD ')'
+  			{ $$ = make_op($1, 1,
+! 				stab2arg(A_STAB,hadd(stabent($3,TRUE))),
+  				Nullarg,
+  				Nullarg, 0); }
+  	;
+***************
+*** 577,597 ****
+  
+  print	:	PRINT
+  			{ $$ = make_op($1,2,
+! 				stab_to_arg(A_STAB,defstab),
+! 				stab_to_arg(A_STAB,Nullstab),
+  				Nullarg,0); }
+  	|	PRINT expr
+  			{ $$ = make_op($1,2,make_list($2),
+! 				stab_to_arg(A_STAB,Nullstab),
+  				Nullarg,1); }
+  	|	PRINT WORD
+  			{ $$ = make_op($1,2,
+! 				stab_to_arg(A_STAB,defstab),
+! 				stab_to_arg(A_STAB,stabent($2,TRUE)),
+  				Nullarg,1); }
+  	|	PRINT WORD expr
+  			{ $$ = make_op($1,2,make_list($3),
+! 				stab_to_arg(A_STAB,stabent($2,TRUE)),
+  				Nullarg,1); }
+  	;
+  
+--- 595,615 ----
+  
+  print	:	PRINT
+  			{ $$ = make_op($1,2,
+! 				stab2arg(A_STAB,defstab),
+! 				stab2arg(A_STAB,Nullstab),
+  				Nullarg,0); }
+  	|	PRINT expr
+  			{ $$ = make_op($1,2,make_list($2),
+! 				stab2arg(A_STAB,Nullstab),
+  				Nullarg,1); }
+  	|	PRINT WORD
+  			{ $$ = make_op($1,2,
+! 				stab2arg(A_STAB,defstab),
+! 				stab2arg(A_STAB,stabent($2,TRUE)),
+  				Nullarg,1); }
+  	|	PRINT WORD expr
+  			{ $$ = make_op($1,2,make_list($3),
+! 				stab2arg(A_STAB,stabent($2,TRUE)),
+  				Nullarg,1); }
+  	;
+  
+ 
+Index: perldb
+Prereq: 1.0.1.4
+*** perldb.old	Wed Mar  2 13:06:17 1988
+--- perldb	Wed Mar  2 13:06:18 1988
+***************
+*** 1,8 ****
+! #!/bin/perl
+  
+! # $Header: perldb,v 1.0.1.4 88/02/25 11:46:57 root Exp $
+  #
+  # $Log:	perldb,v $
+  # Revision 1.0.1.4  88/02/25  11:46:57  root
+  # patch23: perldb doesn't correctly handle "else" and "continue".
+  # 
+--- 1,12 ----
+! #!/usr/bin/perl
+  
+! # $Header: perldb,v 1.0.1.5 88/03/02 12:42:34 root Exp $
+  #
+  # $Log:	perldb,v $
++ # Revision 1.0.1.5  88/03/02  12:42:34  root
++ # patch24: / was treated like operator when it should have been match delim
++ # patch24: "standard" directory changed from /bin to /usr/bin
++ # 
+  # Revision 1.0.1.4  88/02/25  11:46:57  root
+  # patch23: perldb doesn't correctly handle "else" and "continue".
+  # 
+***************
+*** 34,40 ****
+  
+  open(tmp, ">$tmp") || die "Can't make temp script";
+  
+! $perl = '/bin/perl';
+  $init = 1;
+  $state = 'statement';
+  
+--- 38,44 ----
+  
+  open(tmp, ">$tmp") || die "Can't make temp script";
+  
+! $perl = '/usr/bin/perl';
+  $init = 1;
+  $state = 'statement';
+  
+***************
+*** 284,290 ****
+  	    $state = 'term', next	if s/^<[A-Za-z_0-9]*>//;
+  	    next			if s/^\+\+//;
+  	    next			if s/^--//;
+! 	    $state = 'operator', next	if s/^[(!%&*-=+:,.<>]//;
+  	    $state = 'term', next	if s/^\)+//;
+  	    do quote($ord,1), next	if s/^'//;
+  	    do quote($ord,1), next	if s/^"//;
+--- 288,294 ----
+  	    $state = 'term', next	if s/^<[A-Za-z_0-9]*>//;
+  	    next			if s/^\+\+//;
+  	    next			if s/^--//;
+! 	    $state = 'operator', next	if s/^[-(!%&*=+:,.<>]//;
+  	    $state = 'term', next	if s/^\)+//;
+  	    do quote($ord,1), next	if s/^'//;
+  	    do quote($ord,1), next	if s/^"//;
+ 
+Index: perly.c
+Prereq: 1.0.1.7
+*** perly.c.old	Wed Mar  2 13:06:40 1988
+--- perly.c	Wed Mar  2 13:06:48 1988
+***************
+*** 1,6 ****
+! char rcsid[] = "$Header: perly.c,v 1.0.1.7 88/02/25 11:48:55 root Exp $";
+  /*
+   * $Log:	perly.c,v $
+   * Revision 1.0.1.7  88/02/25  11:48:55  root
+   * patch23: changed CPP to CPPSTDIN.
+   * patch23: extra argument to cmd_free()
+--- 1,17 ----
+! char rcsid[] = "$Header: perly.c,v 1.0.1.8 88/03/02 12:45:28 root Exp $";
+  /*
+   * $Log:	perly.c,v $
++  * Revision 1.0.1.8  88/03/02  12:45:28  root
++  * patch24: added new filetest and symlink operations
++  * patch24: made assume_* unique in 7 chars
++  * patch24: added line numbers for improved runtime error messages
++  * patch24: some machines don't handle types right in return (a,b,c)
++  * patch24: "$1text" did not interpolate $1 correctly
++  * patch24: optimization of /foo/ .. /bar/ was incorrect
++  * patch24: grandfathering of \digit in substitutions wasn't working
++  * patch24: division by 0 is now complained about properly in evalstatic()
++  * patch24: ^L is now a valid space character
++  * 
+   * Revision 1.0.1.7  88/02/25  11:48:55  root
+   * patch23: changed CPP to CPPSTDIN.
+   * patch23: extra argument to cmd_free()
+***************
+*** 32,39 ****
+   */
+  
+  bool preprocess = FALSE;
+! bool assume_n = FALSE;
+! bool assume_p = FALSE;
+  bool doswitches = FALSE;
+  bool allstabs = FALSE;		/* init all customary symbols in symbol table?*/
+  char *filename;
+--- 43,50 ----
+   */
+  
+  bool preprocess = FALSE;
+! bool minus_n = FALSE;
+! bool minus_p = FALSE;
+  bool doswitches = FALSE;
+  bool allstabs = FALSE;		/* init all customary symbols in symbol table?*/
+  char *filename;
+***************
+*** 89,99 ****
+  	    }
+  	    break;
+  	case 'n':
+! 	    assume_n = TRUE;
+  	    strcpy(argv[0], argv[0]+1);
+  	    goto reswitch;
+  	case 'p':
+! 	    assume_p = TRUE;
+  	    strcpy(argv[0], argv[0]+1);
+  	    goto reswitch;
+  	case 'P':
+--- 100,110 ----
+  	    }
+  	    break;
+  	case 'n':
+! 	    minus_n = TRUE;
+  	    strcpy(argv[0], argv[0]+1);
+  	    goto reswitch;
+  	case 'p':
+! 	    minus_p = TRUE;
+  	    strcpy(argv[0], argv[0]+1);
+  	    goto reswitch;
+  	case 'P':
+***************
+*** 113,119 ****
+  	case 0:
+  	    break;
+  	default:
+! 	    fatal("Unrecognized switch: %s\n",argv[0]);
+  	}
+      }
+    switch_end:
+--- 124,130 ----
+  	case 0:
+  	    break;
+  	default:
+! 	    fatal("Unrecognized switch: %s",argv[0]);
+  	}
+      }
+    switch_end:
+***************
+*** 153,159 ****
+      else
+  	rsfp = fopen(argv[0],"r");
+      if (rsfp == Nullfp)
+! 	fatal("Perl script \"%s\" doesn't seem to exist.\n",filename);
+      str_free(str);		/* free -I directories */
+  
+      defstab = stabent("_",TRUE);
+--- 164,170 ----
+      else
+  	rsfp = fopen(argv[0],"r");
+      if (rsfp == Nullfp)
+! 	fatal("Perl script \"%s\" doesn't seem to exist",filename);
+      str_free(str);		/* free -I directories */
+  
+      defstab = stabent("_",TRUE);
+***************
+*** 165,171 ****
+      /* now parse the report spec */
+  
+      if (yyparse())
+! 	fatal("Execution aborted due to compilation errors.\n");
+  
+      if (e_fp) {
+  	e_fp = Nullfp;
+--- 176,182 ----
+      /* now parse the report spec */
+  
+      if (yyparse())
+! 	fatal("Execution aborted due to compilation errors");
+  
+      if (e_fp) {
+  	e_fp = Nullfp;
+***************
+*** 235,241 ****
+      (void) cmd_exec(main_root);
+  
+      if (goto_targ)
+! 	fatal("Can't find label \"%s\"--aborting.\n",goto_targ);
+      exit(0);
+  }
+  
+--- 246,252 ----
+      (void) cmd_exec(main_root);
+  
+      if (goto_targ)
+! 	fatal("Can't find label \"%s\"--aborting",goto_targ);
+      exit(0);
+  }
+  
+***************
+*** 254,270 ****
+      }
+  }
+  
+! #define RETURN(retval) return (bufptr = s,retval)
+! #define OPERATOR(retval) return (expectterm = TRUE,bufptr = s,retval)
+! #define TERM(retval) return (expectterm = FALSE,bufptr = s,retval)
+! #define LOOPX(f) return (yylval.ival = f,expectterm = FALSE,bufptr = s,LOOPEX)
+! #define UNI(f) return (yylval.ival = f,expectterm = TRUE,bufptr = s,UNIOP)
+! #define FUN0(f) return (yylval.ival = f,expectterm = FALSE,bufptr = s,FUNC0)
+! #define FUN1(f) return (yylval.ival = f,expectterm = FALSE,bufptr = s,FUNC1)
+! #define FUN2(f) return (yylval.ival = f,expectterm = FALSE,bufptr = s,FUNC2)
+! #define FUN3(f) return (yylval.ival = f,expectterm = FALSE,bufptr = s,FUNC3)
+! #define SFUN(f) return (yylval.ival = f,expectterm = FALSE,bufptr = s,STABFUN)
+  
+  yylex()
+  {
+      register char *s = bufptr;
+--- 265,286 ----
+      }
+  }
+  
+! unsigned int cmdline = 65535;
+  
++ #define CLINE (cmdline = (line < cmdline ? line : cmdline))
++ 
++ #define RETURN(retval) return (bufptr = s,(int)retval)
++ #define OPERATOR(retval) return (expectterm = TRUE,bufptr = s,(int)retval)
++ #define TERM(retval) return (CLINE, expectterm = FALSE,bufptr = s,(int)retval)
++ #define LOOPX(f) return(yylval.ival=f,expectterm = FALSE,bufptr = s,(int)LOOPEX)
++ #define UNI(f) return(yylval.ival = f,expectterm = TRUE,bufptr = s,(int)UNIOP)
++ #define FTST(f) return(yylval.ival=f,expectterm = TRUE,bufptr = s,(int)FILETEST)
++ #define FUN0(f) return(yylval.ival = f,expectterm = FALSE,bufptr = s,(int)FUNC0)
++ #define FUN1(f) return(yylval.ival = f,expectterm = FALSE,bufptr = s,(int)FUNC1)
++ #define FUN2(f) return(yylval.ival = f,expectterm = FALSE,bufptr = s,(int)FUNC2)
++ #define FUN3(f) return(yylval.ival = f,expectterm = FALSE,bufptr = s,(int)FUNC3)
++ #define SFUN(f) return(yylval.ival=f,expectterm = FALSE,bufptr = s,(int)STABFUN)
++ 
+  yylex()
+  {
+      register char *s = bufptr;
+***************
+*** 290,296 ****
+      case 0:
+  	s = str_get(linestr);
+  	*s = '\0';
+! 	if (firstline && (assume_n || assume_p)) {
+  	    firstline = FALSE;
+  	    str_set(linestr,"while (<>) {");
+  	    s = str_get(linestr);
+--- 306,312 ----
+      case 0:
+  	s = str_get(linestr);
+  	*s = '\0';
+! 	if (firstline && (minus_n || minus_p)) {
+  	    firstline = FALSE;
+  	    str_set(linestr,"while (<>) {");
+  	    s = str_get(linestr);
+***************
+*** 311,318 ****
+  	    else if (rsfp != stdin)
+  		fclose(rsfp);
+  	    rsfp = Nullfp;
+! 	    if (assume_n || assume_p) {
+! 		str_set(linestr,assume_p ? "}continue{print;" : "");
+  		str_cat(linestr,"}");
+  		s = str_get(linestr);
+  		goto retry;
+--- 327,334 ----
+  	    else if (rsfp != stdin)
+  		fclose(rsfp);
+  	    rsfp = Nullfp;
+! 	    if (minus_n || minus_p) {
+! 		str_set(linestr,minus_p ? "}continue{print;" : "");
+  		str_cat(linestr,"}");
+  		s = str_get(linestr);
+  		goto retry;
+***************
+*** 328,334 ****
+  #endif
+  	firstline = FALSE;
+  	goto retry;
+!     case ' ': case '\t':
+  	s++;
+  	goto retry;
+      case '\n':
+--- 344,350 ----
+  #endif
+  	firstline = FALSE;
+  	goto retry;
+!     case ' ': case '\t': case '\f':
+  	s++;
+  	goto retry;
+      case '\n':
+***************
+*** 356,363 ****
+  	if (lex_newlines)
+  	    RETURN('\n');
+  	goto retry;
+-     case '+':
+      case '-':
+  	if (s[1] == *s) {
+  	    s++;
+  	    if (*s++ == '+')
+--- 372,402 ----
+  	if (lex_newlines)
+  	    RETURN('\n');
+  	goto retry;
+      case '-':
++ 	if (s[1] && isalpha(s[1]) && !isalpha(s[2])) {
++ 	    s++;
++ 	    switch (*s++) {
++ 	    case 'r': FTST(O_FTEREAD); break;
++ 	    case 'w': FTST(O_FTEWRITE); break;
++ 	    case 'x': FTST(O_FTEEXEC); break;
++ 	    case 'o': FTST(O_FTEOWNED); break;
++ 	    case 'R': FTST(O_FTRREAD); break;
++ 	    case 'W': FTST(O_FTRWRITE); break;
++ 	    case 'X': FTST(O_FTREXEC); break;
++ 	    case 'O': FTST(O_FTROWNED); break;
++ 	    case 'e': FTST(O_FTIS); break;
++ 	    case 'z': FTST(O_FTZERO); break;
++ 	    case 's': FTST(O_FTSIZE); break;
++ 	    case 'f': FTST(O_FTFILE); break;
++ 	    case 'd': FTST(O_FTDIR); break;
++ 	    case 'l': FTST(O_FTLINK); break;
++ 	    default:
++ 		s -= 2;
++ 		break;
++ 	    }
++ 	}
++ 	/*FALL THROUGH*/
++     case '+':
+  	if (s[1] == *s) {
+  	    s++;
+  	    if (*s++ == '+')
+***************
+*** 373,383 ****
+      case '(':
+      case ',':
+      case ':':
+-     case ';':
+-     case '{':
+      case '[':
+  	tmp = *s++;
+  	OPERATOR(tmp);
+      case ')':
+      case ']':
+  	tmp = *s++;
+--- 412,430 ----
+      case '(':
+      case ',':
+      case ':':
+      case '[':
+  	tmp = *s++;
+  	OPERATOR(tmp);
++     case '{':
++ 	tmp = *s++;
++ 	if (isspace(*s) || *s == '#')
++ 	    cmdline = 65535;	/* invalidate current command line number */
++ 	OPERATOR(tmp);
++     case ';':
++ 	if (line < cmdline)
++ 	    cmdline = line;
++ 	tmp = *s++;
++ 	OPERATOR(tmp);
+      case ')':
+      case ']':
+  	tmp = *s++;
+***************
+*** 538,545 ****
+  	SNARFWORD;
+  	if (strEQ(d,"else"))
+  	    OPERATOR(ELSE);
+! 	if (strEQ(d,"elsif"))
+  	    OPERATOR(ELSIF);
+  	if (strEQ(d,"eq") || strEQ(d,"EQ"))
+  	    OPERATOR(SEQ);
+  	if (strEQ(d,"exit"))
+--- 585,594 ----
+  	SNARFWORD;
+  	if (strEQ(d,"else"))
+  	    OPERATOR(ELSE);
+! 	if (strEQ(d,"elsif")) {
+! 	    yylval.ival = line;
+  	    OPERATOR(ELSIF);
++ 	}
+  	if (strEQ(d,"eq") || strEQ(d,"EQ"))
+  	    OPERATOR(SEQ);
+  	if (strEQ(d,"exit"))
+***************
+*** 592,599 ****
+  	OPERATOR(WORD);
+      case 'i': case 'I':
+  	SNARFWORD;
+! 	if (strEQ(d,"if"))
+  	    OPERATOR(IF);
+  	if (strEQ(d,"index"))
+  	    FUN2(O_INDEX);
+  	if (strEQ(d,"int"))
+--- 641,650 ----
+  	OPERATOR(WORD);
+      case 'i': case 'I':
+  	SNARFWORD;
+! 	if (strEQ(d,"if")) {
+! 	    yylval.ival = line;
+  	    OPERATOR(IF);
++ 	}
+  	if (strEQ(d,"index"))
+  	    FUN2(O_INDEX);
+  	if (strEQ(d,"int"))
+***************
+*** 722,727 ****
+--- 773,784 ----
+  	    yylval.ival = O_SYSTEM;
+  	    OPERATOR(PRINT);
+  	}
++ 	if (strEQ(d,"symlink"))
++ #ifdef SYMLINK
++ 	    FUN2(O_SYMLINK);
++ #else
++ 	    fatal("symlink() not supported on this machine");
++ #endif
+  	yylval.cval = savestr(d);
+  	OPERATOR(WORD);
+      case 't': case 'T':
+***************
+*** 742,751 ****
+  	SNARFWORD;
+  	if (strEQ(d,"using"))
+  	    OPERATOR(USING);
+! 	if (strEQ(d,"until"))
+  	    OPERATOR(UNTIL);
+! 	if (strEQ(d,"unless"))
+  	    OPERATOR(UNLESS);
+  	if (strEQ(d,"umask"))
+  	    FUN1(O_UMASK);
+  	if (strEQ(d,"unshift")) {
+--- 799,812 ----
+  	SNARFWORD;
+  	if (strEQ(d,"using"))
+  	    OPERATOR(USING);
+! 	if (strEQ(d,"until")) {
+! 	    yylval.ival = line;
+  	    OPERATOR(UNTIL);
+! 	}
+! 	if (strEQ(d,"unless")) {
+! 	    yylval.ival = line;
+  	    OPERATOR(UNLESS);
++ 	}
+  	if (strEQ(d,"umask"))
+  	    FUN1(O_UMASK);
+  	if (strEQ(d,"unshift")) {
+***************
+*** 768,775 ****
+  	SNARFWORD;
+  	if (strEQ(d,"write"))
+  	    TERM(WRITE);
+! 	if (strEQ(d,"while"))
+  	    OPERATOR(WHILE);
+  	yylval.cval = savestr(d);
+  	OPERATOR(WORD);
+      case 'x': case 'X':
+--- 829,838 ----
+  	SNARFWORD;
+  	if (strEQ(d,"write"))
+  	    TERM(WRITE);
+! 	if (strEQ(d,"while")) {
+! 	    yylval.ival = line;
+  	    OPERATOR(WHILE);
++ 	}
+  	yylval.cval = savestr(d);
+  	OPERATOR(WORD);
+      case 'x': case 'X':
+***************
+*** 838,845 ****
+  
+      s++;
+      d = dest;
+!     while (isalpha(*s) || isdigit(*s) || *s == '_')
+! 	*d++ = *s++;
+      *d = '\0';
+      d = dest;
+      if (!*d) {
+--- 901,914 ----
+  
+      s++;
+      d = dest;
+!     if (isdigit(*s)) {
+! 	while (isdigit(*s) || *s == '_')
+! 	    *d++ = *s++;
+!     }
+!     else {
+! 	while (isalpha(*s) || isdigit(*s) || *s == '_')
+! 	    *d++ = *s++;
+!     }
+      *d = '\0';
+      d = dest;
+      if (!*d) {
+***************
+*** 938,948 ****
+  	spat->spat_flags |= SPAT_USE_ONCE;
+  	break;
+      default:
+! 	fatal("Search pattern not found:\n%s",str_get(linestr));
+      }
+      s = cpytill(tokenbuf,s,s[-1]);
+      if (!*s)
+! 	fatal("Search pattern not terminated:\n%s",str_get(linestr));
+      s++;
+      if (*s == 'i') {
+  	s++;
+--- 1007,1017 ----
+  	spat->spat_flags |= SPAT_USE_ONCE;
+  	break;
+      default:
+! 	fatal("panic: scanpat");
+      }
+      s = cpytill(tokenbuf,s,s[-1]);
+      if (!*s)
+! 	fatal("Search pattern not terminated");
+      s++;
+      if (*s == 'i') {
+  	s++;
+***************
+*** 980,986 ****
+        spat->spat_flags & SPAT_FOLD ))
+  	fatal(d);
+    got_pat:
+!     yylval.arg = make_match(O_MATCH,stab_to_arg(A_STAB,defstab),spat);
+      return s;
+  }
+  
+--- 1049,1055 ----
+        spat->spat_flags & SPAT_FOLD ))
+  	fatal(d);
+    got_pat:
+!     yylval.arg = make_match(O_MATCH,stab2arg(A_STAB,defstab),spat);
+      return s;
+  }
+  
+***************
+*** 998,1004 ****
+  
+      s = cpytill(tokenbuf,s+1,*s);
+      if (!*s)
+! 	fatal("Substitution pattern not terminated:\n%s",str_get(linestr));
+      for (d=tokenbuf; *d; d++) {
+  	if (*d == '$' && d[1] && d[-1] != '\\' && d[1] != '|') {
+  	    register ARG *arg;
+--- 1067,1073 ----
+  
+      s = cpytill(tokenbuf,s+1,*s);
+      if (!*s)
+! 	fatal("Substitution pattern not terminated");
+      for (d=tokenbuf; *d; d++) {
+  	if (*d == '$' && d[1] && d[-1] != '\\' && d[1] != '|') {
+  	    register ARG *arg;
+***************
+*** 1026,1032 ****
+  get_repl:
+      s = scanstr(s);
+      if (!*s)
+! 	fatal("Substitution replacement not terminated:\n%s",str_get(linestr));
+      spat->spat_repl = yylval.arg;
+      spat->spat_flags |= SPAT_USE_ONCE;
+      while (*s == 'g' || *s == 'i') {
+--- 1095,1101 ----
+  get_repl:
+      s = scanstr(s);
+      if (!*s)
+! 	fatal("Substitution replacement not terminated");
+      spat->spat_repl = yylval.arg;
+      spat->spat_flags |= SPAT_USE_ONCE;
+      while (*s == 'g' || *s == 'i') {
+***************
+*** 1040,1046 ****
+  	}
+      }
+      spat->spat_compex.do_folding = spat->spat_flags & SPAT_FOLD;
+!     yylval.arg = make_match(O_SUBST,stab_to_arg(A_STAB,defstab),spat);
+      return s;
+  }
+  
+--- 1109,1115 ----
+  	}
+      }
+      spat->spat_compex.do_folding = spat->spat_flags & SPAT_FOLD;
+!     yylval.arg = make_match(O_SUBST,stab2arg(A_STAB,defstab),spat);
+      return s;
+  }
+  
+***************
+*** 1059,1068 ****
+  	init_compex(&spat->spat_compex);
+  
+  	spat->spat_runtime = arg;
+! 	arg = make_match(O_MATCH,stab_to_arg(A_STAB,defstab),spat);
+      }
+      arg->arg_type = O_SPLIT;
+!     arg[2].arg_ptr.arg_spat->spat_repl = stab_to_arg(A_STAB,aadd(stab));
+      return arg;
+  }
+  
+--- 1128,1137 ----
+  	init_compex(&spat->spat_compex);
+  
+  	spat->spat_runtime = arg;
+! 	arg = make_match(O_MATCH,stab2arg(A_STAB,defstab),spat);
+      }
+      arg->arg_type = O_SPLIT;
+!     arg[2].arg_ptr.arg_spat->spat_repl = stab2arg(A_STAB,aadd(stab));
+      return arg;
+  }
+  
+***************
+*** 1092,1098 ****
+  register char *s;
+  {
+      ARG *arg =
+! 	l(make_op(O_TRANS,2,stab_to_arg(A_STAB,defstab),Nullarg,Nullarg,0));
+      register char *t;
+      register char *r;
+      register char *tbl = safemalloc(256);
+--- 1161,1167 ----
+  register char *s;
+  {
+      ARG *arg =
+! 	l(make_op(O_TRANS,2,stab2arg(A_STAB,defstab),Nullarg,Nullarg,0));
+      register char *t;
+      register char *r;
+      register char *tbl = safemalloc(256);
+***************
+*** 1104,1115 ****
+  	tbl[i] = 0;
+      s = scanstr(s);
+      if (!*s)
+! 	fatal("Translation pattern not terminated:\n%s",str_get(linestr));
+      t = expand_charset(str_get(yylval.arg[1].arg_ptr.arg_str));
+      free_arg(yylval.arg);
+      s = scanstr(s-1);
+      if (!*s)
+! 	fatal("Translation replacement not terminated:\n%s",str_get(linestr));
+      r = expand_charset(str_get(yylval.arg[1].arg_ptr.arg_str));
+      free_arg(yylval.arg);
+      yylval.arg = arg;
+--- 1173,1184 ----
+  	tbl[i] = 0;
+      s = scanstr(s);
+      if (!*s)
+! 	fatal("Translation pattern not terminated");
+      t = expand_charset(str_get(yylval.arg[1].arg_ptr.arg_str));
+      free_arg(yylval.arg);
+      s = scanstr(s-1);
+      if (!*s)
+! 	fatal("Translation replacement not terminated");
+      r = expand_charset(str_get(yylval.arg[1].arg_ptr.arg_str));
+      free_arg(yylval.arg);
+      yylval.arg = arg;
+***************
+*** 1183,1188 ****
+--- 1252,1261 ----
+  	opt_arg(cmd,1);
+  	cmd->c_flags |= CF_COND;
+      }
++     if (cmdline < 65535) {
++ 	cmd->c_line = cmdline;
++ 	cmdline = 65535;
++     }
+      return cmd;
+  }
+  
+***************
+*** 1203,1208 ****
+--- 1276,1285 ----
+  	opt_arg(cmd,1);
+  	cmd->c_flags |= CF_COND;
+      }
++     if (cmdline < 65535) {
++ 	cmd->c_line = cmdline;
++ 	cmdline = 65535;
++     }
+      return cmd;
+  }
+  
+***************
+*** 1280,1286 ****
+  	}
+      }
+      else if (arg->arg_type == O_MATCH || arg->arg_type == O_SUBST ||
+!              arg->arg_type == O_NMATCH || arg->arg_type == O_NSUBST) {
+  	if ((arg[1].arg_type == A_STAB || arg[1].arg_type == A_LVAL) &&
+  		arg[2].arg_type == A_SPAT &&
+  		arg[2].arg_ptr.arg_spat->spat_first ) {
+--- 1357,1363 ----
+  	}
+      }
+      else if (arg->arg_type == O_MATCH || arg->arg_type == O_SUBST ||
+! 	     arg->arg_type == O_NMATCH || arg->arg_type == O_NSUBST) {
+  	if ((arg[1].arg_type == A_STAB || arg[1].arg_type == A_LVAL) &&
+  		arg[2].arg_type == A_SPAT &&
+  		arg[2].arg_ptr.arg_spat->spat_first ) {
+***************
+*** 1288,1294 ****
+  	    cmd->c_first = arg[2].arg_ptr.arg_spat->spat_first;
+  	    cmd->c_flen  = arg[2].arg_ptr.arg_spat->spat_flen;
+  	    if (arg[2].arg_ptr.arg_spat->spat_flags & SPAT_SCANALL &&
+! 	        !(arg[2].arg_ptr.arg_spat->spat_flags & SPAT_USE_ONCE) &&
+  		(arg->arg_type == O_MATCH || arg->arg_type == O_NMATCH) )
+  		sure |= CF_EQSURE;		/* (SUBST must be forced even */
+  						/* if we know it will work.) */
+--- 1365,1371 ----
+  	    cmd->c_first = arg[2].arg_ptr.arg_spat->spat_first;
+  	    cmd->c_flen  = arg[2].arg_ptr.arg_spat->spat_flen;
+  	    if (arg[2].arg_ptr.arg_spat->spat_flags & SPAT_SCANALL &&
+! 		!(arg[2].arg_ptr.arg_spat->spat_flags & SPAT_USE_ONCE) &&
+  		(arg->arg_type == O_MATCH || arg->arg_type == O_NMATCH) )
+  		sure |= CF_EQSURE;		/* (SUBST must be forced even */
+  						/* if we know it will work.) */
+***************
+*** 1318,1325 ****
+  		    && arg->arg_type == O_MATCH
+  		    && context & 4
+  		    && fliporflop == 1) {
+! 		    arg[2].arg_type = A_SINGLE;		/* don't do twice */
+! 		    arg[2].arg_ptr.arg_str = &str_yes;
+  		}
+  		cmd->c_flags |= sure;
+  	    }
+--- 1395,1402 ----
+  		    && arg->arg_type == O_MATCH
+  		    && context & 4
+  		    && fliporflop == 1) {
+! 		    spat_free(arg[2].arg_ptr.arg_spat);
+! 		    arg[2].arg_ptr.arg_spat = Nullspat;	/* don't do twice */
+  		}
+  		cmd->c_flags |= sure;
+  	    }
+***************
+*** 1595,1601 ****
+  		    goto out;
+  		case '8': case '9':
+  		    if (shift != 4)
+! 			fatal("Illegal octal digit at line %d",line);
+  		    /* FALL THROUGH */
+  		case '0': case '1': case '2': case '3': case '4':
+  		case '5': case '6': case '7':
+--- 1672,1678 ----
+  		    goto out;
+  		case '8': case '9':
+  		    if (shift != 4)
+! 			fatal("Illegal octal digit");
+  		    /* FALL THROUGH */
+  		case '0': case '1': case '2': case '3': case '4':
+  		case '5': case '6': case '7':
+***************
+*** 1660,1666 ****
+  	if (*s)
+  	    s++;
+  	if (rsfp == stdin && strEQ(tokenbuf,"stdin"))
+! 	    fatal("Can't get both program and data from <stdin>\n");
+  	arg[1].arg_ptr.arg_stab = stabent(tokenbuf,TRUE);
+  	arg[1].arg_ptr.arg_stab->stab_io = stio_new();
+  	if (strEQ(tokenbuf,"ARGV")) {
+--- 1737,1743 ----
+  	if (*s)
+  	    s++;
+  	if (rsfp == stdin && strEQ(tokenbuf,"stdin"))
+! 	    fatal("Can't get both program and data from <stdin>");
+  	arg[1].arg_ptr.arg_stab = stabent(tokenbuf,TRUE);
+  	arg[1].arg_ptr.arg_stab->stab_io = stio_new();
+  	if (strEQ(tokenbuf,"ARGV")) {
+***************
+*** 1686,1693 ****
+  	    s = str_append_till(tmpstr,s+1,term,leave);
+  	    while (!*s) {	/* multiple line string? */
+  		s = str_gets(linestr, rsfp);
+! 		if (!s)
+! 		    fatal("EOF in string at line %d\n",sqstart);
+  		line++;
+  		s = str_append_till(tmpstr,s,term,leave);
+  	    }
+--- 1763,1772 ----
+  	    s = str_append_till(tmpstr,s+1,term,leave);
+  	    while (!*s) {	/* multiple line string? */
+  		s = str_gets(linestr, rsfp);
+! 		if (!s) {
+! 		    line = sqstart;
+! 		    fatal("EOF in string");
+! 		}
+  		line++;
+  		s = str_append_till(tmpstr,s,term,leave);
+  	    }
+***************
+*** 1699,1704 ****
+--- 1778,1786 ----
+  	    tmps = s;
+  	    s = d = tmpstr->str_ptr;	/* assuming shrinkage only */
+  	    while (*s) {
++ 		if (*s == '\\' && s[1] && isdigit(s[1]) && !isdigit(s[2]) &&
++ 		  !index("`\"",term) )
++ 		    *s == '$';		/* grandfather \digit in subst */
+  		if (*s == '$' && s[1]) {
+  		    makesingle = FALSE;	/* force interpretation */
+  		    if (!isalpha(s[1])) {	/* an internal register? */
+***************
+*** 1727,1736 ****
+  			    *d <<= 3;
+  			    *d += *s++ - '0';
+  			}
+- 			else if (!index("`\"",term)) {	/* oops, a subpattern */
+- 			    s--;
+- 			    goto defchar;
+- 			}
+  			if (index("01234567",*s)) {
+  			    *d <<= 3;
+  			    *d += *s++ - '0';
+--- 1809,1814 ----
+***************
+*** 1949,1960 ****
+  	    str_numset(str,value * str_gnum(s2));
+  	    break;
+  	case O_DIVIDE:
+! 	    value = str_gnum(s1);
+! 	    str_numset(str,value / str_gnum(s2));
+  	    break;
+  	case O_MODULO:
+! 	    value = str_gnum(s1);
+! 	    str_numset(str,(double)(((long)value) % ((long)str_gnum(s2))));
+  	    break;
+  	case O_ADD:
+  	    value = str_gnum(s1);
+--- 2027,2042 ----
+  	    str_numset(str,value * str_gnum(s2));
+  	    break;
+  	case O_DIVIDE:
+! 	    value = str_gnum(s2);
+! 	    if (value == 0.0)
+! 		fatal("Illegal division by constant zero");
+! 	    str_numset(str,str_gnum(s1) / value);
+  	    break;
+  	case O_MODULO:
+! 	    value = str_gnum(s2);
+! 	    if (value == 0.0)
+! 		fatal("Illegal modulus of constant zero");
+! 	    str_numset(str,(double)(((long)str_gnum(s1)) % ((long)value)));
+  	    break;
+  	case O_ADD:
+  	    value = str_gnum(s1);
+***************
+*** 2275,2281 ****
+  }
+  
+  ARG *
+! stab_to_arg(atype,stab)
+  int atype;
+  register STAB *stab;
+  {
+--- 2357,2363 ----
+  }
+  
+  ARG *
+! stab2arg(atype,stab)
+  int atype;
+  register STAB *stab;
+  {
+***************
+*** 2377,2383 ****
+  	cmd->c_stab = arg[1].arg_ptr.arg_stab;
+  	if (arg[1].arg_ptr.arg_stab->stab_io->flags & IOF_ARGV) {
+  	    cmd->c_expr = l(make_op(O_ASSIGN, 2,	/* fake up "$_ =" */
+! 	       stab_to_arg(A_LVAL,defstab), arg, Nullarg,1 ));
+  	}
+  	else {
+  	    free_arg(arg);
+--- 2459,2465 ----
+  	cmd->c_stab = arg[1].arg_ptr.arg_stab;
+  	if (arg[1].arg_ptr.arg_stab->stab_io->flags & IOF_ARGV) {
+  	    cmd->c_expr = l(make_op(O_ASSIGN, 2,	/* fake up "$_ =" */
+! 	       stab2arg(A_LVAL,defstab), arg, Nullarg,1 ));
+  	}
+  	else {
+  	    free_arg(arg);
+***************
+*** 2521,2527 ****
+  		    *bufptr = '\0';
+  		    break;
+  		case REG:
+! 		    yylval.arg = stab_to_arg(A_LVAL,yylval.stabval);
+  		    /* FALL THROUGH */
+  		case RSTRING:
+  		    if (!flinebeg)
+--- 2603,2609 ----
+  		    *bufptr = '\0';
+  		    break;
+  		case REG:
+! 		    yylval.arg = stab2arg(A_LVAL,yylval.stabval);
+  		    /* FALL THROUGH */
+  		case RSTRING:
+  		    if (!flinebeg)
+ 
+Index: x2p/s2p
+*** x2p/s2p.old	Wed Mar  2 13:08:11 1988
+--- x2p/s2p	Wed Mar  2 13:08:13 1988
+***************
+*** 132,137 ****
+--- 132,138 ----
+  	$addr1 .= " .. $addr2";
+      }
+  					# a { to keep vi happy
++     s/^[ \t]+//;
+      if ($_ eq '}') {
+  	$indent -= 4;
+  	next;
+ 
+Index: search.c
+Prereq: 1.0.1.4
+*** search.c.old	Wed Mar  2 13:07:03 1988
+--- search.c	Wed Mar  2 13:07:05 1988
+***************
+*** 1,6 ****
+! /* $Header: search.c,v 1.0.1.4 88/02/25 11:52:17 root Exp $
+   *
+   * $Log:	search.c,v $
+   * Revision 1.0.1.4  88/02/25  11:52:17  root
+   * patch23: (.*) in pattern wouldn't match null string.
+   * 
+--- 1,9 ----
+! /* $Header: search.c,v 1.0.1.5 88/03/02 12:55:48 root Exp $
+   *
+   * $Log:	search.c,v $
++  * Revision 1.0.1.5  88/03/02  12:55:48  root
++  * patch24: improved runtime error messages
++  * 
+   * Revision 1.0.1.4  88/02/25  11:52:17  root
+   * patch23: (.*) in pattern wouldn't match null string.
+   * 
+***************
+*** 24,30 ****
+  #include "perl.h"
+  
+  #define VERBOSE
+- #define FLUSH
+  #define MEM_SIZE int
+  
+  #ifndef BITSPERBYTE
+--- 27,32 ----
+***************
+*** 403,409 ****
+  		case '|':
+  		    if (parenp>paren) {
+  #ifdef VERBOSE
+! 			retmes = "No | in subpattern";	/* Sigh! */
+  #endif
+  			goto badcomp;
+  		    }
+--- 405,411 ----
+  		case '|':
+  		    if (parenp>paren) {
+  #ifdef VERBOSE
+! 			retmes = "No | allowed in subpattern";	/* Sigh! */
+  #endif
+  			goto badcomp;
+  		    }
+***************
+*** 691,701 ****
+  		continue;
+   
+  	    case REF:
+! 		if (compex->subend[i = *cp++] == 0) {
+! 		    fputs("Bad subpattern reference\n",stdout) FLUSH;
+! 		    err = FATAL;
+! 		    goto wrong;
+! 		}
+  		basesp = sp;
+  		backlen = compex->subend[i] - compex->subbeg[i];
+  		if (code & MAXINF)
+--- 693,700 ----
+  		continue;
+   
+  	    case REF:
+! 		if (compex->subend[i = *cp++] == 0)
+! 		    fatal("Bad subpattern reference");
+  		basesp = sp;
+  		backlen = compex->subend[i] - compex->subbeg[i];
+  		if (code & MAXINF)
+***************
+*** 705,713 ****
+  		goto backoff;
+   
+  	    default:
+! 		fputs("Botched pattern compilation\n",stdout) FLUSH;
+! 		err = FATAL;
+! 		return -1;
+  	}
+      }
+      if (*cp == FINIS || *cp == END) {
+--- 704,710 ----
+  		goto backoff;
+   
+  	    default:
+! 		fatal("Botched pattern compilation");
+  	}
+      }
+      if (*cp == FINIS || *cp == END) {
+ 
+Index: str.c
+Prereq: 1.0.1.3
+*** str.c.old	Wed Mar  2 13:07:13 1988
+--- str.c	Wed Mar  2 13:07:15 1988
+***************
+*** 1,6 ****
+! /* $Header: str.c,v 1.0.1.3 88/02/25 11:53:48 root Exp $
+   *
+   * $Log:	str.c,v $
+   * Revision 1.0.1.3  88/02/25  11:53:48  root
+   * patch23: str_gets() can stomp malloc arena under certain circumstances.
+   * 
+--- 1,9 ----
+! /* $Header: str.c,v 1.0.1.4 88/03/02 12:56:44 root Exp $
+   *
+   * $Log:	str.c,v $
++  * Revision 1.0.1.4  88/03/02  12:56:44  root
++  * patch24: some Xenix systems clobber errno on every sprintf()
++  * 
+   * Revision 1.0.1.3  88/02/25  11:53:48  root
+   * patch23: str_gets() can stomp malloc arena under certain circumstances.
+   * 
+***************
+*** 62,72 ****
+--- 65,78 ----
+      str->str_nok = 1;		/* validate number */
+  }
+  
++ extern int errno;
++ 
+  char *
+  str_2ptr(str)
+  register STR *str;
+  {
+      register char *s;
++     int olderrno;
+  
+      if (!str)
+  	return "";
+***************
+*** 73,79 ****
+--- 79,87 ----
+      GROWSTR(&(str->str_ptr), &(str->str_len), 24);
+      s = str->str_ptr;
+      if (str->str_nok) {
++ 	olderrno = errno;	/* some Xenix systems wipe out errno here */
+  	sprintf(s,"%.20g",str->str_nval);
++ 	errno = olderrno;
+  	while (*s) s++;
+      }
+      *s = '\0';
+ 
+Index: util.c
+Prereq: 1.0.1.4
+*** util.c.old	Wed Mar  2 13:07:37 1988
+--- util.c	Wed Mar  2 13:07:38 1988
+***************
+*** 1,6 ****
+! /* $Header: util.c,v 1.0.1.4 88/02/06 00:28:14 root Exp $
+   *
+   * $Log:	util.c,v $
+   * Revision 1.0.1.4  88/02/06  00:28:14  root
+   * patch21: added trap in saferealloc() for null pointer on input.
+   * 
+--- 1,9 ----
+! /* $Header: util.c,v 1.0.1.5 88/03/02 12:58:14 root Exp $
+   *
+   * $Log:	util.c,v $
++  * Revision 1.0.1.5  88/03/02  12:58:14  root
++  * patch24: upgraded runtime error messages
++  * 
+   * Revision 1.0.1.4  88/02/06  00:28:14  root
+   * patch21: added trap in saferealloc() for null pointer on input.
+   * 
+***************
+*** 62,68 ****
+      char *realloc();
+  
+      if (!where)
+! 	fatal("Null realloc\n");
+      ptr = realloc(where,size?size:1);	/* realloc(0) is NASTY on our system */
+  #ifdef DEBUGGING
+      if (debug & 128) {
+--- 65,71 ----
+      char *realloc();
+  
+      if (!where)
+! 	fatal("Null realloc");
+      ptr = realloc(where,size?size:1);	/* realloc(0) is NASTY on our system */
+  #ifdef DEBUGGING
+      if (debug & 128) {
+***************
+*** 214,226 ****
+  {
+      extern FILE *e_fp;
+      extern char *e_tmpname;
+  
+      if (in_eval) {
+- 	sprintf(tokenbuf,pat,a1,a2,a3,a4);
+  	str_set(stabent("@",TRUE)->stab_val,tokenbuf);
+  	longjmp(eval_env,1);
+      }
+!     fprintf(stderr,pat,a1,a2,a3,a4);
+      if (e_fp)
+  	UNLINK(e_tmpname);
+      exit(1);
+--- 217,243 ----
+  {
+      extern FILE *e_fp;
+      extern char *e_tmpname;
++     char *s;
+  
++     s = tokenbuf;
++     sprintf(s,pat,a1,a2,a3,a4);
++     s += strlen(s);
++     if (line) {
++ 	sprintf(s," at line %d",line);
++ 	s += strlen(s);
++     }
++     if (last_in_stab && last_in_stab->stab_io && last_in_stab->stab_io->lines) {
++ 	sprintf(s,", <%s> line %d",
++ 	  last_in_stab == argvstab ? "" : last_in_stab->stab_name,
++ 	  last_in_stab->stab_io->lines);
++ 	s += strlen(s);
++     }
++     strcpy(s,".\n");
+      if (in_eval) {
+  	str_set(stabent("@",TRUE)->stab_val,tokenbuf);
+  	longjmp(eval_env,1);
+      }
+!     fputs(tokenbuf,stderr);
+      if (e_fp)
+  	UNLINK(e_tmpname);
+      exit(1);

@@ -1,0 +1,365 @@
+Path: utzoo!mnetor!uunet!husc6!mailrus!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #28
+Message-ID: <1491@devvax.JPL.NASA.GOV>
+Date: 5 Mar 88 03:43:55 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 354
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 28
+Priority: LOW
+Subject: added ability to kill process groups
+Subject: removed spurious debugging print statement from s2p
+Subject: grandfathering of \digit STILL didn't work
+Subject: io.fs test complains if ./tmp already exists
+
+Description:
+	Perl already had a kill function.  Now you can kill process groups
+	as well by specifying a negative signal number.
+
+	There was a leftover print statement in s2p that printed out some
+	debugging information.  This has been deleted.
+
+	Substitution of subpatterns is normally done via \digit in other
+	programs, though perl prefers to use $digit.  I've "fixed" the support
+	for \digit several times now.  This time I actually tested it!
+
+	The io.fs test creates a subdirectory, and unfortunately didn't
+	expect that it might already be there.
+
+Fix:	From rn, say "| patch -p -N -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch -p -N <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch (version 2.0, latest patchlevel).
+
+	After patching:
+		(unless you have a great need for killing process groups,
+		you can probably hold off on this till another patch)
+		Configure
+		make depend
+		make
+		make test
+		make install
+		cp x2p/s2p to wherever it goes
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, or in
+	bang notation from any well-known host, and LIST is the number of one
+	or more patches you need, separated by spaces, commas, and/or hyphens.
+	Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 27
+1c1
+< #define PATCHLEVEL 27
+---
+> #define PATCHLEVEL 28
+ 
+Index: Configure
+Prereq: 1.0.1.10
+*** Configure.old	Fri Mar  4 19:13:17 1988
+--- Configure	Fri Mar  4 19:13:21 1988
+***************
+*** 8,14 ****
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.10 88/03/03 19:32:23 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+--- 8,14 ----
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.11 88/03/04 19:09:59 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+***************
+*** 73,78 ****
+--- 73,79 ----
+  d_charsprf=''
+  d_crypt=''
+  d_index=''
++ d_killpg=''
+  d_rename=''
+  d_statblks=''
+  d_stdstdio=''
+***************
+*** 127,133 ****
+  attrlist="$attrlist vax pdp11 i8086 z8000 u3b2 u3b5 u3b20 u3b200"
+  attrlist="$attrlist ns32000 ns16000 iAPX286 mc300 mc500 mc700 sparc"
+  pth="/usr/ucb /bin /usr/bin /usr/local /usr/local/bin /usr/lbin /etc /usr/lib /lib"
+- : find out where common programs are
+  defvoidused=7
+  
+  : some greps do not return status, grrr.
+--- 128,133 ----
+***************
+*** 253,258 ****
+--- 253,259 ----
+      esac
+  fi
+  
++ : find out where common programs are
+  echo " "
+  echo "Locating common programs..."
+  cat <<EOSC >loc
+***************
+*** 710,715 ****
+--- 711,726 ----
+      fi
+  fi
+  
++ : see if killpg exists
++ echo " "
++ if $contains killpg libc.list >/dev/null 2>&1; then
++     echo 'killpg() found.'
++     d_killpg="$define"
++ else
++     echo 'killpg() not found.'
++     d_killpg="$undef"
++ fi
++ 
+  : see if rename exists
+  echo " "
+  if $contains rename libc.list >/dev/null 2>&1; then
+***************
+*** 1397,1402 ****
+--- 1408,1414 ----
+  d_charsprf='$d_charsprf'
+  d_crypt='$d_crypt'
+  d_index='$d_index'
++ d_killpg='$d_killpg'
+  d_rename='$d_rename'
+  d_statblks='$d_statblks'
+  d_stdstdio='$d_stdstdio'
+ 
+Index: arg.c
+Prereq: 1.0.1.15
+*** arg.c.old	Fri Mar  4 19:13:47 1988
+--- arg.c	Fri Mar  4 19:13:56 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.c,v 1.0.1.15 88/03/03 19:52:14 root Exp $
+   *
+   * $Log:	arg.c,v $
+   * Revision 1.0.1.15  88/03/03  19:52:14  root
+   * patch27: hacked around printf bug that chokes on fields >128 chars
+   * patch27: some close() calls weren't checking return status
+--- 1,9 ----
+! /* $Header: arg.c,v 1.0.1.16 88/03/04 19:10:31 root Exp $
+   *
+   * $Log:	arg.c,v $
++  * Revision 1.0.1.16  88/03/04  19:10:31  root
++  * patch28: support for killpg() or equivalent
++  * 
+   * Revision 1.0.1.15  88/03/03  19:52:14  root
+   * patch27: hacked around printf bug that chokes on fields >128 chars
+   * patch27: some close() calls weren't checking return status
+***************
+*** 988,998 ****
+      case O_KILL:
+  	if (--i > 0) {
+  	    val = (int)str_gnum(tmpary[1]);
+! 	    if (val < 0)
+  		val = -val;
+! 	    for (elem = tmpary+2; *elem; elem++)
+! 		if (kill(atoi(str_get(*elem)),val))
+! 		    i--;
+  	}
+  	break;
+      case O_UNLINK:
+--- 991,1011 ----
+      case O_KILL:
+  	if (--i > 0) {
+  	    val = (int)str_gnum(tmpary[1]);
+! 	    if (val < 0) {
+  		val = -val;
+! 		for (elem = tmpary+2; *elem; elem++)
+! #ifdef KILLPG
+! 		    if (killpg((int)(str_gnum(*elem)),val))	/* BSD */
+! #else
+! 		    if (kill(-(int)(str_gnum(*elem)),val))	/* SYSV */
+! #endif
+! 			i--;
+! 	    }
+! 	    else {
+! 		for (elem = tmpary+2; *elem; elem++)
+! 		    if (kill((int)(str_gnum(*elem)),val))
+! 			i--;
+! 	    }
+  	}
+  	break;
+      case O_UNLINK:
+ 
+Index: config.h.SH
+*** config.h.SH.old	Fri Mar  4 19:14:06 1988
+--- config.h.SH	Fri Mar  4 19:14:07 1988
+***************
+*** 82,87 ****
+--- 82,94 ----
+  #$d_index	index strchr	/* cultural */
+  #$d_index	rindex strrchr	/*  differences? */
+  
++ /* KILLPG:
++  *	This symbol, if defined, indicates that the killpg routine is available
++  *	to kill process groups.  If unavailable, you probably should use kill
++  *	with a negative process number.
++  */
++ #$d_killpg	KILLPG		/**/
++ 
+  /* RENAME:
+   *	This symbol, if defined, indicates that the rename routine is available
+   *	to rename files.  Otherwise you should do the unlink(), link(), unlink()
+ 
+Index: perl.man.2
+Prereq: 1.0.1.7
+*** perl.man.2.old	Fri Mar  4 19:14:18 1988
+--- perl.man.2	Fri Mar  4 19:14:22 1988
+***************
+*** 1,7 ****
+  ''' Beginning of part 2
+! ''' $Header: perl.man.2,v 1.0.1.7 88/03/02 12:36:57 root Exp $
+  '''
+  ''' $Log:	perl.man.2,v $
+  ''' Revision 1.0.1.7  88/03/02  12:36:57  root
+  ''' patch24: documented symlink()
+  ''' 
+--- 1,10 ----
+  ''' Beginning of part 2
+! ''' $Header: perl.man.2,v 1.0.1.8 88/03/04 19:11:44 root Exp $
+  '''
+  ''' $Log:	perl.man.2,v $
++ ''' Revision 1.0.1.8  88/03/04  19:11:44  root
++ ''' patch28: documented killing of process groups
++ ''' 
+  ''' Revision 1.0.1.7  88/03/02  12:36:57  root
+  ''' patch24: documented symlink()
+  ''' 
+***************
+*** 84,89 ****
+--- 87,95 ----
+  	$cnt = (kill 9,$child1,$child2);
+  
+  .fi
++ If the signal is negative, kills process groups instead of processes.
++ (On System V, a negative \fIprocess\fR number will also kill process groups,
++ but that's not portable.)
+  .Ip "last LABEL" 8 8
+  .Ip "last" 8
+  The
+ 
+Index: x2p/s2p
+*** x2p/s2p.old	Fri Mar  4 19:14:30 1988
+--- x2p/s2p	Fri Mar  4 19:14:31 1988
+***************
+*** 399,405 ****
+  		    $len++;
+  		}
+  	    }
+- 	    print "repl $repl end $end $_\n";
+  	    do Die("Malformed substitution at line $.") unless $end;
+  	    $pat = substr($_, 0, $repl + 1);
+  	    $repl = substr($_, $repl + 1, $end - $repl - 1);
+--- 399,404 ----
+ 
+Index: perly.c
+Prereq: 1.0.1.9
+*** perly.c.old	Fri Mar  4 19:31:53 1988
+--- perly.c	Fri Mar  4 19:32:01 1988
+***************
+*** 1,6 ****
+! char rcsid[] = "$Header: perly.c,v 1.0.1.9 88/03/03 19:36:31 root Exp $";
+  /*
+   * $Log:	perly.c,v $
+   * Revision 1.0.1.9  88/03/03  19:36:31  root
+   * patch27: the crypt() routine needed ifdeffing in this file as well as arg.c
+   * 
+--- 1,9 ----
+! char rcsid[] = "$Header: perly.c,v 1.0.1.10 88/03/04 19:30:56 root Exp $";
+  /*
+   * $Log:	perly.c,v $
++  * Revision 1.0.1.10  88/03/04  19:30:56  root
++  * patch28: grandfathering of \digit STILL didn't work!
++  * 
+   * Revision 1.0.1.9  88/03/03  19:36:31  root
+   * patch27: the crypt() routine needed ifdeffing in this file as well as arg.c
+   * 
+***************
+*** 1783,1789 ****
+  	    while (*s) {
+  		if (*s == '\\' && s[1] && isdigit(s[1]) && !isdigit(s[2]) &&
+  		  !index("`\"",term) )
+! 		    *s == '$';		/* grandfather \digit in subst */
+  		if (*s == '$' && s[1]) {
+  		    makesingle = FALSE;	/* force interpretation */
+  		    if (!isalpha(s[1])) {	/* an internal register? */
+--- 1786,1792 ----
+  	    while (*s) {
+  		if (*s == '\\' && s[1] && isdigit(s[1]) && !isdigit(s[2]) &&
+  		  !index("`\"",term) )
+! 		    *s = '$';		/* grandfather \digit in subst */
+  		if (*s == '$' && s[1]) {
+  		    makesingle = FALSE;	/* force interpretation */
+  		    if (!isalpha(s[1])) {	/* an internal register? */
+ 
+Index: t/io.fs
+Prereq: 1.0.1.2
+*** t/io.fs.old	Fri Mar  4 19:40:24 1988
+--- t/io.fs	Fri Mar  4 19:40:25 1988
+***************
+*** 1,6 ****
+  #!./perl
+  
+! # $Header: io.fs,v 1.0.1.2 88/03/03 19:37:33 root Exp $
+  
+  print "1..20\n";
+  
+--- 1,6 ----
+  #!./perl
+  
+! # $Header: io.fs,v 1.0.1.3 88/03/04 19:39:52 root Exp $
+  
+  print "1..20\n";
+  
+***************
+*** 7,13 ****
+  $wd = `pwd`;
+  chop($wd);
+  
+! `mkdir tmp`;
+  chdir './tmp';
+  `/bin/rm -rf a b c x`;
+  
+--- 7,13 ----
+  $wd = `pwd`;
+  chop($wd);
+  
+! `rm -f tmp; mkdir tmp 2>/dev/null`;
+  chdir './tmp';
+  `/bin/rm -rf a b c x`;
+  

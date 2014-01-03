@@ -1,0 +1,2415 @@
+Path: utzoo!mnetor!uunet!lll-winken!lll-lcc!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #29
+Message-ID: <1536@devvax.JPL.NASA.GOV>
+Date: 11 Mar 88 04:06:47 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 2404
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 29
+Priority: HIGH
+Subject: unlink as root could easily corrupt directory structure
+Subject: added -U for unsafe operations
+Subject: added opening of duped filehandles
+Subject: $! can now return system error messages as well as errno
+Subject: $< and $> are uid and euid, $( and $) are gid and egid
+Subject: $? now set by system op as well as `cmd`
+Subject: -i now preserves mode and owner
+Subject: time() not declared and arg wasn't cast right
+Subject: times were erroneous if HZ != 60
+Subject: types.h was included twice
+Subject: NGROUPS doesn't imply getgroups() on some systems
+Subject: $# failed on one-arg prints
+Subject: int(-1.5) failed on some systems
+Subject: reset operator now resets arrays also
+Subject: more control over die operator
+Subject: filename sometimes became "" when using -P switch
+Subject: UNLINK was wrong on Eunice
+Subject: mktemp violated readonly string space
+Subject: eval 'print $ENV{"SHELL"};' didn't work right
+Subject: some compilers don't grok && outside of conditionals
+Subject: made s/\\/\\\\/ work right
+Subject: a2p couldn't handle vertical whitespace after opening curly
+
+Description:
+	The superuser could easily delete a directory using perl without
+	properly cleaning up the directory first.  This has now been outlawed
+	unless you explicitly use the -U switch that enables unsafe operations.
+
+	You can now dup filehandles similarly to the way the Bourne shell does:
+	if the filename begins with >&, the following string is interpreted as
+	a filehandle or file descriptor to dup and open.  You could previously
+	redirect stdout and stderr for subprocesses, but not to the same fd,
+	and you couldn't recover your original stdout and stderr.  Now you can.
+
+	$! is now more magical than ever.  If used in a numeric context, returns
+	errno as of old.  If used in a string context, returns the corresponding
+	system error message.  Also, the die operator will return $! if it's
+	nonzero.
+
+	You can now get and set the uids and gids.  $< and $> are uid and euid,
+	$( and $) are gid and egid.  For example $< = $> sets real uid to be
+	the same as effective uid.  Group sets are supported on reading.
+	The usual caveats apply about permissions to change uid and gid.
+
+	The $? variable was set by only `cmd` previously.  Now the system
+	command also sets it.
+
+	The inplace editing option (-i) didn't preserve mode and owner.  It now
+	does, to the extent permissible.
+
+	The argument to time() should be cast to a pointer to long.  Also,
+	time() wasn't declared.
+
+	Times were erroneous if HZ != 60.  I'm still not sure where HZ comes
+	from on every machine, but if HZ is declared in any of the files that
+	perl includes, perl will respect it.
+
+	The file types.h was included twice, once via param.h.  I'm now relying
+	on param.h to include it.  If you're param.h doesn't happen to include
+	it, you'll get errors.  Is anyone in that boat?
+
+	Having NGROUPS defined doesn't necessarily imply that the system has
+	the getgroups() function.  Configure now checks for getgroups().
+
+	Print statements with one argument didn't respect the value of $#, which
+	sets the default numeric output format.
+
+	Some systems didn't do int() on negative numbers correctly due to
+	differences of opinion on how modf works.
+
+	The reset operator used to reset string variables.  Now it resets
+	arrays too.
+
+	You can now control whether the die operator appends "at line 123" to
+	your message.  You can control what exit code is produced by die.
+
+	When using -P to preprocess your script, $0 got set to "" instead of
+	the filename of the script.
+
+	The UNLINK macro generated syntax errors on Eunice systems by trying
+	to take the value of a while loop.
+
+	The mktemp() routine violated readonly string space.  Perl now makes
+	a copy in heap space.
+
+	The ENV and ARGV arrays weren't initialized right if they only occurred
+	inside of eval expressions.
+
+	Some C compilers don't grok the && operator outside of conditionals.
+	What can I say?
+
+	s/\\/\\\\/ produced a "pattern not terminated" message because it
+	thought it saw s/\/\\\\/.
+
+	A2p couldn't handle vertical whitespace after opening curly brackets.
+	It used to, but fixing another bug botched this up.
+
+Fix:	From rn, say "| patch -p -N -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch -p -N <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch (version 2.0, latest patchlevel).
+
+	After patching:
+		Configure
+		make depend
+		make
+		make test
+		make install
+		cd x2p
+		make depend
+		make
+		make install
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 28
+1c1
+< #define PATCHLEVEL 28
+---
+> #define PATCHLEVEL 29
+ 
+Index: Configure
+Prereq: 1.0.1.11
+*** Configure.old	Thu Mar 10 17:18:45 1988
+--- Configure	Thu Mar 10 17:18:51 1988
+***************
+*** 8,14 ****
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.11 88/03/04 19:09:59 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+--- 8,14 ----
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.12 88/03/10 15:57:46 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+***************
+*** 72,77 ****
+--- 72,78 ----
+  d_bcopy=''
+  d_charsprf=''
+  d_crypt=''
++ d_getgrps=''
+  d_index=''
+  d_killpg=''
+  d_rename=''
+***************
+*** 106,111 ****
+--- 107,113 ----
+  sharpbang=''
+  startsh=''
+  stdchar=''
++ uidtype=''
+  voidflags=''
+  defvoidused=''
+  CONFIG=''
+***************
+*** 684,689 ****
+--- 686,701 ----
+      d_crypt="$undef"
+  fi
+  
++ : see if getgroups exists
++ echo " "
++ if $contains getgroups libc.list >/dev/null 2>&1; then
++     echo 'getgroups() found.'
++     d_getgrps="$define"
++ else
++     echo 'getgroups() not found.'
++     d_getgrps="$undef"
++ fi
++ 
+  : index or strcpy
+  echo " "
+  dflt=y
+***************
+*** 926,931 ****
+--- 938,966 ----
+      stdchar="char"
+  fi
+  
++ : see what type uids are declared as in the kernel
++ case "$uidtype" in
++ '')
++     if $contains 'uid_t;' /usr/include/sys/types.h >/dev/null 2>&1 ; then
++ 	dflt='uid_t';
++     else
++ 	set `grep '_ruid;' /usr/include/sys/user.h 2>/dev/null` unsigned short
++ 	case $1 in
++ 	unsigned) dflt="$1 $2" ;;
++ 	*) dflt="$1" ;;
++ 	esac
++     fi
++     ;;
++ *)  dflt="$uidtype"
++     ;;
++ esac
++ cont=true
++ echo " "
++ rp="What type are user ids on this system declared as? [$dflt]"
++ $echo $n "$rp $c"
++ . myread
++ uidtype="$ans"
++ 
+  : preserve RCS keywords in files with variable substitution, grrr
+  Log='$Log'
+  Header='$Header'
+***************
+*** 1407,1412 ****
+--- 1442,1448 ----
+  d_bcopy='$d_bcopy'
+  d_charsprf='$d_charsprf'
+  d_crypt='$d_crypt'
++ d_getgrps='$d_getgrps'
+  d_index='$d_index'
+  d_killpg='$d_killpg'
+  d_rename='$d_rename'
+***************
+*** 1441,1446 ****
+--- 1477,1483 ----
+  sharpbang='$sharpbang'
+  startsh='$startsh'
+  stdchar='$stdchar'
++ uidtype='$uidtype'
+  voidflags='$voidflags'
+  defvoidused='$defvoidused'
+  CONFIG=true
+ 
+Index: x2p/a2p.y
+Prereq: 1.0.1.2
+*** x2p/a2p.y.old	Thu Mar 10 17:22:21 1988
+--- x2p/a2p.y	Thu Mar 10 17:22:22 1988
+***************
+*** 1,7 ****
+  %{
+! /* $Header: a2p.y,v 1.0.1.2 88/03/02 12:59:39 root Exp $
+   *
+   * $Log:	a2p.y,v $
+   * Revision 1.0.1.2  88/03/02  12:59:39  root
+   * patch24: blank lines were being treated like they had semicolons on them
+   * 
+--- 1,10 ----
+  %{
+! /* $Header: a2p.y,v 1.0.1.3 88/03/10 17:17:08 root Exp $
+   *
+   * $Log:	a2p.y,v $
++  * Revision 1.0.1.3  88/03/10  17:17:08  root
++  * patch29: couldn't handle vertical whitespace after opening curly
++  * 
+   * Revision 1.0.1.2  88/03/02  12:59:39  root
+   * patch24: blank lines were being treated like they had semicolons on them
+   * 
+***************
+*** 48,61 ****
+  		{ root = oper4(OPROG,$1,$2,$3,$4); }
+  	;
+  
+! begin	: BEGIN '{' states '}' junk
+! 		{ $$ = oper2(OJUNK,$3,$5); in_begin = FALSE; }
+  	| /* NULL */
+  		{ $$ = Nullop; }
+  	;
+  
+! end	: END '{' states '}'
+! 		{ $$ = $3; }
+  	| end NEWLINE
+  		{ $$ = $1; }
+  	| /* NULL */
+--- 51,64 ----
+  		{ root = oper4(OPROG,$1,$2,$3,$4); }
+  	;
+  
+! begin	: BEGIN '{' maybe states '}' junk
+! 		{ $$ = oper3(OJUNK,$3,$4,$6); in_begin = FALSE; }
+  	| /* NULL */
+  		{ $$ = Nullop; }
+  	;
+  
+! end	: END '{' maybe states '}'
+! 		{ $$ = oper2(OJUNK,$3,$4); }
+  	| end NEWLINE
+  		{ $$ = $1; }
+  	| /* NULL */
+***************
+*** 70,79 ****
+  
+  hunk	: patpat
+  		{ $$ = oper1(OHUNK,$1); need_entire = TRUE; }
+! 	| patpat '{' states '}'
+! 		{ $$ = oper2(OHUNK,$1,$3); }
+! 	| '{' states '}'
+! 		{ $$ = oper2(OHUNK,Nullop,$2); }
+  	;
+  
+  patpat	: pat
+--- 73,82 ----
+  
+  hunk	: patpat
+  		{ $$ = oper1(OHUNK,$1); need_entire = TRUE; }
+! 	| patpat '{' maybe states '}'
+! 		{ $$ = oper2(OHUNK,$1,oper2(OJUNK,$3,$4)); }
+! 	| '{' maybe states '}'
+! 		{ $$ = oper2(OHUNK,Nullop,oper2(OJUNK,$2,$3)); }
+  	;
+  
+  patpat	: pat
+***************
+*** 334,341 ****
+  		{ $$ = oper4(OFOR,$3,string("",0),$6,bl($9,$8)); }
+  	| FOR '(' VAR IN VAR ')' maybe statement
+  		{ $$ = oper3(OFORIN,$3,$5,bl($8,$7)); }
+! 	| '{' states '}'
+! 		{ $$ = oper1(OBLOCK,$2); }
+  	;
+  
+  %%
+--- 337,344 ----
+  		{ $$ = oper4(OFOR,$3,string("",0),$6,bl($9,$8)); }
+  	| FOR '(' VAR IN VAR ')' maybe statement
+  		{ $$ = oper3(OFORIN,$3,$5,bl($8,$7)); }
+! 	| '{' maybe states '}'
+! 		{ $$ = oper1(OBLOCK,oper2(OJUNK,$2,$3)); }
+  	;
+  
+  %%
+ 
+Index: arg.c
+Prereq: 1.0.1.16
+*** arg.c.old	Thu Mar 10 17:19:20 1988
+--- arg.c	Thu Mar 10 17:19:32 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.c,v 1.0.1.16 88/03/04 19:10:31 root Exp $
+   *
+   * $Log:	arg.c,v $
+   * Revision 1.0.1.16  88/03/04  19:10:31  root
+   * patch28: support for killpg() or equivalent
+   * 
+--- 1,18 ----
+! /* $Header: arg.c,v 1.0.1.17 88/03/10 15:59:12 root Exp $
+   *
+   * $Log:	arg.c,v $
++  * Revision 1.0.1.17  88/03/10  15:59:12  root
++  * patch29: added duped filehandles
++  * patch29: -i now preserves mode and owner
++  * patch29: uid and gid now available
++  * patch29: unlink as root was dangerous
++  * patch29: time() not declared and arg wasn't cast right
++  * patch29: times were erroneous if HZ != 60
++  * patch29: $# failed on one-arg prints
++  * patch29: int(-1.5) failed on some systems
++  * patch29: $? now set by system op as well as `cmd`
++  * patch29: NGROUPS doesn't imply getgroups() on some systems
++  * 
+   * Revision 1.0.1.16  88/03/04  19:10:31  root
+   * patch28: support for killpg() or equivalent
+   * 
+***************
+*** 72,77 ****
+--- 84,90 ----
+  #include <signal.h>
+  
+  ARG *debarg;
++ long time();
+  
+  bool
+  do_match(s,arg)
+***************
+*** 362,367 ****
+--- 375,381 ----
+      register STIO *stio = stab->stab_io;
+      char *myname = savestr(name);
+      int result;
++     int fd;
+  
+      name = myname;
+      while (len && isspace(name[len-1]))
+***************
+*** 386,394 ****
+--- 400,425 ----
+  	fp = popen(name,"w");
+      }
+      else if (*name == '>' && name[1] == '>') {
++ 	stio->type = 'a';
+  	for (name += 2; isspace(*name); name++) ;
+  	fp = fopen(name,"a");
+      }
++     else if (*name == '>' && name[1] == '&') {
++ 	for (name += 2; isspace(*name); name++) ;
++ 	if (isdigit(*name))
++ 	    fd = atoi(name);
++ 	else {
++ 	    stab = stabent(name,FALSE);
++ 	    if (stab->stab_io && stab->stab_io->fp) {
++ 		fd = fileno(stab->stab_io->fp);
++ 		stio->type = stab->stab_io->type;
++ 	    }
++ 	    else
++ 		fd = -1;
++ 	}
++ 	fp = fdopen(dup(fd),stio->type == 'a' ? "a" :
++ 	  (stio->type == '<' ? "r" : "w") );
++     }
+      else if (*name == '>') {
+  	for (name++; isspace(*name); name++) ;
+  	if (strEQ(name,"-")) {
+***************
+*** 430,436 ****
+      safefree(myname);
+      if (!fp)
+  	return FALSE;
+!     if (stio->type != '|' && stio->type != '-') {
+  	if (fstat(fileno(fp),&statbuf) < 0) {
+  	    fclose(fp);
+  	    return FALSE;
+--- 461,467 ----
+      safefree(myname);
+      if (!fp)
+  	return FALSE;
+!     if (stio->type && stio->type != '|' && stio->type != '-') {
+  	if (fstat(fileno(fp),&statbuf) < 0) {
+  	    fclose(fp);
+  	    return FALSE;
+***************
+*** 453,458 ****
+--- 484,490 ----
+  {
+      register STR *str;
+      char *oldname;
++     int filemode,fileuid,filegid;
+  
+      while (alen(stab->stab_array) >= 0L) {
+  	str = ashift(stab->stab_array);
+***************
+*** 461,466 ****
+--- 493,501 ----
+  	oldname = str_get(stab->stab_val);
+  	if (do_open(stab,oldname)) {
+  	    if (inplace) {
++ 		filemode = statbuf.st_mode;
++ 		fileuid = statbuf.st_uid;
++ 		filegid = statbuf.st_gid;
+  		if (*inplace) {
+  		    str_cat(str,inplace);
+  #ifdef RENAME
+***************
+*** 478,483 ****
+--- 513,520 ----
+  		errno = 0;		/* in case sprintf set errno */
+  		do_open(argvoutstab,tokenbuf);
+  		defoutstab = argvoutstab;
++ 		fchmod(fileno(argvoutstab->stab_io->fp),filemode);
++ 		fchown(fileno(argvoutstab->stab_io->fp),fileuid,filegid);
+  	    }
+  	    str_free(str);
+  	    return stab->stab_io->fp;
+***************
+*** 660,671 ****
+      ary->ary_fill = -1;
+      times(&timesbuf);
+  
+      if (retary) {
+  	if (max) {
+! 	    apush(ary,str_nmake(((double)timesbuf.tms_utime)/60.0));
+! 	    apush(ary,str_nmake(((double)timesbuf.tms_stime)/60.0));
+! 	    apush(ary,str_nmake(((double)timesbuf.tms_cutime)/60.0));
+! 	    apush(ary,str_nmake(((double)timesbuf.tms_cstime)/60.0));
+  	}
+  	sarg = (STR**)safemalloc((max+2)*sizeof(STR*));
+  	sarg[0] = Nullstr;
+--- 697,712 ----
+      ary->ary_fill = -1;
+      times(&timesbuf);
+  
++ #ifndef HZ
++ #define HZ 60
++ #endif
++ 
+      if (retary) {
+  	if (max) {
+! 	    apush(ary,str_nmake(((double)timesbuf.tms_utime)/HZ));
+! 	    apush(ary,str_nmake(((double)timesbuf.tms_stime)/HZ));
+! 	    apush(ary,str_nmake(((double)timesbuf.tms_cutime)/HZ));
+! 	    apush(ary,str_nmake(((double)timesbuf.tms_cstime)/HZ));
+  	}
+  	sarg = (STR**)safemalloc((max+2)*sizeof(STR*));
+  	sarg[0] = Nullstr;
+***************
+*** 797,809 ****
+  }
+  
+  bool
+! do_print(s,fp)
+! char *s;
+  FILE *fp;
+  {
+!     if (!fp || !s)
+  	return FALSE;
+!     fputs(s,fp);
+      return TRUE;
+  }
+  
+--- 838,854 ----
+  }
+  
+  bool
+! do_print(str,fp)
+! register STR *str;
+  FILE *fp;
+  {
+!     if (!fp || !str)
+  	return FALSE;
+!     if (ofmt &&
+!       ((str->str_nok && str->str_nval != 0.0) || str_gnum(str) != 0.0) )
+! 	fprintf(fp, ofmt, str->str_nval);
+!     else
+! 	fputs(str_get(str),fp);
+      return TRUE;
+  }
+  
+***************
+*** 817,844 ****
+      register bool retval;
+      double value;
+  
+      (void)eval(arg[1].arg_ptr.arg_arg,&tmpary);
+      if (arg->arg_type == O_PRTF) {
+  	do_sprintf(arg->arg_ptr.arg_str,32767,tmpary);
+! 	retval = do_print(str_get(arg->arg_ptr.arg_str),fp);
+      }
+      else {
+  	retval = FALSE;
+  	for (elem = tmpary+1; *elem; elem++) {
+  	    if (retval && ofs)
+! 		do_print(ofs, fp);
+! 	    if (ofmt && fp) {
+! 		if ((*elem)->str_nok || str_gnum(*elem) != 0.0)
+! 		    fprintf(fp, ofmt, str_gnum(*elem));
+! 		retval = TRUE;
+! 	    }
+! 	    else
+! 		retval = do_print(str_get(*elem), fp);
+  	    if (!retval)
+  		break;
+  	}
+  	if (ors)
+! 	    retval = do_print(ors, fp);
+      }
+      safefree((char*)tmpary);
+      return retval;
+--- 862,885 ----
+      register bool retval;
+      double value;
+  
++     if (!fp)
++ 	return FALSE;
+      (void)eval(arg[1].arg_ptr.arg_arg,&tmpary);
+      if (arg->arg_type == O_PRTF) {
+  	do_sprintf(arg->arg_ptr.arg_str,32767,tmpary);
+! 	retval = do_print(arg->arg_ptr.arg_str,fp);
+      }
+      else {
+  	retval = FALSE;
+  	for (elem = tmpary+1; *elem; elem++) {
+  	    if (retval && ofs)
+! 		fputs(ofs, fp);
+! 	    retval = do_print(*elem, fp);
+  	    if (!retval)
+  		break;
+  	}
+  	if (ors)
+! 	    fputs(ors, fp);
+      }
+      safefree((char*)tmpary);
+      return retval;
+***************
+*** 959,964 ****
+--- 1000,1006 ----
+      register int i;
+      register int val;
+      register int val2;
++     char *s;
+  
+      if (sarg)
+  	tmpary = sarg;
+***************
+*** 1009,1017 ****
+  	}
+  	break;
+      case O_UNLINK:
+! 	for (elem = tmpary+1; *elem; elem++)
+! 	    if (UNLINK(str_get(*elem)))
+! 		i--;
+  	break;
+      }
+      if (!sarg)
+--- 1051,1072 ----
+  	}
+  	break;
+      case O_UNLINK:
+! 	for (elem = tmpary+1; *elem; elem++) {
+! 	    s = str_get(*elem);
+! 	    if (euid || unsafe) {
+! 		if (UNLINK(s))
+! 		    i--;
+! 	    }
+! 	    else {	/* don't let root wipe out directories without -U */
+! 		if (stat(s,&statbuf) < 0 ||
+! 		  (statbuf.st_mode & S_IFMT) == S_IFDIR )
+! 		    i--;
+! 		else {
+! 		    if (UNLINK(s))
+! 			i--;
+! 		}
+! 	    }
+! 	}
+  	break;
+      }
+      if (!sarg)
+***************
+*** 1938,1955 ****
+  	    if (!stab)
+  		stab = defoutstab;
+  	}
+! 	if (!stab->stab_io)
+  	    value = 0.0;
+  	else {
+  	    if (arg[1].arg_flags & AF_SPECIAL)
+! 		value = (double)do_aprint(arg,stab->stab_io->fp);
+  	    else {
+! 		value = (double)do_print(str_get(sarg[1]),stab->stab_io->fp);
+  		if (ors && optype == O_PRINT)
+! 		    do_print(ors, stab->stab_io->fp);
+  	    }
+! 	    if (stab->stab_io->flags & IOF_FLUSH && stab->stab_io->fp)
+! 		fflush(stab->stab_io->fp);
+  	}
+  	goto donumset;
+      case O_CHDIR:
+--- 1993,2010 ----
+  	    if (!stab)
+  		stab = defoutstab;
+  	}
+! 	if (!stab->stab_io || !(fp = stab->stab_io->fp))
+  	    value = 0.0;
+  	else {
+  	    if (arg[1].arg_flags & AF_SPECIAL)
+! 		value = (double)do_aprint(arg,fp);
+  	    else {
+! 		value = (double)do_print(sarg[1],fp);
+  		if (ors && optype == O_PRINT)
+! 		    fputs(ors, fp);
+  	    }
+! 	    if (stab->stab_io->flags & IOF_FLUSH)
+! 		fflush(fp);
+  	}
+  	goto donumset;
+      case O_CHDIR:
+***************
+*** 2031,2037 ****
+  	    value = (double)(tmps2 - tmps + arybase);
+  	goto donumset;
+      case O_TIME:
+! 	value = (double) time(0);
+  	goto donumset;
+      case O_TMS:
+  	value = (double) do_tms(retary);
+--- 2086,2092 ----
+  	    value = (double)(tmps2 - tmps + arybase);
+  	goto donumset;
+      case O_TIME:
+! 	value = (double) time(Null(long*));
+  	goto donumset;
+      case O_TMS:
+  	value = (double) do_tms(retary);
+***************
+*** 2070,2076 ****
+  	value = sqrt(str_gnum(sarg[1]));
+  	goto donumset;
+      case O_INT:
+! 	modf(str_gnum(sarg[1]),&value);
+  	goto donumset;
+      case O_ORD:
+  	value = (double) *str_get(sarg[1]);
+--- 2125,2137 ----
+  	value = sqrt(str_gnum(sarg[1]));
+  	goto donumset;
+      case O_INT:
+! 	value = str_gnum(sarg[1]);
+! 	if (value >= 0.0)
+! 	    modf(value,&value);
+! 	else {
+! 	    modf(-value,&value);
+! 	    value = -value;
+! 	}
+  	goto donumset;
+      case O_ORD:
+  	value = (double) *str_get(sarg[1]);
+***************
+*** 2124,2129 ****
+--- 2185,2191 ----
+  	    }
+  	    signal(SIGINT, ihand);
+  	    signal(SIGQUIT, qhand);
++ 	    statusvalue = argflags;
+  	    value = (double)argflags;
+  	    goto donumset;
+  	}
+***************
+*** 2199,2205 ****
+  	value = (double)(rename(tmps,str_get(sarg[2])) >= 0);
+  #else
+  	tmps2 = str_get(sarg[2]);
+! 	UNLINK(tmps2);
+  	if (!(anum = link(tmps,tmps2)))
+  	    anum = UNLINK(tmps);
+  	value = (double)(anum >= 0);
+--- 2261,2269 ----
+  	value = (double)(rename(tmps,str_get(sarg[2])) >= 0);
+  #else
+  	tmps2 = str_get(sarg[2]);
+! 	if (euid || stat(tmps2,&statbuf) < 0 ||
+! 	  (statbuf.st_mode & S_IFMT) != S_IFDIR )
+! 	    UNLINK(tmps2);	/* avoid unlinking a directory */
+  	if (!(anum = link(tmps,tmps2)))
+  	    anum = UNLINK(tmps);
+  	value = (double)(anum >= 0);
+***************
+*** 2256,2268 ****
+  	else if (statbuf.st_mode & anum >> 6)
+  	    str = &str_yes;	/* ok as "other" */
+  	else if (statbuf.st_mode & anum &&
+! 	  statbuf.st_uid == (maxarg ? geteuid() : getuid()) )
+  	    str = &str_yes;	/* ok as "user" */
+  	else if (statbuf.st_mode & anum >> 3) {
+  	    if (statbuf.st_gid == (maxarg ? getegid() : getgid()))
+  		str = &str_yes;	/* ok as "group" */
+  	    else {
+! #ifdef NGROUPS
+  		GIDTYPE gary[NGROUPS];
+  
+  		str = &str_no;
+--- 2320,2335 ----
+  	else if (statbuf.st_mode & anum >> 6)
+  	    str = &str_yes;	/* ok as "other" */
+  	else if (statbuf.st_mode & anum &&
+! 	  statbuf.st_uid == (maxarg ? euid : uid) )
+  	    str = &str_yes;	/* ok as "user" */
+  	else if (statbuf.st_mode & anum >> 3) {
+  	    if (statbuf.st_gid == (maxarg ? getegid() : getgid()))
+  		str = &str_yes;	/* ok as "group" */
+  	    else {
+! #ifdef GETGROUPS
+! #ifndef NGROUPS
+! #define NGROUPS 32
+! #endif
+  		GIDTYPE gary[NGROUPS];
+  
+  		str = &str_no;
+***************
+*** 2288,2294 ****
+      case O_FTEOWNED:
+      case O_FTROWNED:
+  	if (stat(str_get(sarg[1]),&statbuf) >= 0 &&
+! 	  statbuf.st_uid == (optype == O_FTEOWNED ? geteuid() : getuid()) )
+  	    str = &str_yes;
+  	else
+  	    str = &str_no;
+--- 2355,2361 ----
+      case O_FTEOWNED:
+      case O_FTROWNED:
+  	if (stat(str_get(sarg[1]),&statbuf) >= 0 &&
+! 	  statbuf.st_uid == (optype == O_FTEOWNED ? euid : uid) )
+  	    str = &str_yes;
+  	else
+  	    str = &str_no;
+ 
+Index: array.c
+Prereq: 1.0.1.2
+*** array.c.old	Thu Mar 10 17:19:42 1988
+--- array.c	Thu Mar 10 17:19:43 1988
+***************
+*** 1,6 ****
+! /* $Header: array.c,v 1.0.1.2 88/02/25 11:38:33 root Exp $
+   *
+   * $Log:	array.c,v $
+   * Revision 1.0.1.2  88/02/25  11:38:33  root
+   * patch23: unshift can wipe out malloc arena on some machines
+   * 
+--- 1,9 ----
+! /* $Header: array.c,v 1.0.1.3 88/03/10 16:25:49 root Exp $
+   *
+   * $Log:	array.c,v $
++  * Revision 1.0.1.3  88/03/10  16:25:49  root
++  * patch29: added aclear() for reset operator
++  * 
+   * Revision 1.0.1.2  88/02/25  11:38:33  root
+   * patch23: unshift can wipe out malloc arena on some machines
+   * 
+***************
+*** 81,86 ****
+--- 84,103 ----
+  }
+  
+  void
++ aclear(ar)
++ register ARRAY *ar;
++ {
++     register int key;
++ 
++     if (!ar)
++ 	return;
++     for (key = 0; key <= ar->ary_max; key++)
++ 	str_free(ar->ary_array[key]);
++     ar->ary_fill = -1;
++     bzero((char*)ar->ary_array, (ar->ary_max+1) * sizeof(STR*));
++ }
++ 
++ void
+  afree(ar)
+  register ARRAY *ar;
+  {
+***************
+*** 88,94 ****
+  
+      if (!ar)
+  	return;
+!     for (key = 0; key <= ar->ary_fill; key++)
+  	str_free(ar->ary_array[key]);
+      safefree((char*)ar->ary_array);
+      safefree((char*)ar);
+--- 105,111 ----
+  
+      if (!ar)
+  	return;
+!     for (key = 0; key <= ar->ary_max; key++)
+  	str_free(ar->ary_array[key]);
+      safefree((char*)ar->ary_array);
+      safefree((char*)ar);
+ 
+Index: array.h
+Prereq: 1.0
+*** array.h.old	Thu Mar 10 17:19:48 1988
+--- array.h	Thu Mar 10 17:19:48 1988
+***************
+*** 1,6 ****
+! /* $Header: array.h,v 1.0 87/12/18 13:04:46 root Exp $
+   *
+   * $Log:	array.h,v $
+   * Revision 1.0  87/12/18  13:04:46  root
+   * Initial revision
+   * 
+--- 1,9 ----
+! /* $Header: array.h,v 1.0.1.1 88/03/10 16:26:38 root Exp $
+   *
+   * $Log:	array.h,v $
++  * Revision 1.0.1.1  88/03/10  16:26:38  root
++  * patch29: added aclear()
++  * 
+   * Revision 1.0  87/12/18  13:04:46  root
+   * Initial revision
+   * 
+***************
+*** 17,22 ****
+--- 20,27 ----
+  bool adelete();
+  STR *apop();
+  STR *ashift();
++ void afree();
++ void aclear();
+  bool apush();
+  long alen();
+  ARRAY *anew();
+ 
+Index: config.h.SH
+*** config.h.SH.old	Thu Mar 10 17:19:53 1988
+--- config.h.SH	Thu Mar 10 17:19:54 1988
+***************
+*** 71,76 ****
+--- 71,83 ----
+   */
+  #$d_crypt	CRYPT		/**/
+  
++ /* GETGROUPS:
++  *	This symbol, if defined, indicates that the getgroups() routine is
++  *	available to get the list of process groups.  If unavailable, multiple
++  *	groups are probably not supported.
++  */
++ #$d_getgrps	GETGROUPS		/**/
++ 
+  /* index:
+   *	This preprocessor symbol is defined, along with rindex, if the system
+   *	uses the strchr and strrchr routines instead.
+***************
+*** 154,159 ****
+--- 161,172 ----
+   *	It has the values "unsigned char" or "char".
+   */
+  #define STDCHAR $stdchar	/**/
++ 
++ /* UIDTYPE:
++  *	This symbol has a value like uid_t, int, ushort, or whatever type is
++  *	used to declare user ids in the kernel.
++  */
++ #define UIDTYPE $uidtype		/**/
+  
+  /* VOIDFLAGS:
+   *	This symbol indicates how much support of the void type is given by this
+ 
+Index: hash.c
+Prereq: 1.0.1.1
+*** hash.c.old	Thu Mar 10 17:19:59 1988
+--- hash.c	Thu Mar 10 17:19:59 1988
+***************
+*** 1,6 ****
+! /* $Header: hash.c,v 1.0.1.1 88/02/04 11:16:20 root Exp $
+   *
+   * $Log:	hash.c,v $
+   * Revision 1.0.1.1  88/02/04  11:16:20  root
+   * patch18: regularized includes.
+   * 
+--- 1,9 ----
+! /* $Header: hash.c,v 1.0.1.2 88/03/10 16:27:20 root Exp $
+   *
+   * $Log:	hash.c,v $
++  * Revision 1.0.1.2  88/03/10  16:27:20  root
++  * patch29: added hclear() for reset operator
++  * 
+   * Revision 1.0.1.1  88/02/04  11:16:20  root
+   * patch18: regularized includes.
+   * 
+***************
+*** 89,95 ****
+      return FALSE;
+  }
+  
+- #ifdef NOTUSED
+  bool
+  hdelete(tb,key)
+  register HASH *tb;
+--- 92,97 ----
+***************
+*** 117,126 ****
+  	    continue;
+  	if (strNE(entry->hent_key,key))	/* is this it? */
+  	    continue;
+- 	safefree((char*)entry->hent_val);
+- 	safefree(entry->hent_key);
+  	*oentry = entry->hent_next;
+! 	safefree((char*)entry);
+  	if (i)
+  	    tb->tbl_fill--;
+  	return TRUE;
+--- 119,126 ----
+  	    continue;
+  	if (strNE(entry->hent_key,key))	/* is this it? */
+  	    continue;
+  	*oentry = entry->hent_next;
+! 	hentfree(entry);
+  	if (i)
+  	    tb->tbl_fill--;
+  	return TRUE;
+***************
+*** 127,133 ****
+      }
+      return FALSE;
+  }
+- #endif
+  
+  hsplit(tb)
+  HASH *tb;
+--- 127,132 ----
+***************
+*** 178,183 ****
+--- 177,230 ----
+      bzero((char*)tb->tbl_array, 8 * sizeof(HENT*));
+      return tb;
+  }
++ 
++ void
++ hentfree(hent)
++ register HENT *hent;
++ {
++     if (!hent)
++ 	return;
++     str_free((char*)hent->hent_val);
++     safefree(hent->hent_key);
++     safefree((char*)hent);
++ }
++ 
++ void
++ hclear(tb)
++ register HASH *tb;
++ {
++     register HENT *hent;
++     register HENT *ohent = Null(HENT*);
++ 
++     if (!tb)
++ 	return;
++     hiterinit(tb);
++     while (hent = hiternext(tb)) {	/* concise but not very efficient */
++ 	hentfree(ohent);
++ 	ohent = hent;
++     }
++     hentfree(ohent);
++     tb->tbl_fill = 0;
++     bzero((char*)tb->tbl_array, (tb->tbl_max + 1) * sizeof(HENT*));
++ }
++ 
++ #ifdef NOTUSED
++ void
++ hfree(tb)
++ HASH *tb;
++ {
++     if (!tb)
++ 	return
++     hiterinit(tb);
++     while (hent = hiternext(tb)) {
++ 	hentfree(ohent);
++ 	ohent = hent;
++     }
++     hentfree(ohent);
++     safefree((char*)tb->tbl_array);
++     safefree((char*)tb);
++ }
++ #endif
+  
+  #ifdef NOTUSED
+  hshow(tb)
+ 
+Index: hash.h
+Prereq: 1.0
+*** hash.h.old	Thu Mar 10 17:20:07 1988
+--- hash.h	Thu Mar 10 17:20:07 1988
+***************
+*** 1,6 ****
+! /* $Header: hash.h,v 1.0 87/12/18 13:05:20 root Exp $
+   *
+   * $Log:	hash.h,v $
+   * Revision 1.0  87/12/18  13:05:20  root
+   * Initial revision
+   * 
+--- 1,9 ----
+! /* $Header: hash.h,v 1.0.1.1 88/03/10 16:28:43 root Exp $
+   *
+   * $Log:	hash.h,v $
++  * Revision 1.0.1.1  88/03/10  16:28:43  root
++  * patch29: added hclear()
++  * 
+   * Revision 1.0  87/12/18  13:05:20  root
+   * Initial revision
+   * 
+***************
+*** 43,48 ****
+--- 46,54 ----
+  bool hstore();
+  bool hdelete();
+  HASH *hnew();
++ void hclear();
++ void hfree();
++ void hentfree();
+  int hiterinit();
+  HENT *hiternext();
+  char *hiterkey();
+ 
+Index: t/io.dup
+*** t/io.dup.old	Thu Mar 10 17:21:50 1988
+--- t/io.dup	Thu Mar 10 17:21:51 1988
+***************
+*** 0 ****
+--- 1,30 ----
++ #!./perl
++ 
++ print "1..6\n";
++ 
++ print "ok 1\n";
++ 
++ open(dupout,">&stdout");
++ open(duperr,">&stderr");
++ 
++ open(stdout,">Io.dup") || die "Can't open stdout";
++ open(stderr,">&stdout") || die "Can't open stderr";
++ 
++ select(stderr); $| = 1;
++ select(stdout); $| = 1;
++ 
++ print stdout "ok 2\n";
++ print stderr "ok 3\n";
++ system 'echo ok 4';
++ system 'echo ok 5 1>&2';
++ 
++ close(stdout);
++ close(stderr);
++ 
++ open(stdout,">&dupout");
++ open(stderr,">&duperr");
++ 
++ system 'cat Io.dup';
++ unlink 'Io.dup';
++ 
++ print stdout "ok 6\n";
+ 
+Index: t/op.magic
+Prereq: 1.0.1.1
+*** t/op.magic.old	Thu Mar 10 17:21:55 1988
+--- t/op.magic	Thu Mar 10 17:21:56 1988
+***************
+*** 1,12 ****
+  #!./perl
+  
+! # $Header: op.magic,v 1.0.1.1 88/02/12 10:52:07 root Exp $
+  
+  $| = 1;		# command buffering
+  
+  print "1..4\n";
+  
+! $ENV{'foo'} = 'hi there';
+  if (`echo \$foo` eq "hi there\n") {print "ok 1\n";} else {print "not ok 1\n";}
+  
+  $! = 0;
+--- 1,12 ----
+  #!./perl
+  
+! # $Header: op.magic,v 1.0.1.2 88/03/10 16:55:06 root Exp $
+  
+  $| = 1;		# command buffering
+  
+  print "1..4\n";
+  
+! eval '$ENV{"foo"} = "hi there";';	# check that ENV is inited inside eval
+  if (`echo \$foo` eq "hi there\n") {print "ok 1\n";} else {print "not ok 1\n";}
+  
+  $! = 0;
+ 
+Index: t/op.pat
+Prereq: 1.0.1.2
+*** t/op.pat.old	Thu Mar 10 17:22:00 1988
+--- t/op.pat	Thu Mar 10 17:22:01 1988
+***************
+*** 1,7 ****
+  #!./perl
+  
+! # $Header: op.pat,v 1.0.1.2 88/03/03 19:38:00 root Exp $
+! print "1..24\n";
+  
+  $x = "abc\ndef\n";
+  
+--- 1,7 ----
+  #!./perl
+  
+! # $Header: op.pat,v 1.0.1.3 88/03/10 16:55:45 root Exp $
+! print "1..27\n";
+  
+  $x = "abc\ndef\n";
+  
+***************
+*** 59,61 ****
+--- 59,80 ----
+  
+  $* = 1;		# test 3 only tested the optimized version--this one is for real
+  if ("ab\ncd\n" =~ /^cd/) {print "ok 24\n";} else {print "not ok 24\n";}
++ $* = 0;
++ 
++ $XXX{123} = 123;
++ $XXX{234} = 234;
++ $XXX{345} = 345;
++ 
++ @XXX = ('ok 25','not ok 25', 'ok 26','not ok 26','not ok 27');
++ while ($_ = shift(XXX)) {
++     ?(.*)? && (print $1,"\n");
++     /not/ && reset;
++     /not ok 26/ && reset 'X';
++ }
++ 
++ while (($key,$val) = each(XXX)) {
++     print "not ok 27\n";
++     exit;
++ }
++ 
++ print "ok 27\n";
+ 
+Index: t/op.subst
+Prereq: 1.0.1.1
+*** t/op.subst.old	Thu Mar 10 17:22:06 1988
+--- t/op.subst	Thu Mar 10 17:22:07 1988
+***************
+*** 1,8 ****
+  #!./perl
+  
+! # $Header: op.subst,v 1.0.1.1 88/02/06 00:27:19 root Exp $
+  
+! print "1..8\n";
+  
+  $x = 'foo';
+  $_ = "x";
+--- 1,8 ----
+  #!./perl
+  
+! # $Header: op.subst,v 1.0.1.2 88/03/10 16:56:36 root Exp $
+  
+! print "1..13\n";
+  
+  $x = 'foo';
+  $_ = "x";
+***************
+*** 39,41 ****
+--- 39,52 ----
+  
+  $_ = 'ABACADA';
+  if (/a/i && s///gi && $_ eq 'BCD') {print "ok 8\n";} else {print "not ok 8\n";}
++ 
++ $_ = '\\' x 4;
++ if (length($_) == 4) {print "ok 9\n";} else {print "not ok 9\n";}
++ s/\\/\\\\/g;
++ if ($_ eq '\\' x 8) {print "ok 10\n";} else {print "not ok 10\n";}
++ 
++ $_ = '\/' x 4;
++ if (length($_) == 8) {print "ok 11\n";} else {print "not ok 11\n";}
++ s/\//\/\//g;
++ if ($_ eq '\\//' x 4) {print "ok 12\n";} else {print "not ok 12\n";}
++ if (length($_) == 12) {print "ok 13\n";} else {print "not ok 13\n";}
+ 
+Index: perl.h
+Prereq: 1.0.1.6
+*** perl.h.old	Thu Mar 10 17:20:12 1988
+--- perl.h	Thu Mar 10 17:20:14 1988
+***************
+*** 1,6 ****
+! /* $Header: perl.h,v 1.0.1.6 88/03/02 12:34:53 root Exp $
+   *
+   * $Log:	perl.h,v $
+   * Revision 1.0.1.6  88/03/02  12:34:53  root
+   * patch24: added include of <sys/param.h>
+   * patch24: made some identifiers unique in first 7 chars
+--- 1,12 ----
+! /* $Header: perl.h,v 1.0.1.7 88/03/10 16:28:52 root Exp $
+   *
+   * $Log:	perl.h,v $
++  * Revision 1.0.1.7  88/03/10  16:28:52  root
++  * patch29: types.h was included twice
++  * patch29: filename sometimes became ""
++  * patch29: uid and gid now available
++  * patch29: UNLINK was wrong on Eunice
++  * 
+   * Revision 1.0.1.6  88/03/02  12:34:53  root
+   * patch24: added include of <sys/param.h>
+   * patch24: made some identifiers unique in first 7 chars
+***************
+*** 38,46 ****
+  #include <stdio.h>
+  #include <ctype.h>
+  #include <setjmp.h>
+- #include <sys/types.h>
+- #include <sys/stat.h>
+  #include <sys/param.h>
+  
+  #ifdef TMINSYS
+  #include <sys/time.h>
+--- 44,51 ----
+  #include <stdio.h>
+  #include <ctype.h>
+  #include <setjmp.h>
+  #include <sys/param.h>
++ #include <sys/stat.h>
+  
+  #ifdef TMINSYS
+  #include <sys/time.h>
+***************
+*** 168,173 ****
+--- 173,180 ----
+  
+  EXT STR *freestrroot INIT(Nullstr);
+  
++ EXT char *filename;
++ EXT char *origfilename;
+  EXT FILE *rsfp;
+  EXT char buf[1024];
+  EXT char *bufptr INIT(buf);
+***************
+*** 193,198 ****
+--- 200,212 ----
+  
+  EXT struct stat statbuf;
+  EXT struct tms timesbuf;
++ EXT int uid;
++ EXT int euid;
++ UIDTYPE getuid();
++ UIDTYPE geteuid();
++ GIDTYPE getgid();
++ GIDTYPE getegid();
++ EXT int unsafe;
+  
+  #ifdef DEBUGGING
+  EXT int debug INIT(0);
+***************
+*** 225,231 ****
+  struct tm *gmtime(), *localtime();
+  
+  #ifdef EUNICE
+! #define UNLINK(f) while (unlink(f) >= 0)
+  #else
+  #define UNLINK unlink
+  #endif
+--- 239,246 ----
+  struct tm *gmtime(), *localtime();
+  
+  #ifdef EUNICE
+! #define UNLINK unlnk
+! int unlnk();
+  #else
+  #define UNLINK unlink
+  #endif
+ 
+Index: perl.man.1
+Prereq: 1.0.1.7
+*** perl.man.1.old	Thu Mar 10 17:20:22 1988
+--- perl.man.1	Thu Mar 10 17:20:26 1988
+***************
+*** 1,7 ****
+  .rn '' }`
+! ''' $Header: perl.man.1,v 1.0.1.7 88/03/02 12:36:18 root Exp $
+  ''' 
+  ''' $Log:	perl.man.1,v $
+  ''' Revision 1.0.1.7  88/03/02  12:36:18  root
+  ''' patch24: documented file tests
+  ''' 
+--- 1,12 ----
+  .rn '' }`
+! ''' $Header: perl.man.1,v 1.0.1.8 88/03/10 16:31:29 root Exp $
+  ''' 
+  ''' $Log:	perl.man.1,v $
++ ''' Revision 1.0.1.8  88/03/10  16:31:29  root
++ ''' patch29: /bin/perl -> /usr/bin/perl
++ ''' patch29: documented -U
++ ''' patch29: new die functionality
++ ''' 
+  ''' Revision 1.0.1.7  88/03/02  12:36:18  root
+  ''' patch24: documented file tests
+  ''' 
+***************
+*** 122,128 ****
+  .nf
+  
+  .ne 2
+! 	#!/bin/perl -spi.bak	# same as -s -p -i.bak
+  	.\|.\|.
+  
+  .fi
+--- 127,133 ----
+  .nf
+  
+  .ne 2
+! 	#!/usr/bin/perl -spi.bak	# same as -s -p -i.bak
+  	.\|.\|.
+  
+  .fi
+***************
+*** 159,171 ****
+  .nf
+  
+  .ne 2
+! 	#!/bin/perl -pi.bak
+  	s/foo/bar/;
+  
+  which is equivalent to
+  
+  .ne 14
+! 	#!/bin/perl
+  	while (<>) {
+  		if ($ARGV ne $oldargv) {
+  			rename($ARGV,$ARGV . '.bak');
+--- 164,176 ----
+  .nf
+  
+  .ne 2
+! 	#!/usr/bin/perl -pi.bak
+  	s/foo/bar/;
+  
+  which is equivalent to
+  
+  .ne 14
+! 	#!/usr/bin/perl
+  	while (<>) {
+  		if ($ARGV ne $oldargv) {
+  			rename($ARGV,$ARGV . '.bak');
+***************
+*** 254,264 ****
+  .nf
+  
+  .ne 2
+! 	#!/bin/perl -s
+  	if ($xyz) { print "true\en"; }
+  
+  .fi
+  .TP 5
+  .B \-v
+  prints the version and patchlevel of your perl executable.
+  .Sh "Data Types and Objects"
+--- 259,274 ----
+  .nf
+  
+  .ne 2
+! 	#!/usr/bin/perl -s
+  	if ($xyz) { print "true\en"; }
+  
+  .fi
+  .TP 5
++ .B \-U
++ allows perl to do unsafe operations.
++ Currently the only "unsafe" operation is the unlinking of directories while
++ running as superuser.
++ .TP 5
+  .B \-v
+  prints the version and patchlevel of your perl executable.
+  .Sh "Data Types and Objects"
+***************
+*** 659,665 ****
+  The
+  .I while
+  and
+! .I unless
+  modifiers also have the expected semantics (conditional evaluated first),
+  except when applied to a do-BLOCK command,
+  in which case the block executes once before the conditional is evaluated.
+--- 669,675 ----
+  The
+  .I while
+  and
+! .I until
+  modifiers also have the expected semantics (conditional evaluated first),
+  except when applied to a do-BLOCK command,
+  in which case the block executes once before the conditional is evaluated.
+***************
+*** 962,978 ****
+  Useful for checking the password file for lousy passwords.
+  Only the guys wearing white hats should do this.
+  .Ip "die EXPR" 8 6
+! Prints the value of EXPR to stderr and exits with a non-zero status.
+  Equivalent examples:
+  .nf
+  
+  .ne 3
+! 	die "Can't cd to spool." unless chdir '/usr/spool/news';
+  
+! 	(chdir '/usr/spool/news') || die "Can't cd to spool." 
+  
+  .fi
+  Note that the parens are necessary above due to precedence.
+  See also
+  .IR exit .
+  .Ip "do BLOCK" 8 4
+--- 972,1010 ----
+  Useful for checking the password file for lousy passwords.
+  Only the guys wearing white hats should do this.
+  .Ip "die EXPR" 8 6
+! Prints the value of EXPR to stderr and exits with the current value of $!
+! (errno).
+! If $! is 0, exits with the value of ($? >> 8) (`command` status).
+! If ($? >> 8) is 0, exits with 255.
+  Equivalent examples:
+  .nf
+  
+  .ne 3
+! 	die "Can't cd to spool.\en" unless chdir '/usr/spool/news';
+  
+! 	(chdir '/usr/spool/news') || die "Can't cd to spool.\en" 
+  
+  .fi
+  Note that the parens are necessary above due to precedence.
++ .Sp
++ If the value of EXPR does not end in a newline, the current script line
++ number and input line number (if any) are also printed, and a newline is
++ supplied.
++ Hint: sometimes appending ", stopped" to your message will cause it to make
++ better sense when the string "at foo line 123" is appended.
++ Suppose you are running script "canasta".
++ .nf
++ 
++ .ne 7
++ 	die "/etc/games is no good";
++ 	die "/etc/games is no good, stopped";
++ 
++ produce, respectively
++ 
++ 	/etc/games is no good at canasta line 123.
++ 	/etc/games is no good, stopped at canasta line 123.
++ 
++ .fi
+  See also
+  .IR exit .
+  .Ip "do BLOCK" 8 4
+ 
+Index: perl.man.2
+Prereq: 1.0.1.8
+*** perl.man.2.old	Thu Mar 10 17:20:41 1988
+--- perl.man.2	Thu Mar 10 17:20:46 1988
+***************
+*** 1,7 ****
+  ''' Beginning of part 2
+! ''' $Header: perl.man.2,v 1.0.1.8 88/03/04 19:11:44 root Exp $
+  '''
+  ''' $Log:	perl.man.2,v $
+  ''' Revision 1.0.1.8  88/03/04  19:11:44  root
+  ''' patch28: documented killing of process groups
+  ''' 
+--- 1,14 ----
+  ''' Beginning of part 2
+! ''' $Header: perl.man.2,v 1.0.1.9 88/03/10 16:36:45 root Exp $
+  '''
+  ''' $Log:	perl.man.2,v $
++ ''' Revision 1.0.1.9  88/03/10  16:36:45  root
++ ''' patch29: filehandle duping
++ ''' patch29: reset resets arrays also now
++ ''' patch29: clarification of $.
++ ''' patch29: new wrinkles on $? and $!
++ ''' patch29: uids and gids
++ ''' 
+  ''' Revision 1.0.1.8  88/03/04  19:11:44  root
+  ''' patch28: documented killing of process groups
+  ''' 
+***************
+*** 189,194 ****
+--- 196,232 ----
+      open(extract, "|sort >/tmp/Tmp$$"\|);		# $$ is our process#
+  
+  .fi
++ You may also, in the Bourne shell tradition, specify an EXPR beginning
++ with ">&", in which case the rest of the string
++ is interpreted as the name of a filehandle
++ (or file descriptor, if numeric) which is to be duped and opened.
++ Here is a script that saves, redirects, and restores stdout and stdin:
++ .nf
++ 
++ .ne 21
++ 	#!/usr/bin/perl
++ 	open(saveout,">&stdout");
++ 	open(saveerr,">&stderr");
++ 
++ 	open(stdout,">foo.out") || die "Can't redirect stdout";
++ 	open(stderr,">&stdout") || die "Can't dup stdout";
++ 
++ 	select(stderr); $| = 1;		# make unbuffered
++ 	select(stdout); $| = 1;		# make unbuffered
++ 
++ 	print stdout "stdout 1\en";	# this works for
++ 	print stderr "stderr 1\en";	# subprocesses too
++ 
++ 	close(stdout);
++ 	close(stderr);
++ 
++ 	open(stdout,">&saveout");
++ 	open(stderr,">&saveerr");
++ 
++ 	print stdout "stdout 2\en";
++ 	print stderr "stderr 2\en";
++ 
++ .fi
+  .Ip "ord(EXPR)" 8 3
+  Returns the ascii value of the first character of EXPR.
+  .Ip "pop ARRAY" 8 6
+***************
+*** 260,267 ****
+  so that they work again.
+  The expression is interpreted as a list of single characters (hyphens allowed
+  for ranges).
+! All string variables beginning with one of those letters are set to the null
+! string.
+  If the expression is omitted, one-match searches (?pattern?) are reset to
+  match again.
+  Always returns 1.
+--- 298,305 ----
+  so that they work again.
+  The expression is interpreted as a list of single characters (hyphens allowed
+  for ranges).
+! All variables and arrays beginning with one of those letters are reset to
+! their pristine state.
+  If the expression is omitted, one-match searches (?pattern?) are reset to
+  match again.
+  Always returns 1.
+***************
+*** 274,279 ****
+--- 312,319 ----
+      reset;	\h'|2i'# just reset ?? searches
+  
+  .fi
++ Note: reset "A-Z" is not recommended since you'll wipe out your ARGV and ENV
++ arrays.
+  .Ip "s/PATTERN/REPLACEMENT/gi" 8 3
+  Searches a string for a pattern, and if found, replaces that pattern with the
+  replacement text and returns the number of substitutions made.
+***************
+*** 477,482 ****
+--- 517,524 ----
+  	$cnt = (unlink 'a','b','c');
+  
+  .fi
++ Note: unlink will not delete directories unless you are superuser and the \-U
++ flag is supplied to perl.
+  .ne 7
+  .Ip "unshift(ARRAY,LIST)" 8 4
+  Does the opposite of a shift.
+***************
+*** 781,788 ****
+  .fi 
+  (Mnemonic: underline is understood in certain operations.)
+  .Ip $. 8
+! The current input line number of the last file that was read.
+  Readonly.
+  (Mnemonic: many programs use . to mean the current line number.)
+  .Ip $/ 8
+  The input record separator, newline by default.
+--- 823,832 ----
+  .fi 
+  (Mnemonic: underline is understood in certain operations.)
+  .Ip $. 8
+! The current input line number of the last filehandle that was read.
+  Readonly.
++ Remember that only an explicit close on the filehandle resets the line number.
++ Since <> never does an explicit close line numbers increase across ARGV files.
+  (Mnemonic: many programs use . to mean the current line number.)
+  .Ip $/ 8
+  The input record separator, newline by default.
+***************
+*** 848,855 ****
+  running this script.
+  (Mnemonic: same as shells.)
+  .Ip $? 8
+! The status returned by the last backtick (``) command.
+! (Mnemonic: same as sh and ksh.)
+  .Ip $+ 8 4
+  The last bracket matched by the last search pattern.
+  This is useful if you don't know which of a set of alternative patterns
+--- 892,903 ----
+  running this script.
+  (Mnemonic: same as shells.)
+  .Ip $? 8
+! The status returned by the last backtick (``) command or system operator.
+! Note that this is the status word returned by the wait() system
+! call, so the exit value of the subprocess is actually ($? >> 8).
+! $? & 255 gives which signal, if any, the process died from, and whether
+! there was a core dump.
+! (Mnemonic: similar to sh and ksh.)
+  .Ip $+ 8 4
+  The last bracket matched by the last search pattern.
+  This is useful if you don't know which of a set of alternative patterns
+***************
+*** 889,900 ****
+  when subscripting and when evaluating the index() and substr() functions.
+  (Mnemonic: [ begins subscripts.)
+  .Ip $! 8 2
+! The current value of errno, with all the usual caveats.
+  (Mnemonic: What just went bang?)
+  .Ip $@ 8 2
+  The error message from the last eval command.
+  If null, the last eval parsed and executed correctly.
+  (Mnemonic: Where was the syntax error "at"?)
+  .Ip @ARGV 8 3
+  The array ARGV contains the command line arguments intended for the script.
+  Note that $#ARGV is the generally number of arguments minus one, since
+--- 937,981 ----
+  when subscripting and when evaluating the index() and substr() functions.
+  (Mnemonic: [ begins subscripts.)
+  .Ip $! 8 2
+! If used in a numeric context, yields the current value of errno, with all the
+! usual caveats.
+! If used in a string context, yields the corresponding system error string.
+! You can assign to $! in order to set errno
+! if, for instance, you want $! to return the string for error n, or you want
+! to set the exit value for the die operator.
+  (Mnemonic: What just went bang?)
+  .Ip $@ 8 2
+  The error message from the last eval command.
+  If null, the last eval parsed and executed correctly.
+  (Mnemonic: Where was the syntax error "at"?)
++ .Ip $< 8 2
++ The real uid of this process.
++ (Mnemonic: it's the uid you came FROM, if you're running setuid.)
++ .Ip $> 8 2
++ The effective uid of this process.
++ Example:
++ .nf
++ 
++ 	$< = $>;	# set real uid to the effective uid
++ 
++ .fi
++ (Mnemonic: it's the uid you went TO, if you're running setuid.)
++ .Ip $( 8 2
++ The real gid of this process.
++ If you are on a machine that supports membership in multiple groups
++ simultaneously, gives a space separated list of groups you are in.
++ The first number is the one returned by getgid(), and the subsequent ones
++ by getgroups(), one of which may be the same as the first number.
++ (Mnemonic: parens are used to GROUP things.
++ The real gid is the group you LEFT, if you're running setgid.)
++ .Ip $) 8 2
++ The effective gid of this process.
++ If you are on a machine that supports membership in multiple groups
++ simultaneously, gives a space separated list of groups you are in.
++ The first number is the one returned by getegid(), and the subsequent ones
++ by getgroups(), one of which may be the same as the first number.
++ (Mnemonic: parens are used to GROUP things.
++ The effective gid is the group that's RIGHT for you, if you're running setgid.)
+  .Ip @ARGV 8 3
+  The array ARGV contains the command line arguments intended for the script.
+  Note that $#ARGV is the generally number of arguments minus one, since
+***************
+*** 911,917 ****
+  .ne 12
+  	sub handler {	# 1st argument is signal name
+  		($sig) = @_;
+! 		print "Caught a SIG$sig--shutting down\n";
+  		close(log);
+  		exit(0);
+  	}
+--- 992,998 ----
+  .ne 12
+  	sub handler {	# 1st argument is signal name
+  		($sig) = @_;
+! 		print "Caught a SIG$sig--shutting down\en";
+  		close(log);
+  		exit(0);
+  	}
+ 
+Index: perly.c
+Prereq: 1.0.1.10
+*** perly.c.old	Thu Mar 10 17:21:08 1988
+--- perly.c	Thu Mar 10 17:21:16 1988
+***************
+*** 1,6 ****
+! char rcsid[] = "$Header: perly.c,v 1.0.1.10 88/03/04 19:30:56 root Exp $";
+  /*
+   * $Log:	perly.c,v $
+   * Revision 1.0.1.10  88/03/04  19:30:56  root
+   * patch28: grandfathering of \digit STILL didn't work!
+   * 
+--- 1,15 ----
+! char rcsid[] = "$Header: perly.c,v 1.0.1.11 88/03/10 16:42:59 root Exp $";
+  /*
+   * $Log:	perly.c,v $
++  * Revision 1.0.1.11  88/03/10  16:42:59  root
++  * patch29: mktemp violated readonly string space
++  * patch29: added -U for unsafe operations
++  * patch29: added uid and gid support
++  * patch29: filename sometimes became ""
++  * patch29: eval 'print $ENV{"SHELL"};' didn't work right
++  * patch29: some compilers don't grok && outside of conditionals
++  * patch29: int(-1.5) fix in evalstatic()
++  * 
+   * Revision 1.0.1.10  88/03/04  19:30:56  root
+   * patch28: grandfathering of \digit STILL didn't work!
+   * 
+***************
+*** 53,60 ****
+  bool minus_p = FALSE;
+  bool doswitches = FALSE;
+  bool allstabs = FALSE;		/* init all customary symbols in symbol table?*/
+! char *filename;
+! char *e_tmpname = "/tmp/perl-eXXXXXX";
+  FILE *e_fp = Nullfp;
+  ARG *l();
+  
+--- 62,69 ----
+  bool minus_p = FALSE;
+  bool doswitches = FALSE;
+  bool allstabs = FALSE;		/* init all customary symbols in symbol table?*/
+! #define TMPPATH "/tmp/perl-eXXXXXX"
+! char *e_tmpname;
+  FILE *e_fp = Nullfp;
+  ARG *l();
+  
+***************
+*** 65,72 ****
+  {
+      register STR *str;
+      register char *s;
+!     char *index();
+  
+      linestr = str_new(80);
+      str = str_make("-I/usr/lib/perl ");	/* first used for -I flags */
+      for (argc--,argv++; argc; argc--,argv++) {
+--- 74,83 ----
+  {
+      register STR *str;
+      register char *s;
+!     char *index(), *strcpy();
+  
++     uid = (int)getuid();
++     euid = (int)geteuid();
+      linestr = str_new(80);
+      str = str_make("-I/usr/lib/perl ");	/* first used for -I flags */
+      for (argc--,argv++; argc; argc--,argv++) {
+***************
+*** 84,89 ****
+--- 95,101 ----
+  #endif
+  	case 'e':
+  	    if (!e_fp) {
++ 	        e_tmpname = strcpy(safemalloc(sizeof(TMPPATH)),TMPPATH);
+  		mktemp(e_tmpname);
+  		e_fp = fopen(e_tmpname,"w");
+  	    }
+***************
+*** 121,126 ****
+--- 133,142 ----
+  	    doswitches = TRUE;
+  	    strcpy(argv[0], argv[0]+1);
+  	    goto reswitch;
++ 	case 'U':
++ 	    unsafe = TRUE;
++ 	    strcpy(argv[0], argv[0]+1);
++ 	    goto reswitch;
+  	case 'v':
+  	    version();
+  	    exit(0);
+***************
+*** 149,154 ****
+--- 165,171 ----
+      if (argv[0] == Nullch)
+  	argv[0] = "-";
+      filename = savestr(argv[0]);
++     origfilename = savestr(filename);
+      if (strEQ(filename,"-"))
+  	argv[0] = "";
+      if (preprocess) {
+***************
+*** 199,209 ****
+--- 216,228 ----
+  	}
+      }
+      if (argvstab = stabent("ARGV",allstabs)) {
++ 	aadd(argvstab);
+  	for (; argc > 0; argc--,argv++) {
+  	    apush(argvstab->stab_array,str_make(argv[0]));
+  	}
+      }
+      if (envstab = stabent("ENV",allstabs)) {
++ 	hadd(envstab);
+  	for (; *env; env++) {
+  	    if (!(s = index(*env,'=')))
+  		continue;
+***************
+*** 214,225 ****
+  	    *--s = '=';
+  	}
+      }
+!     sigstab = stabent("SIG",allstabs);
+  
+!     magicalize("!#?^~=-%0123456789.+&*(),\\/[|");
+  
+!     (tmpstab = stabent("0",allstabs)) && str_set(STAB_STR(tmpstab),filename);
+!     (tmpstab = stabent("$",allstabs)) &&
+  	str_numset(STAB_STR(tmpstab),(double)getpid());
+  
+      tmpstab = stabent("stdin",TRUE);
+--- 233,246 ----
+  	    *--s = '=';
+  	}
+      }
+!     if (sigstab = stabent("SIG",allstabs))
+! 	hadd(sigstab);
+  
+!     magicalize("!#?^~=-%0123456789.+&*()<>,\\/[|");
+  
+!     if (tmpstab = stabent("0",allstabs))
+! 	str_set(STAB_STR(tmpstab),origfilename);
+!     if (tmpstab = stabent("$",allstabs))
+  	str_numset(STAB_STR(tmpstab),(double)getpid());
+  
+      tmpstab = stabent("stdin",TRUE);
+***************
+*** 363,369 ****
+  	    if (filename)
+  		safefree(filename);
+  	    s[strlen(s)-1] = '\0';	/* wipe out newline */
+! 	    filename = savestr(s);
+  	    s = str_get(linestr);
+  	}
+  	if (in_eval) {
+--- 384,397 ----
+  	    if (filename)
+  		safefree(filename);
+  	    s[strlen(s)-1] = '\0';	/* wipe out newline */
+! 	    if (*s == '"') {
+! 		s++;
+! 		s[strlen(s)-1] = '\0';	/* wipe out trailing quote */
+! 	    }
+! 	    if (*s)
+! 		filename = savestr(s);
+! 	    else
+! 		filename = savestr(origfilename);
+  	    s = str_get(linestr);
+  	}
+  	if (in_eval) {
+***************
+*** 2054,2065 ****
+  	    break;
+  	case O_LEFT_SHIFT:
+  	    value = str_gnum(s1);
+!     tmplong = (long)str_gnum(s2);
+  	    str_numset(str,(double)(((long)value) << tmplong));
+  	    break;
+  	case O_RIGHT_SHIFT:
+  	    value = str_gnum(s1);
+!     tmplong = (long)str_gnum(s2);
+  	    str_numset(str,(double)(((long)value) >> tmplong));
+  	    break;
+  	case O_LT:
+--- 2082,2093 ----
+  	    break;
+  	case O_LEFT_SHIFT:
+  	    value = str_gnum(s1);
+! 	    tmplong = (long)str_gnum(s2);
+  	    str_numset(str,(double)(((long)value) << tmplong));
+  	    break;
+  	case O_RIGHT_SHIFT:
+  	    value = str_gnum(s1);
+! 	    tmplong = (long)str_gnum(s2);
+  	    str_numset(str,(double)(((long)value) >> tmplong));
+  	    break;
+  	case O_LT:
+***************
+*** 2193,2199 ****
+  	    str_numset(str,sqrt(str_gnum(s1)));
+  	    break;
+  	case O_INT:
+! 	    modf(str_gnum(s1),&value);
+  	    str_numset(str,value);
+  	    break;
+  	case O_ORD:
+--- 2221,2233 ----
+  	    str_numset(str,sqrt(str_gnum(s1)));
+  	    break;
+  	case O_INT:
+! 	    value = str_gnum(s1);
+! 	    if (value >= 0.0)
+! 		modf(value,&value);
+! 	    else {
+! 		modf(-value,&value);
+! 		value = -value;
+! 	    }
+  	    str_numset(str,value);
+  	    break;
+  	case O_ORD:
+ 
+Index: x2p/s2p
+*** x2p/s2p.old	Thu Mar 10 17:22:28 1988
+--- x2p/s2p	Thu Mar 10 17:22:29 1988
+***************
+*** 221,227 ****
+  close body;
+  
+  unless ($debug) {
+!     open(head,">/tmp/sperl2$$") || do Die("Can't open temp file 2.\n");
+      print head "#define PRINTIT\n" if ($printit);
+      print head "#define APPENDSEEN\n" if ($appendseen);
+      print head "#define TSEEN\n" if ($tseen);
+--- 221,227 ----
+  close body;
+  
+  unless ($debug) {
+!     open(head,">/tmp/sperl2$$.c") || do Die("Can't open temp file 2.\n");
+      print head "#define PRINTIT\n" if ($printit);
+      print head "#define APPENDSEEN\n" if ($appendseen);
+      print head "#define TSEEN\n" if ($tseen);
+***************
+*** 236,242 ****
+      close head;
+  
+      print "#!/bin/perl\n\n";
+!     open(body,"cc -E /tmp/sperl2$$ |") ||
+  	do Die("Can't reopen temp file.");
+      while (<body>) {
+  	/^# [0-9]/ && next;
+--- 236,242 ----
+      close head;
+  
+      print "#!/bin/perl\n\n";
+!     open(body,"cc -E /tmp/sperl2$$.c |") ||
+  	do Die("Can't reopen temp file.");
+      while (<body>) {
+  	/^# [0-9]/ && next;
+ 
+Index: stab.c
+Prereq: 1.0.1.5
+*** stab.c.old	Thu Mar 10 17:21:28 1988
+--- stab.c	Thu Mar 10 17:21:29 1988
+***************
+*** 1,6 ****
+! /* $Header: stab.c,v 1.0.1.5 88/02/04 11:16:57 root Exp $
+   *
+   * $Log:	stab.c,v $
+   * Revision 1.0.1.5  88/02/04  11:16:57  root
+   * patch18: regularized includes.
+   * 
+--- 1,10 ----
+! /* $Header: stab.c,v 1.0.1.6 88/03/10 16:49:11 root Exp $
+   *
+   * $Log:	stab.c,v $
++  * Revision 1.0.1.6  88/03/10  16:49:11  root
++  * patch29: made $! more magic than ever
++  * patch29: $< and $> are uid and euid, $( and $) are gid and egid
++  * 
+   * Revision 1.0.1.5  88/02/04  11:16:57  root
+   * patch18: regularized includes.
+   * 
+***************
+*** 75,80 ****
+--- 79,86 ----
+      };
+  
+  extern int errno;
++ extern int sys_nerr;
++ extern char *sys_errlist[];
+  
+  STR *
+  stab_str(stab)
+***************
+*** 82,87 ****
+--- 88,94 ----
+  {
+      register int paren;
+      register char *s;
++     register int i;
+  
+      switch (*stab->stab_name) {
+      case '0': case '1': case '2': case '3': case '4':
+***************
+*** 130,147 ****
+      case '%':
+  	str_numset(stab->stab_val,(double)curoutstab->stab_io->page);
+  	break;
+-     case '(':
+- 	if (curspat) {
+- 	    str_numset(stab->stab_val,(double)(curspat->spat_compex.subbeg[0] -
+- 		curspat->spat_compex.subbase));
+- 	}
+- 	break;
+-     case ')':
+- 	if (curspat) {
+- 	    str_numset(stab->stab_val,(double)(curspat->spat_compex.subend[0] -
+- 		curspat->spat_compex.subbeg[0]));
+- 	}
+- 	break;
+      case '/':
+  	*tokenbuf = record_separator;
+  	tokenbuf[1] = '\0';
+--- 137,142 ----
+***************
+*** 164,171 ****
+  	str_set(stab->stab_val,ofmt);
+  	break;
+      case '!':
+! 	str_numset(stab->stab_val,(double)errno);
+  	break;
+      }
+      return stab->stab_val;
+  }
+--- 159,200 ----
+  	str_set(stab->stab_val,ofmt);
+  	break;
+      case '!':
+! 	str_numset(stab->stab_val, (double)errno);
+! 	str_set(stab->stab_val,
+! 	  errno < 0 || errno > sys_nerr ? "(unknown)" : sys_errlist[errno]);
+! 	stab->stab_val->str_nok = 1;	/* what a wonderful hack! */
+  	break;
++     case '<':
++ 	str_numset(stab->stab_val,(double)uid);
++ 	break;
++     case '>':
++ 	str_numset(stab->stab_val,(double)euid);
++ 	break;
++     case '(':
++ 	s = tokenbuf;
++ 	sprintf(s,"%d",(int)getgid());
++ 	goto add_groups;
++     case ')':
++ 	s = tokenbuf;
++ 	sprintf(s,"%d",(int)getegid());
++       add_groups:
++ 	while (*s) s++;
++ #ifdef GETGROUPS
++ #ifndef NGROUPS
++ #define NGROUPS 32
++ #endif
++ 	{
++ 	    GIDTYPE gary[NGROUPS];
++ 
++ 	    i = getgroups(NGROUPS,gary);
++ 	    while (i >= 0) {
++ 		sprintf(s," %d", gary[i--]);
++ 		while (*s) s++;
++ 	    }
++ 	}
++ #endif
++ 	str_set(stab->stab_val,tokenbuf);
++ 	break;
+      }
+      return stab->stab_val;
+  }
+***************
+*** 229,237 ****
+--- 258,285 ----
+  	case '[':
+  	    arybase = (int)str_gnum(str);
+  	    break;
++ 	case '?':
++ 	    statusvalue = (unsigned short)str_gnum(str);
++ 	    break;
+  	case '!':
+  	    errno = (int)str_gnum(str);		/* will anyone ever use this? */
+  	    break;
++ 	case '<':
++ 	    uid = (int)str_gnum(str);
++ 	    if (setruid(uid) < 0)
++ 		uid = (int)getuid();
++ 	    break;
++ 	case '>':
++ 	    euid = (int)str_gnum(str);
++ 	    if (seteuid(euid) < 0)
++ 		euid = (int)geteuid();
++ 	    break;
++ 	case '(':
++ 	    setrgid((int)str_gnum(str));
++ 	    break;
++ 	case ')':
++ 	    setegid((int)str_gnum(str));
++ 	    break;
+  	case '.':
+  	case '+':
+  	case '&':
+***************
+*** 245,252 ****
+  	case '7':
+  	case '8':
+  	case '9':
+- 	case '(':
+- 	case ')':
+  	    break;		/* "read-only" registers */
+  	}
+      }
+--- 293,298 ----
+ 
+Index: stab.h
+Prereq: 1.0
+*** stab.h.old	Thu Mar 10 17:21:35 1988
+--- stab.h	Thu Mar 10 17:21:36 1988
+***************
+*** 1,6 ****
+! /* $Header: stab.h,v 1.0 87/12/18 13:06:18 root Exp $
+   *
+   * $Log:	stab.h,v $
+   * Revision 1.0  87/12/18  13:06:18  root
+   * Initial revision
+   * 
+--- 1,9 ----
+! /* $Header: stab.h,v 1.0.1.1 88/03/10 16:51:35 root Exp $
+   *
+   * $Log:	stab.h,v $
++  * Revision 1.0.1.1  88/03/10  16:51:35  root
++  * patch29: changed type of statusvalue, deleted subsvalue
++  * 
+   * Revision 1.0  87/12/18  13:06:18  root
+   * Initial revision
+   * 
+***************
+*** 51,58 ****
+  EXT char *envname;	/* place for ENV name being assigned--gross cheat */
+  EXT char *signame;	/* place for SIG name being assigned--gross cheat */
+  
+! EXT int statusvalue;
+! EXT int subsvalue;
+  
+  STAB *aadd();
+  STAB *hadd();
+--- 54,60 ----
+  EXT char *envname;	/* place for ENV name being assigned--gross cheat */
+  EXT char *signame;	/* place for SIG name being assigned--gross cheat */
+  
+! EXT unsigned short statusvalue;
+  
+  STAB *aadd();
+  STAB *hadd();
+ 
+Index: str.c
+Prereq: 1.0.1.4
+*** str.c.old	Thu Mar 10 17:21:43 1988
+--- str.c	Thu Mar 10 17:21:44 1988
+***************
+*** 1,6 ****
+! /* $Header: str.c,v 1.0.1.4 88/03/02 12:56:44 root Exp $
+   *
+   * $Log:	str.c,v $
+   * Revision 1.0.1.4  88/03/02  12:56:44  root
+   * patch24: some Xenix systems clobber errno on every sprintf()
+   * 
+--- 1,9 ----
+! /* $Header: str.c,v 1.0.1.5 88/03/10 16:53:14 root Exp $
+   *
+   * $Log:	str.c,v $
++  * Revision 1.0.1.5  88/03/10  16:53:14  root
++  * patch29: reset now clears arrays too
++  * 
+   * Revision 1.0.1.4  88/03/02  12:56:44  root
+   * patch24: some Xenix systems clobber errno on every sprintf()
+   * 
+***************
+*** 49,56 ****
+--- 52,66 ----
+  	    for (stab = stab_index[i]; stab; stab = stab->stab_next) {
+  		str = stab->stab_val;
+  		str->str_cur = 0;
++ 		str->str_nok = 0;
+  		if (str->str_ptr != Nullch)
+  		    str->str_ptr[0] = '\0';
++ 		if (stab->stab_array) {
++ 		    aclear(stab->stab_array);
++ 		}
++ 		if (stab->stab_hash) {
++ 		    hclear(stab->stab_hash);
++ 		}
+  	    }
+  	}
+      }
+***************
+*** 80,86 ****
+--- 90,100 ----
+      s = str->str_ptr;
+      if (str->str_nok) {
+  	olderrno = errno;	/* some Xenix systems wipe out errno here */
++ #if defined(scs) && defined(ns32000)
++ 	gcvt(str->str_nval,20,s);
++ #else
+  	sprintf(s,"%.20g",str->str_nval);
++ #endif
+  	errno = olderrno;
+  	while (*s) s++;
+      }
+ 
+Index: util.c
+Prereq: 1.0.1.5
+*** util.c.old	Thu Mar 10 17:22:13 1988
+--- util.c	Thu Mar 10 17:22:14 1988
+***************
+*** 1,6 ****
+! /* $Header: util.c,v 1.0.1.5 88/03/02 12:58:14 root Exp $
+   *
+   * $Log:	util.c,v $
+   * Revision 1.0.1.5  88/03/02  12:58:14  root
+   * patch24: upgraded runtime error messages
+   * 
+--- 1,11 ----
+! /* $Header: util.c,v 1.0.1.6 88/03/10 17:13:40 root Exp $
+   *
+   * $Log:	util.c,v $
++  * Revision 1.0.1.6  88/03/10  17:13:40  root
++  * patch29: made s/\\/\\\\/ work right
++  * patch29: enhanced die operator
++  * patch29: added unlnk() for Eunice
++  * 
+   * Revision 1.0.1.5  88/03/02  12:58:14  root
+   * patch24: upgraded runtime error messages
+   * 
+***************
+*** 150,157 ****
+  register int delim;
+  {
+      for (; *from; from++,to++) {
+! 	if (*from == '\\' && from[1] == delim)
+! 	    from++;
+  	else if (*from == delim)
+  	    break;
+  	*to = *from;
+--- 155,166 ----
+  register int delim;
+  {
+      for (; *from; from++,to++) {
+! 	if (*from == '\\') {
+! 	    if (from[1] == delim)
+! 		from++;
+! 	    else if (from[1] == '\\')
+! 		*to++ = *from++;
+! 	}
+  	else if (*from == delim)
+  	    break;
+  	*to = *from;
+***************
+*** 211,216 ****
+--- 220,227 ----
+      }
+  }
+  
++ extern int errno;
++ 
+  /*VARARGS1*/
+  fatal(pat,a1,a2,a3,a4)
+  char *pat;
+***************
+*** 222,238 ****
+      s = tokenbuf;
+      sprintf(s,pat,a1,a2,a3,a4);
+      s += strlen(s);
+!     if (line) {
+! 	sprintf(s," at line %d",line);
+! 	s += strlen(s);
+      }
+-     if (last_in_stab && last_in_stab->stab_io && last_in_stab->stab_io->lines) {
+- 	sprintf(s,", <%s> line %d",
+- 	  last_in_stab == argvstab ? "" : last_in_stab->stab_name,
+- 	  last_in_stab->stab_io->lines);
+- 	s += strlen(s);
+-     }
+-     strcpy(s,".\n");
+      if (in_eval) {
+  	str_set(stabent("@",TRUE)->stab_val,tokenbuf);
+  	longjmp(eval_env,1);
+--- 233,253 ----
+      s = tokenbuf;
+      sprintf(s,pat,a1,a2,a3,a4);
+      s += strlen(s);
+!     if (s[-1] != '\n') {
+! 	if (line) {
+! 	    sprintf(s," at %s line %d", in_eval?filename:origfilename, line);
+! 	    s += strlen(s);
+! 	}
+! 	if (last_in_stab &&
+! 	    last_in_stab->stab_io &&
+! 	    last_in_stab->stab_io->lines ) {
+! 	    sprintf(s,", <%s> line %d",
+! 	      last_in_stab == argvstab ? "" : last_in_stab->stab_name,
+! 	      last_in_stab->stab_io->lines);
+! 	    s += strlen(s);
+! 	}
+! 	strcpy(s,".\n");
+      }
+      if (in_eval) {
+  	str_set(stabent("@",TRUE)->stab_val,tokenbuf);
+  	longjmp(eval_env,1);
+***************
+*** 240,246 ****
+      fputs(tokenbuf,stderr);
+      if (e_fp)
+  	UNLINK(e_tmpname);
+!     exit(1);
+  }
+  
+  static bool firstsetenv = TRUE;
+--- 255,262 ----
+      fputs(tokenbuf,stderr);
+      if (e_fp)
+  	UNLINK(e_tmpname);
+!     statusvalue >>= 8;
+!     exit(errno?errno:(statusvalue?statusvalue:255));
+  }
+  
+  static bool firstsetenv = TRUE;
+***************
+*** 293,295 ****
+--- 309,322 ----
+      }					/* potential SEGV's */
+      return i;
+  }
++ 
++ #ifdef EUNICE
++ unlnk(f)	/* unlink all versions of a file */
++ char *f;
++ {
++     int i;
++ 
++     for (i = 0; unlink(f) >= 0; i++) ;
++     return i ? 0 : -1;
++ }
++ #endif

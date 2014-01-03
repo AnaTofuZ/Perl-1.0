@@ -1,0 +1,284 @@
+Path: utzoo!mnetor!uunet!lll-winken!lll-lcc!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #15
+Message-ID: <1221@devvax.JPL.NASA.GOV>
+Date: 4 Feb 88 01:12:24 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 273
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 15
+Priority: HIGHER than a kite
+Subject: 1+1 is parsed wrong!  eval always returns null string!
+From: markb@rdcf.sm.unisys.com (Mark Biggar)
+From: lwall@jpl-devvax.jpl.nasa.gov (Larry Wall)
+
+Description:
+	The tokener screws up on parsing number literals and can gobble
+	a following + or - that doesn't belong to it.  1+1 is interpreted
+	as 1e+1.  1+1+1 has the value 2.  1+$foo is a syntax error!
+	Leave it to my brother-in-law to find a bug as horrible as this.
+
+	The eval operator was always returning a null string, contray to
+	the documentation.  This turned out to be because the do_eval()
+	routine was freeing the structure holding the return value before
+	it could be copied elsewhere.
+
+	Included are more tests to detect the above behavior.
+
+	There's also a fix to a piddly little bug that won't show up unless
+	you are trying to blow perl up on purpose.  If you say "1 x -1;"
+	perl will loop forever.  But that only happens if both operands of "x"
+	are evaluated at compile time!  The runtime routines handle negative
+	counts reasonably.  (No, they don't give you a string of negative
+	length.  Sorry.  That would have been interesting to see, I know.)
+
+	As a bonus for those of you who have read this far, I've included
+	a little perl script called perlsh.  It's a poor man's perl shell.
+	Just type perl stuff at it, and whenever you want it to evaluate what
+	you've typed (which must be syntactically complete) just type
+	two carriage returns in a row.  Useful for trying out odd little
+	things in perl without writing a script.  The whole script has just
+	4 lines of code.
+
+Fix:	From rn, say "| patch -p0 -d DIR", where DIR is your perl source
+			      ^^^
+	directory.  Outside of rn, say "cd DIR; patch -p0 <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch (version 2.0 patchlevel 9).
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 14
+1c1
+< #define PATCHLEVEL 14
+---
+> #define PATCHLEVEL 15
+ 
+Index: t/base.lex
+Prereq: 1.0.1.1
+*** t/base.lex.old	Wed Feb  3 16:28:51 1988
+--- t/base.lex	Wed Feb  3 16:28:52 1988
+***************
+*** 1,8 ****
+  #!./perl
+  
+! # $Header: base.lex,v 1.0.1.1 88/01/28 10:37:00 root Exp $
+  
+! print "1..6\n";
+  
+  $ # this is the register <space>
+  = 'x';
+--- 1,8 ----
+  #!./perl
+  
+! # $Header: base.lex,v 1.0.1.2 88/02/03 16:27:16 root Exp $
+  
+! print "1..7\n";
+  
+  $ # this is the register <space>
+  = 'x';
+***************
+*** 30,32 ****
+--- 30,36 ----
+  
+  eval '$foo{1} / 1;';
+  if (!$@) {print "ok 6\n";} else {print "not ok 6\n";}
++ 
++ eval '$foo = 123+123.4+123e4+123.4E5+123.4e+5+.12;';
++ 
++ if ($foo eq 25910246.52) {print "ok 7\n";} else {print "not ok 7\n";}
+ 
+Index: t/op.eval
+*** t/op.eval.old	Wed Feb  3 16:45:37 1988
+--- t/op.eval	Wed Feb  3 16:45:38 1988
+***************
+*** 1,6 ****
+  #!./perl
+  
+! print "1..6\n";
+  
+  eval 'print "ok 1\n";';
+  
+--- 1,6 ----
+  #!./perl
+  
+! print "1..7\n";
+  
+  eval 'print "ok 1\n";';
+  
+***************
+*** 12,20 ****
+  eval "\$foo\n    = # this is a comment\n'ok 4\n';";
+  print $foo;
+  
+! eval '
+  $foo =';		# this tests for a call through yyerror()
+  if ($@ =~ /line 2/) {print "ok 5\n";} else {print "not ok 5\n";}
+  
+! eval '$foo = /';	# this tests for a call through fatal()
+  if ($@ =~ /Search/) {print "ok 6\n";} else {print "not ok 6\n";}
+--- 12,22 ----
+  eval "\$foo\n    = # this is a comment\n'ok 4\n';";
+  print $foo;
+  
+! print eval '
+  $foo =';		# this tests for a call through yyerror()
+  if ($@ =~ /line 2/) {print "ok 5\n";} else {print "not ok 5\n";}
+  
+! print eval '$foo = /';	# this tests for a call through fatal()
+  if ($@ =~ /Search/) {print "ok 6\n";} else {print "not ok 6\n";}
++ 
++ print eval '"ok 7\n";';
+ 
+Index: perlsh
+*** perlsh.old	Wed Feb  3 16:28:21 1988
+--- perlsh	Wed Feb  3 16:28:25 1988
+***************
+*** 0 ****
+--- 1,12 ----
++ #!/bin/perl
++ 
++ # Poor man's perl shell.
++ 
++ # Simply type two carriage returns every time you want to evaluate.
++ # Note that it must be a complete perl statement--don't type double
++ #  carriage return in the middle of a loop.
++ 
++ $/ = '';	# set paragraph mode
++ while (<>) {
++     eval; print $@ || "\n";
++ }
+ 
+Index: perly.c
+Prereq: 1.0.1.3
+*** perly.c.old	Wed Feb  3 16:28:35 1988
+--- perly.c	Wed Feb  3 16:28:39 1988
+***************
+*** 1,6 ****
+! char rcsid[] = "$Header: perly.c,v 1.0.1.3 88/01/28 10:28:31 root Exp $";
+  /*
+   * $Log:	perly.c,v $
+   * Revision 1.0.1.3  88/01/28  10:28:31  root
+   * patch8: added eval operator.  Also fixed expectterm following right curly.
+   * 
+--- 1,10 ----
+! char rcsid[] = "$Header: perly.c,v 1.0.1.4 88/02/03 16:25:19 root Exp $";
+  /*
+   * $Log:	perly.c,v $
++  * Revision 1.0.1.4  88/02/03  16:25:19  root
++  * patch15: 1+$foo confused tokener.
++  * Also, the return value in do_eval got tromped by cmd_free().
++  * 
+   * Revision 1.0.1.3  88/01/28  10:28:31  root
+   * patch8: added eval operator.  Also fixed expectterm following right curly.
+   * 
+***************
+*** 1581,1598 ****
+        decimal:
+  	arg[1].arg_type = A_SINGLE;
+  	d = tokenbuf;
+! 	while (isdigit(*s) || *s == '_')
+  	    *d++ = *s++;
+! 	if (*s == '.' && index("0123456789eE",s[1]))
+  	    *d++ = *s++;
+! 	while (isdigit(*s) || *s == '_')
+! 	    *d++ = *s++;
+! 	if (index("eE",*s) && index("+-0123456789",s[1]))
+! 	    *d++ = *s++;
+! 	if (*s == '+' || *s == '-')
+! 	    *d++ = *s++;
+! 	while (isdigit(*s))
+! 	    *d++ = *s++;
+  	*d = '\0';
+  	arg[1].arg_ptr.arg_str = str_make(tokenbuf);
+  	break;
+--- 1585,1612 ----
+        decimal:
+  	arg[1].arg_type = A_SINGLE;
+  	d = tokenbuf;
+! 	while (isdigit(*s) || *s == '_') {
+! 	    if (*s == '_')
+! 		s++;
+! 	    else
+! 		*d++ = *s++;
+! 	}
+! 	if (*s == '.' && index("0123456789eE",s[1])) {
+  	    *d++ = *s++;
+! 	    while (isdigit(*s) || *s == '_') {
+! 		if (*s == '_')
+! 		    s++;
+! 		else
+! 		    *d++ = *s++;
+! 	    }
+! 	}
+! 	if (index("eE",*s) && index("+-0123456789",s[1])) {
+  	    *d++ = *s++;
+! 	    if (*s == '+' || *s == '-')
+! 		*d++ = *s++;
+! 	    while (isdigit(*s))
+! 		*d++ = *s++;
+! 	}
+  	*d = '\0';
+  	arg[1].arg_ptr.arg_str = str_make(tokenbuf);
+  	break;
+***************
+*** 1890,1896 ****
+  	    break;
+  	case O_REPEAT:
+  	    i = (int)str_gnum(s2);
+! 	    while (i--)
+  		str_scat(str,s1);
+  	    break;
+  	case O_MULTIPLY:
+--- 1904,1910 ----
+  	    break;
+  	case O_REPEAT:
+  	    i = (int)str_gnum(s2);
+! 	    while (i-- > 0)
+  		str_scat(str,s1);
+  	    break;
+  	case O_MULTIPLY:
+***************
+*** 2513,2519 ****
+      if (retval)
+  	str = &str_no;
+      else {
+! 	str = cmd_exec(eval_root);
+  	cmd_free(myroot);	/* can't free on error, for some reason */
+      }
+      in_eval--;
+--- 2527,2534 ----
+      if (retval)
+  	str = &str_no;
+      else {
+! 	str = str_static(cmd_exec(eval_root));
+! 				/* if we don't save str, free zaps it */
+  	cmd_free(myroot);	/* can't free on error, for some reason */
+      }
+      in_eval--;

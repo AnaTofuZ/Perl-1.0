@@ -1,0 +1,292 @@
+Path: utzoo!mnetor!uunet!lll-winken!lll-lcc!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #12
+Message-ID: <1197@devvax.JPL.NASA.GOV>
+Date: 2 Feb 88 01:41:48 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 281
+Summary: This is an official patch for perl 1.0.  Please apply it.
+
+System: perl version 1.0
+Patch #: 12
+Priority: MEDIUM
+Subject: scripts made by a2p doen't handle leading white space right on input
+From: kyrimis@Princeton.EDU (Kriton Kyrimis)
+
+Description:
+	Awk ignores leading whitespace on split.  Perl by default does not.
+	The a2p translator couldn't handle this.  The fix is partly to a2p
+	and partly to perl.  Perl now has a way to specify to split to
+	ignore leading white space as awk does.  A2p now takes advantage of
+	that.
+
+	I also threw in an optimization that let's runtime patterns
+	compile just once if they are known to be constant, so that
+	split(' ') doesn't compile the pattern every time.
+
+Fix:	From rn, say "| patch -p0 -d DIR", where DIR is your perl source
+			      ^^^
+	directory.  Outside of rn, say "cd DIR; patch -p0 <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch.
+
+>>>	THE -p0 ABOVE IS REQUIRED     <<<
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 11
+1c1
+< #define PATCHLEVEL 11
+---
+> #define PATCHLEVEL 12
+ 
+Index: x2p/a2p.h
+Prereq: 1.0.1.1
+*** x2p/a2p.h.old	Mon Feb  1 17:35:14 1988
+--- x2p/a2p.h	Mon Feb  1 17:35:15 1988
+***************
+*** 1,6 ****
+! /* $Header: a2p.h,v 1.0.1.1 88/01/26 09:52:30 root Exp $
+   *
+   * $Log:	a2p.h,v $
+   * Revision 1.0.1.1  88/01/26  09:52:30  root
+   * patch 5: a2p didn't use config.h.
+   * 
+--- 1,9 ----
+! /* $Header: a2p.h,v 1.0.1.2 88/02/01 17:33:40 root Exp $
+   *
+   * $Log:	a2p.h,v $
++  * Revision 1.0.1.2  88/02/01  17:33:40  root
++  * patch12: forgot to fix #define YYDEBUG; bug in a2p.
++  * 
+   * Revision 1.0.1.1  88/01/26  09:52:30  root
+   * patch 5: a2p didn't use config.h.
+   * 
+***************
+*** 226,232 ****
+  #ifdef DEBUGGING
+  EXT int debug INIT(0);
+  EXT int dlevel INIT(0);
+! #define YYDEBUG;
+  extern int yydebug;
+  #endif
+  
+--- 229,235 ----
+  #ifdef DEBUGGING
+  EXT int debug INIT(0);
+  EXT int dlevel INIT(0);
+! #define YYDEBUG 1
+  extern int yydebug;
+  #endif
+  
+ 
+Index: arg.c
+Prereq: 1.0.1.5
+*** arg.c.old	Mon Feb  1 17:34:48 1988
+--- arg.c	Mon Feb  1 17:34:51 1988
+***************
+*** 1,6 ****
+! /* $Header: arg.c,v 1.0.1.5 88/01/30 08:53:16 root Exp $
+   *
+   * $Log:	arg.c,v $
+   * Revision 1.0.1.5  88/01/30  08:53:16  root
+   * patch9: fixed some missing right parens introduced (?) by patch 2
+   * 
+--- 1,9 ----
+! /* $Header: arg.c,v 1.0.1.6 88/02/01 17:32:26 root Exp $
+   *
+   * $Log:	arg.c,v $
++  * Revision 1.0.1.6  88/02/01  17:32:26  root
++  * patch12: made split(' ') behave like awk in ignoring leading white space.
++  * 
+   * Revision 1.0.1.5  88/01/30  08:53:16  root
+   * patch9: fixed some missing right parens introduced (?) by patch 2
+   * 
+***************
+*** 220,225 ****
+--- 223,237 ----
+  	char *d;
+  
+  	m = str_get(eval(spat->spat_runtime,Null(STR***)));
++ 	if (!*m || (*m == ' ' && !m[1])) {
++ 	    m = "[ \\t\\n]+";
++ 	    while (isspace(*s)) s++;
++ 	}
++ 	if (spat->spat_runtime->arg_type == O_ITEM &&
++ 	  spat->spat_runtime[1].arg_type == A_SINGLE) {
++ 	    arg_free(spat->spat_runtime);	/* it won't change, so */
++ 	    spat->spat_runtime = Nullarg;	/* no point compiling again */
++ 	}
+  	if (d = compile(&spat->spat_compex,m,TRUE,FALSE)) {
+  #ifdef DEBUGGING
+  	    deb("/%s/: %s\n", m, d);
+ 
+Index: perl.man.2
+Prereq: 1.0.1.2
+*** perl.man.2.old	Mon Feb  1 17:35:03 1988
+--- perl.man.2	Mon Feb  1 17:35:06 1988
+***************
+*** 1,7 ****
+  ''' Beginning of part 2
+! ''' $Header: perl.man.2,v 1.0.1.2 88/01/30 17:04:28 root Exp $
+  '''
+  ''' $Log:	perl.man.2,v $
+  ''' Revision 1.0.1.2  88/01/30  17:04:28  root
+  ''' patch 11: random cleanup
+  ''' 
+--- 1,10 ----
+  ''' Beginning of part 2
+! ''' $Header: perl.man.2,v 1.0.1.3 88/02/01 17:33:03 root Exp $
+  '''
+  ''' $Log:	perl.man.2,v $
++ ''' Revision 1.0.1.3  88/02/01  17:33:03  root
++ ''' patch12: documented split more adequately.
++ ''' 
+  ''' Revision 1.0.1.2  88/01/30  17:04:28  root
+  ''' patch 11: random cleanup
+  ''' 
+***************
+*** 333,340 ****
+  (Note that the delimiter may be longer than one character.)
+  Trailing null fields are stripped, which potential users of pop() would
+  do well to remember.
+! A pattern matching the null string will split the value of EXPR into separate
+! characters.
+  .sp
+  Example:
+  .nf
+--- 336,360 ----
+  (Note that the delimiter may be longer than one character.)
+  Trailing null fields are stripped, which potential users of pop() would
+  do well to remember.
+! A pattern matching the null string (not to be confused with a null pattern)
+! will split the value of EXPR into separate characters at each point it
+! matches that way.
+! For example:
+! .nf
+! 
+! 	print join(':',split(/ */,'hi there'));
+! 
+! .fi
+! produces the output 'h:i:t:h:e:r:e'.
+! 
+! The pattern /PATTERN/ may be replaced with an expression to specify patterns
+! that vary at runtime.
+! As a special case, specifying a space ('\ ') will split on white space
+! just as split with no arguments does, but leading white space does NOT
+! produce a null first field.
+! Thus, split('\ ') can be used to emulate awk's default behavior, whereas
+! split(/\ /) will give you as many null initial fields as there are
+! leading spaces.
+  .sp
+  Example:
+  .nf
+ 
+Index: x2p/walk.c
+Prereq: 1.0.1.1
+*** x2p/walk.c.old	Mon Feb  1 17:35:21 1988
+--- x2p/walk.c	Mon Feb  1 17:35:23 1988
+***************
+*** 1,6 ****
+! /* $Header: walk.c,v 1.0.1.1 88/01/28 11:07:56 root Exp $
+   *
+   * $Log:	walk.c,v $
+   * Revision 1.0.1.1  88/01/28  11:07:56  root
+   * patch8: changed some misleading comments.
+   * 
+--- 1,9 ----
+! /* $Header: walk.c,v 1.0.1.2 88/02/01 17:34:05 root Exp $
+   *
+   * $Log:	walk.c,v $
++  * Revision 1.0.1.2  88/02/01  17:34:05  root
++  * patch12: made a2p take advantage of new awk-compatible split in perl.
++  * 
+   * Revision 1.0.1.1  88/01/28  11:07:56  root
+   * patch8: changed some misleading comments.
+   * 
+***************
+*** 71,77 ****
+  	    str_cat(str,"';\t\t# field separator from -F switch\n");
+  	}
+  	else if (saw_FS && !const_FS) {
+! 	    str_cat(str,"$FS = '[ \\t\\n]+';\t\t# set field separator\n");
+  	}
+  	if (saw_OFS) {
+  	    str_cat(str,"$, = ' ';\t\t# set output field separator\n");
+--- 74,80 ----
+  	    str_cat(str,"';\t\t# field separator from -F switch\n");
+  	}
+  	else if (saw_FS && !const_FS) {
+! 	    str_cat(str,"$FS = ' ';\t\t# set field separator\n");
+  	}
+  	if (saw_OFS) {
+  	    str_cat(str,"$, = ' ';\t\t# set output field separator\n");
+***************
+*** 361,368 ****
+  	str_scat(str,fstr=walk(1,level,ops[node+3].ival,&numarg));
+  	str_free(fstr);
+  	numeric |= numarg;
+- 	if (strEQ(str->str_ptr,"$FS = '\240'"))
+- 	    str_set(str,"$FS = '[\240\\n\\t]+'");
+  	break;
+      case OADD:
+  	str = walk(1,level,ops[node+1].ival,&numarg);
+--- 364,369 ----
+***************
+*** 511,517 ****
+  	else if (saw_FS)
+  	    str_cat(str,"$FS");
+  	else
+! 	    str_cat(str,"/[ \\t\\n]+/");
+  	str_cat(str,", ");
+  	str_scat(str,fstr=walk(1,level,ops[node+1].ival,&numarg));
+  	str_free(fstr);
+--- 512,518 ----
+  	else if (saw_FS)
+  	    str_cat(str,"$FS");
+  	else
+! 	    str_cat(str,"' '");
+  	str_cat(str,", ");
+  	str_scat(str,fstr=walk(1,level,ops[node+1].ival,&numarg));
+  	str_free(fstr);
+***************
+*** 1095,1101 ****
+      else if (saw_FS)
+  	str_cat(str," = split($FS);\n");
+      else
+! 	str_cat(str," = split;\n");
+      tab(str,level);
+  }
+  
+--- 1096,1102 ----
+      else if (saw_FS)
+  	str_cat(str," = split($FS);\n");
+      else
+! 	str_cat(str," = split(' ');\n");
+      tab(str,level);
+  }
+  

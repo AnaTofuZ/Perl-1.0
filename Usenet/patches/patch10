@@ -1,0 +1,94 @@
+Path: bbn.com!bbn!husc6!rutgers!ames!elroy!devvax!lroot
+From: lroot@devvax.JPL.NASA.GOV (The Superuser)
+Newsgroups: comp.sources.bugs
+Subject: perl 1.0 patch #10
+Summary: This is an official patch for perl 1.0.  Please apply it.
+Message-ID: <1188@devvax.JPL.NASA.GOV>
+Date: 30 Jan 88 17:25:46 GMT
+Organization: Jet Propulsion Laboratory, Pasadena, CA
+Lines: 84
+
+System: perl version 1.0
+Patch #: 10
+Priority: LOW
+Subject: if your libc is in a strange place, Configure blows up
+From: Peter E. Yee <yee@trident.arc.nasa.gov>
+
+Description:
+	There's a line in Configure that says libc=ans which should say
+	libc=$ans.  This only shows up if libc.a isn't in /lib.
+
+Fix:	From rn, say "| patch -d DIR", where DIR is your perl source
+	directory.  Outside of rn, say "cd DIR; patch <thisarticle".
+	If you don't have the patch program, apply the following by hand,
+	or get patch.
+
+	If patch indicates that patchlevel is the wrong version, you may need
+	to apply one or more previous patches, or the patch may already
+	have been applied.  See the patchlevel.h file to find out what has or
+	has not been applied.  In any event, don't continue with the patch.
+
+	If you are missing previous patches they can be obtained from me:
+
+	Larry Wall
+	lwall@jpl-devvax.jpl.nasa.gov
+
+	If you send a mail message of the following form it will greatly speed
+	processing:
+
+	Subject: Command
+	@SH mailpatch PATH perl 1.0 LIST
+		   ^ note the c
+
+	where PATH is a return path FROM ME TO YOU in Internet notation, and
+	LIST is the number of one or more patches you need, separated by spaces,
+	commas, and/or hyphens.  Saying 35- says everything from 35 to the end.
+
+	You can also get the patches via anonymous FTP from
+	jpl-devvax.jpl.nasa.gov (128.149.8.43).
+
+Index: patchlevel.h
+Prereq: 9
+1c1
+< #define PATCHLEVEL 9
+---
+> #define PATCHLEVEL 10
+ 
+Index: Configure
+Prereq: 1.0.1.4
+*** Configure.old	Sat Jan 30 09:22:10 1988
+--- Configure	Sat Jan 30 09:22:13 1988
+***************
+*** 8,14 ****
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.4 88/01/30 08:51:49 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+--- 8,14 ----
+  # and edit it to reflect your system.  Some packages may include samples
+  # of config.h for certain machines, so you might look for one of those.)
+  #
+! # $Header: Configure,v 1.0.1.5 88/01/30 09:21:20 root Exp $
+  #
+  # Yes, you may rip this off to use in other distribution packages.
+  # (Note: this Configure script was generated automatically.  Rather than
+***************
+*** 398,404 ****
+      ans=`loc libc.a blurfl/dyick $libpth`
+      if test -f $ans; then
+  	echo "Your C library is in $ans, of all places."
+! 	libc=ans
+      else
+  	if test -f "$libc"; then
+  	    echo "Your C library is in $libc, like you said before."
+--- 398,404 ----
+      ans=`loc libc.a blurfl/dyick $libpth`
+      if test -f $ans; then
+  	echo "Your C library is in $ans, of all places."
+! 	libc=$ans
+      else
+  	if test -f "$libc"; then
+  	    echo "Your C library is in $libc, like you said before."
