@@ -24,6 +24,7 @@
 #include "EXTERN.h"
 #include "perl.h"
 
+void
 str_reset(s)
 register char *s;
 {
@@ -204,6 +205,7 @@ register STR *sstr;
 	str_ncat(dstr,sstr->str_ptr,sstr->str_cur);
 }
 
+void
 str_cat(str,ptr)
 register STR *str;
 register char *ptr;
